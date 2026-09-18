@@ -8,5 +8,5 @@ next-env.d.ts
 .wrangler/
 *.tsbuildinfo
 
-# keluaran script impor (berisi data pribadi)
-/.import/
+# keluaran script seed (berisi nama awardee)
+/.seed/

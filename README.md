@@ -47,43 +47,27 @@ const row = await env.DB.prepare("SELECT 1").first();
 
 `GET /api/health` memeriksa ketiga binding dan membalas `503` kalau salah satunya gagal.
 
-## Skema & impor data BA15
+## Skema & data master
 
 Skema ada di `migrations/`. Terapkan dengan `npm run db:migrate:local` atau `npm run db:migrate:remote`.
 
-Data BA15 diimpor sekali dari sistem lama lewat `scripts/import-ba15.mjs`, lalu dibuktikan dengan `scripts/verify-ba15.mjs`.
-Keduanya membaca konfigurasi dari `.env.import` (di-gitignore) dan menulis keluaran ke `.import/` (juga di-gitignore)
-karena isinya data pribadi awardee dan penilai. **Jangan pernah meng-commit kedua lokasi itu** — repo ini publik.
-
-| Variabel di `.env.import` | Isi |
-|---|---|
-| `BA15_GOOGLE_KEY_FILE` | Path file JSON service account yang bisa membaca spreadsheet responden |
-| `BA15_SPREADSHEET_ID` | ID spreadsheet responden (Sheet1 = evaluasi publik, Sheet2 = Leadpro) |
-| `BA15_CSV_ASSESSMENT`, `BA15_CSV_LEADPRO`, `BA15_CSV_INSTRUMEN_ASSESSMENT`, `BA15_CSV_INSTRUMEN_LEADPRO` | URL CSV sheet dashboard lama |
-| `BA15_AWARDEE_CSV`, `BA15_RUBRIK_ASSESSMENT`, `BA15_RUBRIK_LEADPRO` | Path CSV daftar awardee dan rubrik dari app survey lama |
-| `BA15_OLD_DATALOADER` | Path `dataLoader.js` dashboard lama, dipakai sebagai pembanding |
-| `BA15_INCLUDE_DASHBOARD_ONLY` | `1` untuk ikut mengimpor baris yang hanya ada di sheet dashboard |
+Hub dimulai **tanpa data transaksi**: tidak ada respons, skor, atau saran dari sistem lama. Yang di-seed hanya data master BA15 —
+wilayah, awardee, tipe responden beserta target minimalnya, dan kuesioner. Kedua periode BA15 dibuat sebagai draft tanpa tanggal.
 
 ```bash
-npm run import:ba15
-npx wrangler d1 execute baktinusa-hub-db --remote --file .import/ba15.sql
-npx wrangler d1 export baktinusa-hub-db --remote --output .import/d1-remote.sql
-npm run verify:ba15 -- .import/d1-remote.sql
+npm run seed:ba15
+npx wrangler d1 execute baktinusa-hub-db --remote --file .seed/ba15.sql
 ```
 
-Script impor idempoten untuk data BA15: menghapus lalu mengisi ulang periode dan awardee angkatan itu saja.
+`scripts/seed-ba15.mjs` **menghapus semua respons milik periode BA15** lalu mengisi ulang data masternya, jadi jangan dijalankan
+ke production setelah periode mulai menerima isian.
 
-**Aturan rekonsiliasi.** Skor, kategori responden, awardee, dan saran diambil dari sheet dashboard lama, karena itu versi yang
-sudah dibersihkan tim. Waktu kirim, nama dan kota penilai, jawaban hubungan, dan lama kenal diambil dari Sheet1/Sheet2, karena
-dashboard tidak menyimpannya. Baris dipasangkan lewat nama awardee (tanpa apostrof) ditambah deret skornya. Asesmen Awal dan Tengah
-hanya ada di dashboard, sehingga tidak punya waktu kirim.
-
-**Verifikasi** menjalankan `dataLoader.js` lama apa adanya, lalu menghitung angka yang sama dari D1 dengan batas kategori lama —
-hasilnya harus identik kecuali untuk baris yang sumbernya memang berbeda. Setelah itu dampak batas kategori yang benar dilaporkan
-terpisah. Batas lama di `dataLoader.js` (Self-Maturity Q1–Q19, Competency Enrichment Q20–Q39) salah satu nomor; rubrik menetapkan
-Q1–Q18 dan Q19–Q39. Di D1 setiap pertanyaan memegang `category_id`-nya sendiri, jadi kesalahan jenis ini tidak bisa terulang.
-
-Foto awardee ada di R2 dengan kunci `awardees/ba15/<kode-referal>.webp`.
+- **Kuesioner** ada di `seed/kuesioner-ba15.csv`: 50 indikator asesmen dan 22 indikator Leadership Project, masing-masing dengan
+  kategorinya. Batas asesmen mengikuti rubrik — Self-Maturity Q1–Q18, Competency Enrichment Q19–Q39, Bringing Inspiration Q40–Q50.
+  Dashboard lama menghitung Q1–Q19 dan Q20–Q39, salah satu nomor; di D1 setiap pertanyaan memegang `category_id`-nya sendiri.
+- **Daftar awardee** berisi data pribadi, jadi tidak ada di repo. Script membacanya dari CSV app `leadpro-survey` lama di folder
+  induk; arahkan ke file lain lewat `BA15_AWARDEE_CSV`. Keluarannya, `.seed/`, di-gitignore — **jangan di-commit**, repo ini publik.
+- **Foto awardee** ada di R2 dengan kunci `awardees/ba15/<kode-referal>.webp`.
 
 ## Hal yang perlu diketahui
 
