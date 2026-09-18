@@ -15,6 +15,20 @@ Dibangun dengan [vinext](https://github.com/cloudflare/vinext) (Next.js App Rout
 | `npm run deploy` | Build dan deploy ke Cloudflare |
 | `npx wrangler types` | Perbarui `worker-configuration.d.ts` setiap kali `wrangler.jsonc` berubah |
 
+## Deploy
+
+Setiap push ke `main` di-build dan di-deploy otomatis oleh **Workers Builds**:
+
+| Setting | Nilai |
+|---|---|
+| Build command | `npm run build` |
+| Deploy command (`main`) | `npx wrangler deploy` |
+| Version command (branch lain) | `npx wrangler versions upload` — hanya mengunggah versi preview, production tidak berubah |
+| Node | 24 (default build image) |
+
+`npx wrangler deploy` tidak perlu `--config`: plugin Vite menulis `.wrangler/deploy/config.json` saat build,
+yang mengarahkan Wrangler ke `dist/server/wrangler.json`. `npm run deploy` dari laptop tetap bisa dipakai untuk deploy darurat.
+
 ## Binding
 
 | Binding | Resource | Isi |
