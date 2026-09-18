@@ -69,6 +69,38 @@ ke production setelah periode mulai menerima isian.
   induk; arahkan ke file lain lewat `BA15_AWARDEE_CSV`. Keluarannya, `.seed/`, di-gitignore — **jangan di-commit**, repo ini publik.
 - **Foto awardee** ada di R2 dengan kunci `awardees/ba15/<kode-referal>.webp`.
 
+## Masuk & peran
+
+Tiga peran — Admin, Manajer Wilayah, Awardee — masuk tanpa kata sandi lewat **tautan sekali pakai**. Responden publik tidak punya akun.
+
+- **Sesi** disimpan di D1 (tabel `sessions`), bukan KV: KV tidak menjamin tulisan langsung terbaca, sehingga sesi yang baru
+  dibuat saat login bisa belum terlihat di request berikutnya. Cookie `bh_session` bersifat `HttpOnly; Secure; SameSite=Lax`.
+  Database hanya menyimpan hash SHA-256 dari token sesi dan tautan masuk.
+- **Gerbang akses** berlapis: `proxy.ts` mengarahkan `/admin`, `/manwil`, `/awardee` sesuai peran; setiap halaman dan server
+  action memanggil `requireUser()` lagi; dan setiap query awardee/respons wajib lewat `scopeFor(user)` di `lib/data/`.
+- **Tautan masuk** dipakai lewat tombol "Masuk" (POST), bukan saat tautan dibuka — pemindai tautan di layanan email sering
+  membuka tautan lebih dulu dan akan menghanguskan token sekali pakai.
+- **Pengiriman tautan** (`lib/login-delivery.ts`): lewat Cloudflare Email Service begitu binding `EMAIL` dan variabel
+  `EMAIL_FROM` diisi (butuh domain pengirim terverifikasi). Sampai itu, Admin membuat tautan dari halaman **Pengguna** dan
+  membagikannya sendiri (berlaku 3 hari). Di lokal, `LOGIN_LINK_TO_LOG=1` mencetak tautan ke log dev server.
+
+**Admin pertama** — atau kalau semua Admin terkunci — dibuat dari terminal. Tautannya hanya tercetak di terminal itu:
+
+```bash
+npm run login-link -- nama@email.com --admin "Nama Lengkap"
+```
+
+Tambahkan `--local` untuk D1 lokal. Tanpa `--admin`, script hanya membuat tautan untuk akun yang sudah ada.
+
+## Uji
+
+```bash
+npm test
+```
+
+Menjalankan `lib/data/*` di atas `node:sqlite` dengan migrasi yang sama persis seperti production. Uji membuktikan di lapisan
+query bahwa awardee hanya bisa menarik datanya sendiri, Manwil hanya wilayahnya, dan tautan masuk hanya berlaku sekali.
+
 ## Hal yang perlu diketahui
 
 **Akun Cloudflare dikunci di `wrangler.jsonc`.** Environment user di laptop pengembang punya

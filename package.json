@@ -32,6 +32,8 @@
     "deploy": "vinext-cloudflare deploy --config dist/server/wrangler.json",
     "db:migrate:local": "wrangler d1 migrations apply baktinusa-hub-db --local",
     "db:migrate:remote": "wrangler d1 migrations apply baktinusa-hub-db --remote",
-    "seed:ba15": "node scripts/seed-ba15.mjs"
+    "seed:ba15": "node scripts/seed-ba15.mjs",
+    "test": "node --test --no-warnings \"tests/*.test.ts\"",
+    "login-link": "node scripts/login-link.mjs"
   }
 }

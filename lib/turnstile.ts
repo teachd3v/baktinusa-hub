@@ -1,6 +1,7 @@
 import { env } from "cloudflare:workers";
 
 export const TURNSTILE_ACTION = "survey_submit";
+export const LOGIN_ACTION = "login";
 
 type SiteverifyResult = {
   success?: boolean;
@@ -11,7 +12,7 @@ type SiteverifyResult = {
 
 // Siteverify kanonik: gagal = tolak. Kunci uji Turnstile tidak mengembalikan action, jadi pemeriksaan action
 // hanya dilewati kalau Cloudflare menandai hasilnya sebagai kunci uji DAN flag dev TURNSTILE_ALLOW_TEST_KEYS aktif.
-export async function verifyTurnstile(token: unknown, remoteIp: string | null): Promise<boolean> {
+export async function verifyTurnstile(token: unknown, remoteIp: string | null, expectedAction: string): Promise<boolean> {
   const secret = env.TURNSTILE_SECRET;
   const hostnames = new Set((env.TURNSTILE_HOSTNAMES ?? "").split(",").map((h) => h.trim()).filter(Boolean));
   if (!secret || typeof token !== "string" || token.length === 0 || token.length > 2048 || hostnames.size === 0) return false;
@@ -31,5 +32,5 @@ export async function verifyTurnstile(token: unknown, remoteIp: string | null): 
   }
 
   const testKey = result.metadata?.result_with_testing_key === true && env.TURNSTILE_ALLOW_TEST_KEYS === "1";
-  return result.success === true && (testKey || result.action === TURNSTILE_ACTION) && hostnames.has(result.hostname ?? "");
+  return result.success === true && (testKey || result.action === expectedAction) && hostnames.has(result.hostname ?? "");
 }

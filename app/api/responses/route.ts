@@ -1,7 +1,7 @@
 import { env } from "cloudflare:workers";
 import { deviceFingerprint } from "@/lib/fingerprint";
 import { getPublicForm, receiptCode, saveResponse, validateSubmission, type Submission } from "@/lib/survey";
-import { verifyTurnstile } from "@/lib/turnstile";
+import { TURNSTILE_ACTION, verifyTurnstile } from "@/lib/turnstile";
 
 export const dynamic = "force-dynamic";
 
@@ -32,7 +32,7 @@ export async function POST(request: Request) {
   if (!checked.ok) return fail(422, checked.message);
 
   const ip = request.headers.get("cf-connecting-ip");
-  if (!(await verifyTurnstile(body.turnstileToken, ip))) {
+  if (!(await verifyTurnstile(body.turnstileToken, ip, TURNSTILE_ACTION))) {
     return fail(403, "Verifikasi keamanan gagal. Muat ulang halaman lalu coba kirim lagi.");
   }
 

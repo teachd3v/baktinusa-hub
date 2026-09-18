@@ -1,33 +1,12 @@
 "use client";
 
-import Script from "next/script";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AwardeeCard } from "@/components/AwardeeCard";
 import { BrandHeader } from "@/components/BrandHeader";
 import { DeadlineBanner } from "@/components/DeadlineBanner";
+import { Turnstile, type TurnstileHandle } from "@/components/Turnstile";
 import type { FeedbackField, FormConfig } from "@/lib/survey";
-
-type TurnstileApi = {
-  render: (
-    container: HTMLElement,
-    options: {
-      sitekey: string;
-      action: string;
-      callback: (token: string) => void;
-      "expired-callback"?: () => void;
-      "error-callback"?: () => void;
-    },
-  ) => string;
-  reset: (widgetId: string) => void;
-  remove: (widgetId: string) => void;
-};
-
-declare global {
-  interface Window {
-    turnstile?: TurnstileApi;
-  }
-}
 
 type Props = {
   kode: string;
@@ -72,9 +51,7 @@ export function SurveyForm({ kode, periode, siteKey, turnstileAction, closesAt, 
   const [modal, setModal] = useState<Modal | null>(null);
   const [sending, setSending] = useState(false);
   const [token, setToken] = useState("");
-  const [turnstileReady, setTurnstileReady] = useState(false);
-  const turnstileBox = useRef<HTMLDivElement>(null);
-  const widgetId = useRef<string | null>(null);
+  const turnstile = useRef<TurnstileHandle>(null);
   const flagTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Draf jawaban disimpan di perangkat supaya 50 jawaban tidak hilang saat berpindah aplikasi.
@@ -92,27 +69,6 @@ export function SurveyForm({ kode, periode, siteKey, turnstileAction, closesAt, 
       localStorage.setItem(draftKey, JSON.stringify(answers));
     } catch {}
   }, [answers, draftKey, draftLoaded]);
-
-  useEffect(() => {
-    if (window.turnstile) setTurnstileReady(true);
-  }, []);
-
-  // Widget Turnstile hanya hidup di langkah terakhir; token sekali pakai, jadi widget dibuat ulang tiap masuk langkah itu.
-  useEffect(() => {
-    if (step !== lastStep || !turnstileReady || !siteKey || !turnstileBox.current || widgetId.current) return;
-    widgetId.current = window.turnstile!.render(turnstileBox.current, {
-      sitekey: siteKey,
-      action: turnstileAction,
-      callback: setToken,
-      "expired-callback": () => setToken(""),
-      "error-callback": () => setToken(""),
-    });
-    return () => {
-      if (widgetId.current) window.turnstile?.remove(widgetId.current);
-      widgetId.current = null;
-      setToken("");
-    };
-  }, [step, lastStep, turnstileReady, siteKey, turnstileAction]);
 
   const update = (patch: Partial<Answers>) => setAnswers((prev) => ({ ...prev, ...patch }));
   const relation = answers.relationIndex === null ? undefined : config.relation.options[answers.relationIndex];
@@ -193,8 +149,7 @@ export function SurveyForm({ kode, periode, siteKey, turnstileAction, closesAt, 
       router.push(`/s/${kode}/${periode}/selesai?r=${encodeURIComponent(data.receipt)}`);
     } catch (err) {
       setModal({ kind: "message", emoji: "🥺", title: "Belum terkirim", text: err instanceof Error ? err.message : "Coba kirim lagi." });
-      if (widgetId.current) window.turnstile?.reset(widgetId.current);
-      setToken("");
+      turnstile.current?.reset();
       setSending(false);
     }
   }
@@ -203,11 +158,6 @@ export function SurveyForm({ kode, periode, siteKey, turnstileAction, closesAt, 
 
   return (
     <main className="page">
-      <Script
-        src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"
-        strategy="afterInteractive"
-        onReady={() => setTurnstileReady(true)}
-      />
       <BrandHeader title={config.title} subtitle={config.subtitle} />
 
       <div className="app-screen">
@@ -338,8 +288,8 @@ export function SurveyForm({ kode, periode, siteKey, turnstileAction, closesAt, 
                 </div>
               ))}
               {siteKey ? (
-                // Ruang widget dipesan sejak awal supaya tombol Kirim tidak bergeser saat widget muncul.
-                <div ref={turnstileBox} style={{ display: "flex", justifyContent: "center", minHeight: 72, marginTop: "0.5rem" }} />
+                // Widget hanya hidup di langkah terakhir: dibuat ulang tiap masuk langkah ini, karena token sekali pakai.
+                <Turnstile ref={turnstile} siteKey={siteKey} action={turnstileAction} onToken={setToken} />
               ) : (
                 <p className="section-hint" role="alert">Form belum bisa dikirim: verifikasi keamanan belum diatur pengelola.</p>
               )}
