@@ -10,3 +10,6 @@ next-env.d.ts
 
 # keluaran script seed (berisi nama awardee)
 /.seed/
+
+# konfigurasi alat lokal
+.claude/

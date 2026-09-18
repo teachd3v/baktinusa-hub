@@ -1,0 +1,91 @@
+{
+  "pengukuran": {
+    "title": "Evaluasi Publik",
+    "subtitle": "Awardee BAKTI NUSA 15",
+    "identity": {
+      "name": "Nama Saudara",
+      "city": "Kota/Kabupaten Domisili saat ini"
+    },
+    "relation": {
+      "question": "Dalam hal apa anda berhubungan dengan yang bersangkutan?",
+      "options": [
+        { "label": "Atasan/Leader di organisasi", "type": "external" },
+        { "label": "Anggota tim", "type": "external" },
+        { "label": "Pembina/Pembimbing", "type": "external" },
+        { "label": "Teman organisasi", "type": "external" },
+        { "label": "Teman kos / Teman dekat", "type": "external" },
+        { "label": "Lainnya", "type": "external", "detail": "Sebutkan hubungan Anda (misal: Kakak Kelas, Alumni)" }
+      ]
+    },
+    "knownDuration": {
+      "question": "Berapa lama saudara mengenal yang bersangkutan?",
+      "options": ["< 5 bulan", "5 bulan - 1 tahun", "> 1 tahun"]
+    },
+    "feedback": [
+      {
+        "field": "saran_diri",
+        "label": "Saran Pengembangan Diri",
+        "question": "Mohon berikan masukan untuk pengembangan kepemimpinan yang bersangkutan agar lebih berdampak bagi dirinya dan masyarakat.",
+        "required": false
+      },
+      {
+        "field": "saran_program",
+        "label": "Saran untuk Program",
+        "question": "Berikan masukan untuk pengembangan program BAKTI NUSA di masa mendatang.",
+        "required": false
+      }
+    ],
+    "scale": [
+      { "value": 0, "label": "Tidak Setuju", "emoji": "👎" },
+      { "value": 1, "label": "Kurang Setuju", "emoji": "😕" },
+      { "value": 2, "label": "Cukup Setuju", "emoji": "😐" },
+      { "value": 3, "label": "Setuju", "emoji": "🙂" },
+      { "value": 4, "label": "Sangat Setuju", "emoji": "🌟" }
+    ]
+  },
+  "leadpro": {
+    "title": "Evaluasi Leadership Project",
+    "subtitle": "Awardee BAKTI NUSA 15",
+    "identity": {
+      "name": "Nama Pengisi Survey",
+      "city": "Kota/Kabupaten Domisili saat ini"
+    },
+    "relation": {
+      "question": "Apa hubungan Anda dengan yang bersangkutan?",
+      "options": [
+        { "label": "Tim Leadership Project", "type": "lp_team" },
+        { "label": "Penerima Manfaat Leadership Project", "type": "lp_beneficiary" },
+        { "label": "Volunteer Leadership Project", "type": "lp_volunteer" },
+        { "label": "Mitra", "type": "lp_partner" },
+        { "label": "Lainnya", "type": "lp_other", "detail": "Sebutkan hubungan Anda dengan leadership project ini" }
+      ]
+    },
+    "feedback": [
+      {
+        "field": "pesan",
+        "label": "Pesan",
+        "question": "Berikan pesan selama anda bergabung/terlibat dalam leadership project yang dijalankan!",
+        "required": false
+      },
+      {
+        "field": "kritik",
+        "label": "Kritik",
+        "question": "Berikan kritik anda terkait pelaksanaan leadership project.",
+        "required": false
+      },
+      {
+        "field": "saran_keberlanjutan",
+        "label": "Saran Keberlanjutan",
+        "question": "Berikan saran anda yang membangun demi keberlanjutan kegiatan leadership project Awardee BAKTI NUSA 15.",
+        "required": false
+      }
+    ],
+    "scale": [
+      { "value": 0, "label": "Tidak Setuju", "emoji": "👎" },
+      { "value": 1, "label": "Kurang Setuju", "emoji": "😕" },
+      { "value": 2, "label": "Cukup Setuju", "emoji": "😐" },
+      { "value": 3, "label": "Setuju", "emoji": "🙂" },
+      { "value": 4, "label": "Sangat Setuju", "emoji": "🌟" }
+    ]
+  }
+}

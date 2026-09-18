@@ -3,8 +3,9 @@
 // Hub dimulai tanpa data transaksi. Script ini MENGHAPUS semua respons milik periode BA15, lalu mengisi ulang
 // data master. Periode dibuat sebagai draft tanpa tanggal; Admin yang membukanya nanti.
 //
-// Kuesioner dibaca dari seed/kuesioner-ba15.csv (ikut di repo). Daftar awardee dibaca dari luar repo karena
-// berisi data pribadi — default-nya CSV app leadpro-survey lama, bisa diganti lewat BA15_AWARDEE_CSV.
+// Kuesioner dibaca dari seed/kuesioner-ba15.csv dan konfigurasi form dari seed/formulir-ba15.json (keduanya di repo).
+// Daftar awardee dibaca dari luar repo karena berisi data pribadi — default-nya CSV app leadpro-survey lama,
+// bisa diganti lewat BA15_AWARDEE_CSV.
 //
 // Pakai:  npm run seed:ba15
 //         npx wrangler d1 execute baktinusa-hub-db --remote --file .seed/ba15.sql
@@ -99,6 +100,15 @@ const awardees = ordered.map((r, i) => [
 // ---------- kuesioner ----------
 
 const questionnaire = await readCsv("seed/kuesioner-ba15.csv");
+const formConfigs = JSON.parse(await readFile("seed/formulir-ba15.json", "utf8"));
+for (const period of PERIODS) {
+  const config = formConfigs[period.key];
+  if (!config) throw new Error(`seed/formulir-ba15.json tidak punya konfigurasi "${period.key}"`);
+  for (const option of config.relation.options) {
+    const allowed = PERIOD_TYPES.some((x) => x.period === period.id && RESPONDENT_TYPES.find((t) => t.id === x.type).code === option.type);
+    if (!allowed) throw new Error(`Pilihan hubungan "${option.label}" memakai tipe "${option.type}" yang tidak dibuka di periode ${period.slug}`);
+  }
+}
 const categories = [];
 const instruments = [];
 for (const period of PERIODS) {
@@ -123,8 +133,8 @@ const statements = [
   ...regionNames.map((name) => `INSERT INTO regions (id, name) VALUES (${regionId.get(name)}, ${sql(name)}) ON CONFLICT(id) DO UPDATE SET name = excluded.name;`),
   ...RESPONDENT_TYPES.map((t) => `INSERT INTO respondent_types (id, code, name, audience) VALUES (${t.id}, ${sql(t.code)}, ${sql(t.name)}, ${sql(t.audience)}) ON CONFLICT(id) DO UPDATE SET code = excluded.code, name = excluded.name, audience = excluded.audience;`),
   ...insertStatements("awardees", ["id", "region_id", "batch", "name", "campus", "referral_code", "photo_key", "leadpro_name", "leadpro_field", "leadpro_description"], awardees),
-  ...insertStatements("periods", ["id", "slug", "name", "batch", "kind", "opens_at", "closes_at", "status"],
-    PERIODS.map((p) => [p.id, p.slug, p.name, BATCH, p.kind, null, null, "draft"])),
+  ...insertStatements("periods", ["id", "slug", "name", "batch", "kind", "opens_at", "closes_at", "status", "form_config"],
+    PERIODS.map((p) => [p.id, p.slug, p.name, BATCH, p.kind, null, null, "draft", JSON.stringify(formConfigs[p.key])])),
   ...insertStatements("period_respondent_types", ["period_id", "respondent_type_id", "target_rule", "target_min", "opens_at", "closes_at"],
     PERIOD_TYPES.map((x) => [x.period, x.type, x.rule, x.min, null, null])),
   ...insertStatements("instrument_categories", ["id", "period_id", "name", "weight", "order_index"],
