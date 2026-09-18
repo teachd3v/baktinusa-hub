@@ -18,6 +18,7 @@
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.1",
     "@vitejs/plugin-rsc": "^0.5.35",
+    "papaparse": "^5.7.0",
     "tailwindcss": "^4.3.3",
     "typescript": "^7.0.2",
     "vite": "^8.3.0",
@@ -28,6 +29,10 @@
     "dev": "vinext dev",
     "build": "vinext build",
     "start": "wrangler dev --config dist/server/wrangler.json",
-    "deploy": "vinext-cloudflare deploy --config dist/server/wrangler.json"
+    "deploy": "vinext-cloudflare deploy --config dist/server/wrangler.json",
+    "db:migrate:local": "wrangler d1 migrations apply baktinusa-hub-db --local",
+    "db:migrate:remote": "wrangler d1 migrations apply baktinusa-hub-db --remote",
+    "import:ba15": "node --env-file=.env.import scripts/import-ba15.mjs",
+    "verify:ba15": "node --no-warnings --env-file=.env.import scripts/verify-ba15.mjs"
   }
 }

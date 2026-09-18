@@ -7,3 +7,6 @@ next-env.d.ts
 .vinext/
 .wrangler/
 *.tsbuildinfo
+
+# keluaran script impor (berisi data pribadi)
+/.import/
