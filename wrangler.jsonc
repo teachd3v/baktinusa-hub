@@ -1,0 +1,41 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "baktinusa-hub",
+  // Dikunci di sini karena CLOUDFLARE_ACCOUNT_ID di environment user menunjuk ke akun lain.
+  // account_id di config menang atas env var (lihat getActiveAccountId di wrangler).
+  "account_id": "6dea7431212db790894cca82864822c0",
+  "compatibility_date": "2026-09-18",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  // Entry sendiri supaya handler scheduled() (Cron Triggers) hidup di Worker yang sama dengan vinext.
+  "main": "./worker/index.ts",
+  "assets": {
+    "directory": "dist/client",
+    "not_found_handling": "none",
+    "binding": "ASSETS"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "baktinusa-hub-db",
+      "database_id": "6b43806e-8a1d-497b-8c7b-0a583a3b5d7c",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "kv_namespaces": [
+    {
+      "binding": "SESSIONS",
+      "id": "6af2b9fa807042c6ae5adb860c3a032d"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "FILES",
+      "bucket_name": "baktinusa-hub-files"
+    }
+  ],
+  "observability": {
+    "enabled": true
+  }
+}
