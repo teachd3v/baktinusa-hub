@@ -50,8 +50,8 @@
     }
   ],
   "vars": {
-    // Sitekey production diisi setelah widget Turnstile dibuat. Kosong = form menolak semua kiriman.
-    "TURNSTILE_SITE_KEY": "",
+    // Sitekey widget Turnstile "baktinusa-hub" (publik). Secret-nya: TURNSTILE_SECRET.
+    "TURNSTILE_SITE_KEY": "0x4AAAAAAE7cxR6fTeyN9CuT",
     // Hostname frontend yang sah menurut siteverify. Jangan pernah memasukkan localhost di sini.
     "TURNSTILE_HOSTNAMES": "baktinusa-hub.te4ch.workers.dev"
   },
