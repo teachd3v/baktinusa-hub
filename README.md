@@ -59,8 +59,9 @@ npm run seed:ba15
 npx wrangler d1 execute baktinusa-hub-db --remote --file .seed/ba15.sql
 ```
 
-`scripts/seed-ba15.mjs` **menghapus semua respons milik periode BA15** lalu mengisi ulang data masternya, jadi jangan dijalankan
-ke production setelah periode mulai menerima isian.
+Seed bersifat **upsert**: baris master diperbarui berdasarkan kuncinya, tidak ada yang dihapus, dan respons tidak disentuh.
+Status serta tanggal periode yang sudah ada juga tidak ditimpa — aman dijalankan ulang ke production untuk memperbarui
+kuesioner atau `form_config`. Yang *tidak* bisa dilakukan seed: menghapus pertanyaan atau awardee yang sudah dibuang dari CSV.
 
 - **Kuesioner** ada di `seed/kuesioner-ba15.csv`: 50 indikator asesmen dan 22 indikator Leadership Project, masing-masing dengan
   kategorinya. Batas asesmen mengikuti rubrik — Self-Maturity Q1–Q18, Competency Enrichment Q19–Q39, Bringing Inspiration Q40–Q50.
@@ -92,6 +93,20 @@ npm run login-link -- nama@email.com --admin "Nama Lengkap"
 
 Tambahkan `--local` untuk D1 lokal. Tanpa `--admin`, script hanya membuat tautan untuk akun yang sudah ada.
 
+## Penilaian berakun
+
+Asesmen mandiri (Asesmen Awal/Tengah), penilaian Peer, dan penilaian Manwil diisi dari akun, bukan dari tautan publik —
+form publik hanya menawarkan hubungan eksternal. Awardee melihat tugasnya di `/awardee/nilai`, Manwil di `/manwil/nilai`;
+keduanya memakai `components/SurveyForm.tsx` yang sama dengan form publik, varian `internal` (tanpa langkah profil dan Turnstile).
+
+- **Siapa menilai siapa** ditentukan server di `lib/data/evaluations.ts`: asesmen mandiri hanya untuk diri sendiri, Peer untuk
+  rekan satu wilayah dan angkatan, Manwil untuk awardee di wilayahnya. Sasaran di luar wewenang dijawab 404, sama seperti yang
+  tidak ada. Izin diperiksa lagi saat `POST /api/evaluasi`.
+- **Asesmen mandiri** memakai teks `text_self` ("Saya …") dan saran dari `form_config.self`.
+- **Satu kali per pengisi**: `responses.submitted_by` diisi, dan indeks unik parsial menolak kiriman kedua — termasuk dari dua tab
+  yang mengirim bersamaan.
+- Tugas muncul hanya selama periodenya `open` dan jendela tipe penilainya (`period_respondent_types.opens_at/closes_at`) berjalan.
+
 ## Uji
 
 ```bash
@@ -99,7 +114,8 @@ npm test
 ```
 
 Menjalankan `lib/data/*` di atas `node:sqlite` dengan migrasi yang sama persis seperti production. Uji membuktikan di lapisan
-query bahwa awardee hanya bisa menarik datanya sendiri, Manwil hanya wilayahnya, dan tautan masuk hanya berlaku sekali.
+query bahwa awardee hanya bisa menarik datanya sendiri, Manwil hanya wilayahnya, tautan masuk hanya berlaku sekali, dan
+penilaian berakun hanya bisa diisi oleh yang berhak, sekali saja.
 
 ## Hal yang perlu diketahui
 

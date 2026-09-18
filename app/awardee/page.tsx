@@ -1,8 +1,10 @@
 import { env } from "cloudflare:workers";
 import type { Metadata } from "next";
+import Link from "next/link";
 import { CopyField } from "@/components/CopyField";
 import { ProgressTable } from "@/components/ProgressTable";
 import { requireUser } from "@/lib/auth";
+import { listTasks } from "@/lib/data/evaluations";
 import { listAwardees, progressForScope } from "@/lib/data/awardees";
 import { isRunningOrDone, listPeriods } from "@/lib/data/periods";
 import { scopeFor } from "@/lib/data/scope";
@@ -13,6 +15,8 @@ export const metadata: Metadata = { title: "Beranda Awardee" };
 export default async function AwardeeHome() {
   const user = await requireUser("awardee");
   const scope = scopeFor(user);
+  const tasks = await listTasks(env.DB, user);
+  const pending = tasks.filter((t) => !t.submitted).length;
   const [me] = await listAwardees(env.DB, scope);
   const periods = (await listPeriods(env.DB)).filter(isRunningOrDone);
   const progress = await Promise.all(periods.map(async (period) => ({ period, rows: await progressForScope(env.DB, scope, period.id) })));
@@ -36,11 +40,17 @@ export default async function AwardeeHome() {
         </section>
 
         <section className="card">
-          <h2 className="section-title">Segera hadir</h2>
-          <ul className="section-hint" style={{ margin: 0, paddingLeft: "1.1rem" }}>
-            <li>Mengisi asesmen mandiri dan menilai rekan se-wilayah dari akun ini.</li>
-            <li>Hasil penilaian 360° dan Leadership Project Anda.</li>
-          </ul>
+          <h2 className="section-title">Penilaian untuk Anda</h2>
+          {tasks.length === 0 ? (
+            <p className="section-hint" style={{ margin: 0 }}>Belum ada penilaian yang dibuka untuk Anda saat ini.</p>
+          ) : (
+            <>
+              <p className="section-hint">
+                {pending === 0 ? "Semua penilaian sudah Anda kirim. Terima kasih!" : `${pending} dari ${tasks.length} penilaian menunggu Anda isi.`}
+              </p>
+              <Link href="/awardee/nilai" className="btn btn-small btn-inline">Buka penilaian</Link>
+            </>
+          )}
         </section>
       </div>
 

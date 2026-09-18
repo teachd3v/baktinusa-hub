@@ -1,7 +1,9 @@
 import { env } from "cloudflare:workers";
 import type { Metadata } from "next";
+import Link from "next/link";
 import { ProgressTable } from "@/components/ProgressTable";
 import { requireUser } from "@/lib/auth";
+import { listTasks } from "@/lib/data/evaluations";
 import { listAwardees, progressForScope } from "@/lib/data/awardees";
 import { isRunningOrDone, listPeriods } from "@/lib/data/periods";
 import { scopeFor } from "@/lib/data/scope";
@@ -12,6 +14,8 @@ export const metadata: Metadata = { title: "Wilayah saya" };
 export default async function ManwilHome() {
   const user = await requireUser("manwil");
   const scope = scopeFor(user);
+  const tasks = await listTasks(env.DB, user);
+  const pending = tasks.filter((t) => !t.submitted).length;
   const awardees = await listAwardees(env.DB, scope);
   const periods = (await listPeriods(env.DB)).filter(isRunningOrDone);
   const progress = await Promise.all(periods.map(async (period) => ({ period, rows: await progressForScope(env.DB, scope, period.id) })));
@@ -23,6 +27,20 @@ export default async function ManwilHome() {
         <h1>Wilayah {awardees[0]?.region ?? ""}</h1>
         <p>{awardees.length} awardee binaan</p>
       </div>
+
+      <section className="card">
+        <h2 className="section-title">Penilaian untuk Anda</h2>
+        {tasks.length === 0 ? (
+          <p className="section-hint" style={{ margin: 0 }}>Belum ada penilaian yang dibuka untuk Anda saat ini.</p>
+        ) : (
+          <>
+            <p className="section-hint">
+              {pending === 0 ? "Semua penilaian sudah Anda kirim. Terima kasih!" : `${pending} dari ${tasks.length} penilaian menunggu Anda isi.`}
+            </p>
+            <Link href="/manwil/nilai" className="btn btn-small btn-inline">Buka penilaian</Link>
+          </>
+        )}
+      </section>
 
       {progress.length === 0 ? (
         <section className="card">

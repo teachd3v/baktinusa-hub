@@ -2,6 +2,23 @@
   "pengukuran": {
     "title": "Evaluasi Publik",
     "subtitle": "Awardee BAKTI NUSA 15",
+    "self": {
+      "title": "Asesmen Mandiri",
+      "feedback": [
+        {
+          "field": "saran_diri",
+          "label": "Refleksi Pengembangan Diri",
+          "question": "Apa yang ingin Anda kembangkan dari kepemimpinan Anda agar lebih berdampak bagi diri sendiri dan masyarakat?",
+          "required": false
+        },
+        {
+          "field": "saran_program",
+          "label": "Saran untuk Program",
+          "question": "Berikan masukan untuk pengembangan program BAKTI NUSA di masa mendatang.",
+          "required": false
+        }
+      ]
+    },
     "identity": {
       "name": "Nama Saudara",
       "city": "Kota/Kabupaten Domisili saat ini"

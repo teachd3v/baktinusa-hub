@@ -70,6 +70,11 @@ export async function seedFixture(db: D1Database) {
       (3, 1, 2, 5, 'app'),
       (4, 1, 3, 5, 'app'),
       (5, 1, 4, 5, 'app');
+    INSERT INTO instrument_categories (id, period_id, name, order_index) VALUES (1, 1, 'Kategori Uji', 1);
+    INSERT INTO instruments (id, period_id, category_id, code, text_self, text_public, order_index) VALUES
+      (1, 1, 1, 'Q1', 'Saya jujur', 'Yang bersangkutan jujur', 1),
+      (2, 1, 1, 'Q2', 'Saya disiplin', 'Yang bersangkutan disiplin', 2);
+    UPDATE periods SET form_config = '{"title":"Uji","identity":{"name":"Nama","city":"Kota"},"relation":{"question":"Hubungan","options":[{"label":"Teman","type":"external"}]},"feedback":[{"field":"saran_diri","label":"Saran","question":"Saran untuk yang bersangkutan","required":false}],"scale":[{"value":0,"label":"Tidak","emoji":"👎"},{"value":4,"label":"Sangat","emoji":"🌟"}],"self":{"title":"Asesmen Mandiri","feedback":[{"field":"saran_diri","label":"Refleksi","question":"Apa yang ingin Anda kembangkan?","required":true}]}}' WHERE id = 1;
     INSERT INTO users (id, email, name, role, region_id, awardee_id, status) VALUES
       (1, 'admin@contoh.id', 'Admin', 'admin', NULL, NULL, 'active'),
       (2, 'manwil.bandung@contoh.id', 'Manwil Bandung', 'manwil', 1, NULL, 'active'),

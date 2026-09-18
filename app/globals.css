@@ -734,3 +734,26 @@ a {
   text-decoration: underline;
   cursor: pointer;
 }
+
+/* Form penilaian berakun di dalam kerangka aplikasi: lebar sekolom seperti form publik. */
+.internal-form {
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.back-link {
+  display: inline-block;
+  margin-bottom: 0.5rem;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.back-link:hover {
+  color: var(--text-main);
+}
+
+.btn-inline {
+  display: inline-block;
+}

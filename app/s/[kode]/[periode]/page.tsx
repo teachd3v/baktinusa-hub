@@ -5,7 +5,7 @@ import { BrandHeader } from "@/components/BrandHeader";
 import { formatWib } from "@/lib/format";
 import { getPublicForm } from "@/lib/survey";
 import { TURNSTILE_ACTION } from "@/lib/turnstile";
-import { SurveyForm } from "./SurveyForm";
+import { SurveyForm } from "@/components/SurveyForm";
 
 export const dynamic = "force-dynamic";
 
@@ -41,13 +41,20 @@ export default async function SurveyPage({ params }: { params: Promise<{ kode: s
   const { form } = lookup;
   return (
     <SurveyForm
+      variant="public"
       kode={form.awardee.referralCode}
       periode={form.period.slug}
+      title={form.config.title}
+      subtitle={form.config.subtitle}
+      hint={`Seberapa setuju Anda dengan pernyataan berikut tentang ${form.awardee.name}?`}
+      draftKey={`baktinusa-hub:draft:${form.awardee.referralCode}:${form.period.slug}`}
       siteKey={env.TURNSTILE_SITE_KEY ?? ""}
       turnstileAction={TURNSTILE_ACTION}
       closesAt={form.period.closesAt}
       awardee={{ name: form.awardee.name, region: form.awardee.region, campus: form.awardee.campus, referralCode: form.awardee.referralCode }}
-      config={form.config}
+      profile={{ identity: form.config.identity, relation: form.config.relation, knownDuration: form.config.knownDuration }}
+      scale={form.config.scale}
+      feedback={form.config.feedback}
       instruments={form.instruments.map(({ code, text, category }) => ({ code, text, category }))}
     />
   );

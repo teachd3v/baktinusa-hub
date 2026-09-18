@@ -1,7 +1,7 @@
 // Seed data master BA15: wilayah, awardee, tipe responden, dan kuesioner.
 //
-// Hub dimulai tanpa data transaksi. Script ini MENGHAPUS semua respons milik periode BA15, lalu mengisi ulang
-// data master. Periode dibuat sebagai draft tanpa tanggal; Admin yang membukanya nanti.
+// Idempoten dan aman dijalankan ulang ke production: semua baris di-upsert, tidak ada yang dihapus. Periode baru dibuat
+// sebagai draft tanpa tanggal; status & tanggal periode yang sudah diatur Admin tidak ditimpa.
 //
 // Kuesioner dibaca dari seed/kuesioner-ba15.csv dan konfigurasi form dari seed/formulir-ba15.json (keduanya di repo).
 // Daftar awardee dibaca dari luar repo karena berisi data pribadi — default-nya CSV app leadpro-survey lama,
@@ -54,22 +54,24 @@ const sql = (value) =>
   : `'${String(value).replaceAll("'", "''")}'`;
 
 // D1 membatasi satu pernyataan SQL 100 KB, dan VALUES yang terlalu panjang membuat SQLite lokal kehabisan memori.
-function insertStatements(table, columns, rows, maxBytes = 80_000, maxRows = 500) {
+// conflict: kolom unik yang dicocokkan + kolom yang diperbarui bila barisnya sudah ada.
+function upsertStatements(table, columns, rows, conflict, maxBytes = 80_000, maxRows = 500) {
   const head = `INSERT INTO ${table} (${columns.join(", ")}) VALUES\n`;
+  const tail = `\nON CONFLICT(${conflict.on.join(", ")}) DO UPDATE SET ${conflict.update.map((c) => `${c} = excluded.${c}`).join(", ")};`;
   const out = [];
   let chunk = [];
-  let size = head.length;
+  let size = head.length + tail.length;
   for (const row of rows) {
     const tuple = `(${row.map(sql).join(", ")})`;
     if (chunk.length && (size + tuple.length + 2 > maxBytes || chunk.length >= maxRows)) {
-      out.push(head + chunk.join(",\n") + ";");
+      out.push(head + chunk.join(",\n") + tail);
       chunk = [];
-      size = head.length;
+      size = head.length + tail.length;
     }
     chunk.push(tuple);
     size += tuple.length + 2;
   }
-  if (chunk.length) out.push(head + chunk.join(",\n") + ";");
+  if (chunk.length) out.push(head + chunk.join(",\n") + tail);
   return out;
 }
 
@@ -127,19 +129,23 @@ for (const period of PERIODS) {
 
 const statements = [
   "-- Dihasilkan oleh scripts/seed-ba15.mjs. Berisi nama awardee: jangan di-commit.",
-  `DELETE FROM responses WHERE period_id IN (SELECT id FROM periods WHERE batch = ${sql(BATCH)});`,
-  `DELETE FROM periods WHERE batch = ${sql(BATCH)};`,
-  `DELETE FROM awardees WHERE batch = ${sql(BATCH)};`,
-  ...regionNames.map((name) => `INSERT INTO regions (id, name) VALUES (${regionId.get(name)}, ${sql(name)}) ON CONFLICT(id) DO UPDATE SET name = excluded.name;`),
-  ...RESPONDENT_TYPES.map((t) => `INSERT INTO respondent_types (id, code, name, audience) VALUES (${t.id}, ${sql(t.code)}, ${sql(t.name)}, ${sql(t.audience)}) ON CONFLICT(id) DO UPDATE SET code = excluded.code, name = excluded.name, audience = excluded.audience;`),
-  ...insertStatements("awardees", ["id", "region_id", "batch", "name", "campus", "referral_code", "photo_key", "leadpro_name", "leadpro_field", "leadpro_description"], awardees),
-  ...insertStatements("periods", ["id", "slug", "name", "batch", "kind", "opens_at", "closes_at", "status", "form_config"],
-    PERIODS.map((p) => [p.id, p.slug, p.name, BATCH, p.kind, null, null, "draft", JSON.stringify(formConfigs[p.key])])),
-  ...insertStatements("period_respondent_types", ["period_id", "respondent_type_id", "target_rule", "target_min", "opens_at", "closes_at"],
-    PERIOD_TYPES.map((x) => [x.period, x.type, x.rule, x.min, null, null])),
-  ...insertStatements("instrument_categories", ["id", "period_id", "name", "weight", "order_index"],
-    categories.map((c) => [c.id, c.periodId, c.name, 1, c.order])),
-  ...insertStatements("instruments", ["id", "period_id", "category_id", "code", "text_self", "text_public", "scale_max", "order_index"], instruments),
+  ...upsertStatements("regions", ["id", "name"], regionNames.map((name) => [regionId.get(name), name]), { on: ["id"], update: ["name"] }),
+  ...upsertStatements("respondent_types", ["id", "code", "name", "audience"], RESPONDENT_TYPES.map((t) => [t.id, t.code, t.name, t.audience]),
+    { on: ["id"], update: ["code", "name", "audience"] }),
+  ...upsertStatements("awardees", ["id", "region_id", "batch", "name", "campus", "referral_code", "photo_key", "leadpro_name", "leadpro_field", "leadpro_description"], awardees,
+    { on: ["id"], update: ["region_id", "batch", "name", "campus", "referral_code", "photo_key", "leadpro_name", "leadpro_field", "leadpro_description"] }),
+  // Status & tanggal periode tidak ikut diperbarui: itu wewenang Admin.
+  ...upsertStatements("periods", ["id", "slug", "name", "batch", "kind", "opens_at", "closes_at", "status", "form_config"],
+    PERIODS.map((p) => [p.id, p.slug, p.name, BATCH, p.kind, null, null, "draft", JSON.stringify(formConfigs[p.key])]),
+    { on: ["id"], update: ["slug", "name", "batch", "kind", "form_config"] }),
+  ...upsertStatements("period_respondent_types", ["period_id", "respondent_type_id", "target_rule", "target_min", "opens_at", "closes_at"],
+    PERIOD_TYPES.map((x) => [x.period, x.type, x.rule, x.min, null, null]),
+    { on: ["period_id", "respondent_type_id"], update: ["target_rule", "target_min"] }),
+  ...upsertStatements("instrument_categories", ["id", "period_id", "name", "weight", "order_index"],
+    categories.map((c) => [c.id, c.periodId, c.name, 1, c.order]),
+    { on: ["id"], update: ["period_id", "name", "weight", "order_index"] }),
+  ...upsertStatements("instruments", ["id", "period_id", "category_id", "code", "text_self", "text_public", "scale_max", "order_index"], instruments,
+    { on: ["id"], update: ["period_id", "category_id", "code", "text_self", "text_public", "scale_max", "order_index"] }),
 ];
 
 await mkdir(".seed", { recursive: true });

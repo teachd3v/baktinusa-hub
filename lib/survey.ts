@@ -1,18 +1,10 @@
 import { env } from "cloudflare:workers";
+import type { FeedbackField, FormConfig } from "./data/form-config.ts";
+import { boundedText, receiptCode, validateFeedback, validateScores } from "./data/validation.ts";
 
 // ---------- tipe ----------
 
-export type FeedbackField = "saran_diri" | "saran_program" | "pesan" | "kritik" | "saran_keberlanjutan";
-
-export type FormConfig = {
-  title: string;
-  subtitle?: string;
-  identity: { name: string; city: string };
-  relation: { question: string; options: { label: string; type: string; detail?: string }[] };
-  knownDuration?: { question: string; options: string[] };
-  feedback: { field: FeedbackField; label: string; question: string; required: boolean }[];
-  scale: { value: number; label: string; emoji: string }[];
-};
+export type { FeedbackField, FormConfig };
 
 export type PublicAwardee = {
   id: number;
@@ -172,7 +164,7 @@ export type ValidSubmission = {
   feedback: [field: FeedbackField, body: string][];
 };
 
-const text = (value: unknown, max: number) => (typeof value === "string" ? value.trim().slice(0, max + 1) : "");
+const text = boundedText;
 
 export function validateSubmission(form: OpenForm, input: Partial<Submission>): { ok: true; value: ValidSubmission } | { ok: false; message: string } {
   const name = text(input.name, 120);
@@ -198,25 +190,12 @@ export function validateSubmission(form: OpenForm, input: Partial<Submission>): 
     if (!knownDuration) return { ok: false, message: "Pilih berapa lama Anda mengenal awardee." };
   }
 
-  const scores: [number, number][] = [];
-  const given = input.scores && typeof input.scores === "object" ? input.scores : {};
-  for (const instrument of form.instruments) {
-    const score = (given as Record<string, unknown>)[instrument.code];
-    if (!Number.isInteger(score) || (score as number) < 0 || (score as number) > instrument.scaleMax) {
-      return { ok: false, message: "Masih ada pernyataan yang belum dinilai." };
-    }
-    scores.push([instrument.id, score as number]);
-  }
+  const scores = validateScores(form.instruments, input.scores);
+  if (!scores.ok) return scores;
+  const feedback = validateFeedback(form.config.feedback, input.feedback);
+  if (!feedback.ok) return feedback;
 
-  const feedback: [FeedbackField, string][] = [];
-  for (const item of form.config.feedback) {
-    const body = text(input.feedback?.[item.field], 5000);
-    if (body.length > 5000) return { ok: false, message: `${item.label} maksimal 5.000 karakter.` };
-    if (item.required && !body) return { ok: false, message: `${item.label} wajib diisi.` };
-    if (body) feedback.push([item.field, body]);
-  }
-
-  return { ok: true, value: { respondentTypeId, name, city, relation, knownDuration, scores, feedback } };
+  return { ok: true, value: { respondentTypeId, name, city, relation, knownDuration, scores: scores.value, feedback: feedback.value } };
 }
 
 // ---------- simpan ----------
@@ -249,4 +228,4 @@ export async function saveResponse(form: OpenForm, value: ValidSubmission, finge
   return publicId;
 }
 
-export const receiptCode = (publicId: string) => publicId.replaceAll("-", "").slice(0, 8).toUpperCase();
+export { receiptCode };
