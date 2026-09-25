@@ -150,6 +150,14 @@ npm run demo-data -- --reset # hapus lagi
   belum terpakai). Awardee yang sudah punya jawaban tidak bisa dipindah angkatannya atau dihapus.
 - **Membuka angkatan baru tanpa menyentuh kode**: buat periode (boleh menyalin kategori, pertanyaan, dan tipe penilai dari
   periode lama), rapikan teks form publik, atur jadwal dan target, tambahkan awardee-nya, lalu buka periodenya.
+- **`/admin/respons`** — data mentah yang masuk dengan penanda kiriman kembar (sidik jari perangkat yang sama untuk
+  awardee & tipe yang sama). Ditandai, bukan dihapus otomatis — satu keluarga bisa mengisi dari satu ponsel. Menghapus
+  respons butuh konfirmasi dua langkah dan mencatat isinya ke jejak audit.
+- **Ekspor CSV** lewat `/api/ekspor/matriks?periode=<slug>` (agregat, boleh diunduh Manwil untuk wilayahnya) dan
+  `/api/ekspor/mentah?periode=<slug>` (satu baris per pengisi, memuat identitas responden — **hanya Admin**). Pemisahnya
+  titik koma dan berkasnya ber-BOM supaya Excel berbahasa Indonesia membacanya langsung benar.
+- **PDF belum ada sebagai berkas**; halaman hasil punya gaya cetak, jadi "Cetak → Simpan sebagai PDF" di browser
+  menghasilkan rapor yang rapi tanpa kerangka aplikasi.
 - **`/admin/jejak`** — setiap perubahan lewat konsol tercatat di `audit_log` beserta nama pelakunya. Jejak ditulis di
   `lib/data/*`, bukan di halaman, supaya tidak ada jalur ubah yang lolos tanpa tercatat. Tidak ada tombol hapus jejak.
 

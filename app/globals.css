@@ -938,3 +938,25 @@ a {
     grid-column: 1 / -1;
   }
 }
+
+/* Cetak / simpan sebagai PDF: buang kerangka aplikasi, sisakan isinya di atas kertas putih. */
+@media print {
+  html, body { background: #fff; }
+
+  .shell-bar, .tabs, .back-link, .btn, .btn-link, form { display: none !important; }
+
+  .shell-main { max-width: none; padding: 0; }
+
+  .card {
+    margin-bottom: 1rem;
+    border: 1px solid #ddd;
+    box-shadow: none;
+    break-inside: avoid;
+  }
+
+  .score-card, .quote, .bar-row { break-inside: avoid; }
+
+  .table-wrap { overflow: visible; }
+
+  a[href]::after { content: ""; }
+}

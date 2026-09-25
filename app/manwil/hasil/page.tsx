@@ -67,7 +67,10 @@ export default async function ManwilResults({ searchParams }: { searchParams: Pr
 
       <section className="card">
         <h2 className="section-title">Awardee binaan</h2>
-        <p className="section-hint">Klik nama untuk melihat rincian per kategori dan masukan yang masuk.</p>
+        <p className="section-hint">
+          Klik nama untuk melihat rincian per kategori dan masukan yang masuk.{" "}
+          <a href={`/api/ekspor/matriks?periode=${active.slug}`}>Unduh matriks wilayah (CSV)</a>.
+        </p>
         <MatrixTable results={results} typeCodes={types} hrefBase="/manwil/hasil" />
       </section>
     </>

@@ -73,6 +73,17 @@ export default async function AdminResults({ searchParams }: { searchParams: Pro
       </div>
 
       <section className="card">
+        <h2 className="section-title">Unduh data</h2>
+        <p className="section-hint">
+          CSV siap dibuka di Excel. Data mentah memuat identitas responden — simpan seperti data pribadi lainnya.
+        </p>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
+          <a className="btn btn-small btn-inline" href={`/api/ekspor/matriks?periode=${active.slug}`}>Matriks (CSV)</a>
+          <a className="btn btn-muted btn-small btn-inline" href={`/api/ekspor/mentah?periode=${active.slug}`}>Data mentah (CSV)</a>
+        </div>
+      </section>
+
+      <section className="card">
         <h2 className="section-title">Matriks seluruh awardee</h2>
         <form method="get" className="copy-row" style={{ margin: "0 0 1rem" }}>
           <input type="hidden" name="periode" value={active.slug} />
