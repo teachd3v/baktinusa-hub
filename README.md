@@ -134,6 +134,19 @@ npm run demo-data -- --reset # hapus lagi
 
 `scripts/demo-data.mjs` sengaja tidak punya mode `--remote`, dan semua barisnya ditandai `source = 'demo'`.
 
+## Konsol Admin
+
+- **`/admin/periode`** — daftar periode; **`/admin/periode/<slug>`** mengatur satu periode: nama, jadwal, status, serta
+  jadwal dan target tiap tipe penilai. Deadline yang dulu ditulis tangan di enam berkas kini hanya ada di sini.
+- **Jadwal per tipe** menentukan kapan masing-masing penilai bisa mengisi. Yang paling cepat menutup yang berlaku —
+  jadwal periode tetap batas luarnya. Inilah cara memisahkan Asesmen Awal dan Asesmen Tengah agar tidak muncul bersamaan.
+- **Waktu diketik dalam WIB, disimpan sebagai UTC** (`lib/waktu.ts`), jadi zona waktu laptop pengelola tidak ikut menentukan.
+- **Pagar yang ditegakkan di lapisan data**, bukan hanya di tampilan: periode tanpa pertanyaan tidak bisa dibuka; periode
+  yang sudah menerima jawaban tidak bisa dikembalikan ke draft (tutup saja — hasilnya tetap terbaca); tipe penilai yang
+  sudah punya jawaban tidak bisa dilepas; target "jumlah tetap" wajib punya angka.
+- **`/admin/jejak`** — setiap perubahan lewat konsol tercatat di `audit_log` beserta nama pelakunya. Jejak ditulis di
+  `lib/data/*`, bukan di halaman, supaya tidak ada jalur ubah yang lolos tanpa tercatat. Tidak ada tombol hapus jejak.
+
 ## Uji
 
 ```bash
