@@ -6,60 +6,56 @@ import { NavIcon } from "./NavIcon";
 
 // Lekukan rail di sekitar menu aktif.
 //
-// Bentuknya bukan sekadar rail dikurangi lingkaran — kalau begitu, tepi lurus dan lingkarannya bertemu
-// di sudut yang patah. Yang dipakai di sini kurva-S: garis lurus → busur sambung (fillet) → busur
-// melingkari tombol → busur sambung → garis lurus lagi. Fillet-nya menyinggung keduanya, jadi arah
-// tepinya tidak pernah melompat dan lekukannya terbaca mulus.
+// Bentuknya satu gelombang panjang, bukan gigitan lingkaran: tepi pil turun lurus, melandai ke dalam,
+// memeluk tombol, lalu melandai keluar lagi. Tombolnya sendiri tidak menyembul — ia duduk di atas
+// lekukan itu, sehingga sisi kirinya menumpang sedikit pada pil yang tersisa.
 //
-// Caranya menggambar: satu path berwarna latar halaman dilukis DI ATAS pil gelap, dan batas kirinya
-// itulah tepi gelap yang baru. Semua yang di sebelah kanan batas jadi warna halaman — di luar rail pun
-// tidak apa-apa, di sana memang sudah warna halaman.
+// Tiga ukuran yang menentukan rupanya:
+//   DEPTH  — seberapa dalam gelombang memakan pil (sisa pil = lebar pil − DEPTH)
+//   REACH  — setengah tinggi gelombang; 54 membuatnya setinggi dua slot menu
+//   MIDDLE — radius busur yang memeluk tombol; makin kecil, makin ketat pelukannya
+//
+// Radius busur sambungnya (FILLET) TIDAK ditebak, melainkan dihitung supaya ketiga busur benar-benar
+// bersinggungan: dengan SPAN = FILLET + MIDDLE, berlaku REACH² = SPAN² − (SPAN − DEPTH)².
+// Kalau ditebak, sambungannya patah atau tepinya berbalik jadi paruh.
+//
+// Melukisnya: satu path berwarna latar halaman ditaruh DI ATAS pil gelap; batas kirinya jadi tepi baru.
 
 const ITEM = 48; // diameter tombol menu
 const PAD = 12; // jarak tepi pil ke tombol
-const POP = 18; // seberapa jauh tombol aktif menyembul dari pil
-const RING = 10; // lebar cincin putih antara tombol dan tepi gelap
-// Radius busur sambung. Harus lebih kecil dari (edge - cx), jarak pusat tombol ke tepi pil:
-// kalau tidak, pusat fillet jatuh melewati pusat gigitan dan tepinya berbalik jadi paruh.
-const FILLET = 14;
+const SHIFT = 6; // tombol aktif digeser sedikit ke luar, jadi tidak pas di poros rail
+const DEPTH = 44;
+const REACH = 54;
+const MIDDLE = 30;
+const MARGIN = 20; // sisa ruang di atas & bawah gelombang
 
-// Semua koordinat relatif terhadap kotak tombol aktif yang sudah digeser keluar.
-const cx = ITEM / 2;
 const cy = ITEM / 2;
-const bite = ITEM / 2 + RING; // radius gigitan
-const edge = ITEM + PAD - POP; // tepi kanan pil
-const margin = 24; // sisa ruang di atas & bawah lekukan
+const edge = ITEM + PAD - SHIFT; // tepi kanan pil, relatif terhadap kotak tombol yang sudah digeser
+const SPAN = (REACH ** 2 + DEPTH ** 2) / (2 * DEPTH);
+const FILLET = SPAN - MIDDLE;
+const middleX = edge - DEPTH + MIDDLE; // pusat busur pemeluk tombol
 
-// Titik tempat fillet meninggalkan garis lurus. Pusat fillet ada di (edge - FILLET, y), dan supaya ia
-// menyinggung gigitan dari dalam, jarak pusatnya ke pusat gigitan harus tepat bite + FILLET.
-const reach = Math.sqrt((bite + FILLET) ** 2 - (edge - FILLET - cx) ** 2);
-const yTop = cy - reach;
-const yBottom = cy + reach;
-
-// Titik singgung fillet dengan gigitan: bergerak sejauh FILLET dari pusat fillet ke arah pusat gigitan.
-const span = bite + FILLET;
-const tx = edge - FILLET + (FILLET * (cx - (edge - FILLET))) / span;
-const tyTop = yTop + (FILLET * (cy - yTop)) / span;
-const tyBottom = cy + (cy - tyTop);
+// Titik singgung fillet atas dengan busur pemeluk: sejauh FILLET dari pusat fillet ke arah pusat busur.
+const filletTopY = cy - REACH;
+const touchX = edge - FILLET + (FILLET * (middleX - (edge - FILLET))) / SPAN;
+const touchTopY = filletTopY + (FILLET * (cy - filletTopY)) / SPAN;
+const touchBottomY = cy + (cy - touchTopY);
 
 const round = (n: number) => Math.round(n * 100) / 100;
-const boxTop = yTop - margin;
-const boxHeight = yBottom - yTop + margin * 2;
-// Kotak gambar dimulai di kiri gigitan, karena lekukannya memakan pil sampai sejauh itu.
-const boxLeft = cx - bite - 8;
-const boxWidth = edge + margin - boxLeft;
+const boxTop = cy - REACH - MARGIN;
+const boxBottom = cy + REACH + MARGIN;
+const boxLeft = edge - DEPTH - 8;
+const boxRight = edge + MARGIN;
 
 const NOTCH = [
   `M ${edge} ${round(boxTop)}`,
-  `L ${edge} ${round(yTop)}`,
-  `A ${FILLET} ${FILLET} 0 0 1 ${round(tx)} ${round(tyTop)}`,
-  // sweep 0 + large-arc 1: busur panjang yang melingkar ke kiri sehingga benar-benar memakan pil.
-  // Diverifikasi dengan menelusuri path: batasnya harus mencapai x = cx - bite di tengah tombol.
-  `A ${bite} ${bite} 0 1 0 ${round(tx)} ${round(tyBottom)}`,
-  `A ${FILLET} ${FILLET} 0 0 1 ${edge} ${round(yBottom)}`,
-  `L ${edge} ${round(boxTop + boxHeight)}`,
-  `L ${round(boxLeft + boxWidth)} ${round(boxTop + boxHeight)}`,
-  `L ${round(boxLeft + boxWidth)} ${round(boxTop)}`,
+  `L ${edge} ${round(filletTopY)}`,
+  `A ${round(FILLET)} ${round(FILLET)} 0 0 1 ${round(touchX)} ${round(touchTopY)}`,
+  `A ${MIDDLE} ${MIDDLE} 0 0 0 ${round(touchX)} ${round(touchBottomY)}`,
+  `A ${round(FILLET)} ${round(FILLET)} 0 0 1 ${edge} ${round(cy + REACH)}`,
+  `L ${edge} ${round(boxBottom)}`,
+  `L ${round(boxRight)} ${round(boxBottom)}`,
+  `L ${round(boxRight)} ${round(boxTop)}`,
   "Z",
 ].join(" ");
 
@@ -67,8 +63,8 @@ function Notch() {
   return (
     <svg
       className="nav-notch"
-      viewBox={`${round(boxLeft)} ${round(boxTop)} ${round(boxWidth)} ${round(boxHeight)}`}
-      style={{ width: boxWidth, height: boxHeight, left: boxLeft }}
+      viewBox={`${round(boxLeft)} ${round(boxTop)} ${round(boxRight - boxLeft)} ${round(boxBottom - boxTop)}`}
+      style={{ width: boxRight - boxLeft, height: boxBottom - boxTop, left: boxLeft }}
       aria-hidden="true"
       focusable="false"
     >

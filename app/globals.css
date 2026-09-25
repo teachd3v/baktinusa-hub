@@ -196,8 +196,9 @@ a {
   flex-direction: column;
   align-items: center;
   gap: 0.9rem;
-  /* Ukuran ini dipakai juga oleh perhitungan lekukan di components/NavLinks.tsx — ubah keduanya bersamaan. */
-  padding: 12px;
+  /* Ukuran ini dipakai juga oleh perhitungan lekukan di components/NavLinks.tsx — ubah keduanya bersamaan.
+     Ruang atasnya dilebihkan supaya gelombang menu pertama tidak terpotong ujung pil. */
+  padding: 34px 12px 12px;
   background: var(--rail);
   border-radius: 2.25rem;
 }
@@ -245,10 +246,11 @@ a {
   background: var(--rail-raised);
 }
 
-/* Menu aktif menyembul ke kanan; lekukan pil-nya digambar oleh .nav-notch. */
+/* Pil-nya yang melekuk masuk (digambar .nav-notch); tombolnya hanya bergeser sedikit ke luar.
+   Angka geser ini harus sama dengan SHIFT di components/NavLinks.tsx. */
 .shell-nav a[aria-current="page"] {
   color: var(--primary-ink);
-  transform: translateX(18px);
+  transform: translateX(6px);
 }
 
 .shell-nav a[aria-current="page"] .nav-dot,
