@@ -144,6 +144,12 @@ npm run demo-data -- --reset # hapus lagi
 - **Pagar yang ditegakkan di lapisan data**, bukan hanya di tampilan: periode tanpa pertanyaan tidak bisa dibuka; periode
   yang sudah menerima jawaban tidak bisa dikembalikan ke draft (tutup saja — hasilnya tetap terbaca); tipe penilai yang
   sudah punya jawaban tidak bisa dilepas; target "jumlah tetap" wajib punya angka.
+- **`/admin/periode/<slug>/instrumen`** — kategori dan pertanyaan periode itu. Setelah jawaban masuk susunannya dikunci
+  (menambah/menghapus soal mengubah arti data yang sudah terkumpul); perbaikan salah ketik tetap boleh, kode dan skala tidak.
+- **`/admin/awardee`** — tambah dan perbaiki data awardee, termasuk kode referal (dengan saran kode acak yang dipastikan
+  belum terpakai). Awardee yang sudah punya jawaban tidak bisa dipindah angkatannya atau dihapus.
+- **Membuka angkatan baru tanpa menyentuh kode**: buat periode (boleh menyalin kategori, pertanyaan, dan tipe penilai dari
+  periode lama), rapikan teks form publik, atur jadwal dan target, tambahkan awardee-nya, lalu buka periodenya.
 - **`/admin/jejak`** — setiap perubahan lewat konsol tercatat di `audit_log` beserta nama pelakunya. Jejak ditulis di
   `lib/data/*`, bukan di halaman, supaya tidak ada jalur ubah yang lolos tanpa tercatat. Tidak ada tombol hapus jejak.
 

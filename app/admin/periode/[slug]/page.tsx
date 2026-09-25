@@ -3,8 +3,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/auth";
+import { getFormText } from "@/lib/data/admin-instruments";
 import { getPeriodDetail } from "@/lib/data/admin-periods";
 import { formatWib } from "@/lib/format";
+import { FormTextForm } from "../InstrumentForms";
 import { AddType, PeriodSchedule, StatusSwitch, TypeRow } from "../PeriodForms";
 
 export const metadata: Metadata = { title: "Atur Periode" };
@@ -21,6 +23,7 @@ export default async function PeriodDetailPage({ params }: { params: Promise<{ s
   const { slug } = await params;
   const period = await getPeriodDetail(env.DB, admin, slug);
   if (!period) notFound();
+  const formText = await getFormText(env.DB, admin, period.id);
 
   return (
     <>
@@ -28,7 +31,8 @@ export default async function PeriodDetailPage({ params }: { params: Promise<{ s
         <Link href="/admin/periode" className="back-link">← Semua periode</Link>
         <h1>{period.name}</h1>
         <p>
-          {period.batch} · {period.instruments} pertanyaan · {period.responses} jawaban masuk
+          {period.batch} · <Link href={`/admin/periode/${period.slug}/instrumen`}>{period.instruments} pertanyaan</Link> ·{" "}
+          {period.responses} jawaban masuk
         </p>
       </div>
 
@@ -60,6 +64,14 @@ export default async function PeriodDetailPage({ params }: { params: Promise<{ s
           ))}
         </div>
       </section>
+
+      {formText && (
+        <section className="card">
+          <h2 className="section-title">Teks form publik</h2>
+          <p className="section-hint">Yang dilihat responden di bagian atas form. Ikut tersalin saat periode dibuat dari periode lain.</p>
+          <FormTextForm periodId={period.id} text={formText} />
+        </section>
+      )}
 
       <section className="card">
         <h2 className="section-title">Tambah tipe penilai</h2>

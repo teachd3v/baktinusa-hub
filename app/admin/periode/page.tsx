@@ -4,6 +4,7 @@ import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { listPeriods } from "@/lib/data/periods";
 import { formatWib } from "@/lib/format";
+import { NewPeriodForm } from "./InstrumentForms";
 
 export const metadata: Metadata = { title: "Periode" };
 
@@ -53,6 +54,14 @@ export default async function PeriodsPage() {
             </tbody>
           </table>
         </div>
+      </section>
+
+      <section className="card">
+        <h2 className="section-title">Buat periode baru</h2>
+        <p className="section-hint">
+          Untuk angkatan berikutnya. Periode baru selalu lahir sebagai draft — belum terlihat siapa pun sampai Anda membukanya.
+        </p>
+        <NewPeriodForm periods={periods} />
       </section>
     </>
   );
