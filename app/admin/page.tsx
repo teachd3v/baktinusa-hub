@@ -69,7 +69,9 @@ export default async function AdminHome() {
               </tbody>
             </table>
           </div>
-          <p className="section-hint" style={{ margin: "0.75rem 0 0" }}>Membuka dan menjadwalkan periode dari sini hadir di Fase 5.</p>
+          <p className="section-hint" style={{ margin: "0.75rem 0 0" }}>
+            <Link href="/admin/periode">Atur jadwal dan status periode</Link> — termasuk jadwal tiap tipe penilai.
+          </p>
         </section>
       </div>
 

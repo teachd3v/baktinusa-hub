@@ -183,6 +183,22 @@ Menguji lokal: `npm run build`, lalu `npx wrangler dev --config dist/server/wran
 `/cdn-cgi/handler/scheduled?cron=*/15+*+*+*+*`. Catatan: worker hasil build memakai state D1 lokalnya sendiri di
 `dist/server/.wrangler/` — `--persist-to` diabaikan karena config-nya ada di folder itu.
 
+## Design system
+
+Satu berkas token, `app/globals.css`, jadi sumber tunggal warna, tipografi, sudut, dan bayangan. Aturan mainnya:
+**halaman dan komponen tidak menulis warna sendiri** — semuanya memanggil token. Contoh hidupnya ada di `/admin/gaya`,
+dirender memakai kelas yang sama persis seperti halaman sungguhan, jadi panduan itu tidak bisa basi diam-diam.
+
+- **Bahasa rupa**: latar terang lapang, kartu putih bersudut besar, rail navigasi navy, dan kartu pastel sebagai penanda
+  kategori. Merah BAKTI NUSA dipertahankan untuk aksi dan penanda aktif — bukan lagi sebagai latar halaman.
+- **Rail navigasi** (`.shell-bar`) berisi ikon SVG inline dari `components/NavIcon.tsx`; ikonnya dipilih dari label menu,
+  jadi menambah menu tidak perlu menyentuh dua berkas. Di layar ≤900px rail berubah jadi dua baris: merek & akun di atas,
+  menu yang bisa digeser mendatar di bawahnya.
+- **Pastel berputar otomatis**: `.score-grid > .score-card:nth-child(5n + …)` memberi warna bergantian, jadi halaman tidak
+  perlu menentukan warna per kartu.
+- **Warna grafik** punya tokennya sendiri (`--chart-*`), lebih pekat dari token status karena dipakai dalam potongan kecil.
+- Status tidak pernah disampaikan lewat warna saja — selalu ada kata di sebelahnya.
+
 ## Uji
 
 ```bash

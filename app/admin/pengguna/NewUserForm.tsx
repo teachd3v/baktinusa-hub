@@ -70,7 +70,7 @@ export function NewUserForm({ regions, awardees }: Props) {
       </div>
 
       {state && (
-        <p className={state.ok ? "section-hint" : "form-error"} role={state.ok ? "status" : "alert"} style={state.ok ? { color: "#166534" } : undefined}>
+        <p className={state.ok ? "section-hint" : "form-error"} role={state.ok ? "status" : "alert"} style={state.ok ? { color: "var(--ok)" } : undefined}>
           {state.message}
         </p>
       )}

@@ -95,7 +95,7 @@ export function AwardeeRow({ regions, awardee }: { regions: Region[]; awardee: A
       </tr>
       {open && (
         <tr>
-          <td colSpan={7} style={{ background: "var(--surface)" }}>
+          <td colSpan={7} style={{ background: "var(--surface-sunken)" }}>
             <form action={action}>
               <input type="hidden" name="awardeeId" value={awardee.id} />
               <Fields regions={regions} awardee={awardee} />

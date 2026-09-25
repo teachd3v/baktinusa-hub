@@ -12,11 +12,11 @@ import {
 } from "@/lib/data/results";
 
 const SPREAD_COLOR: Record<string, string> = {
-  cumlaude: "#16a34a",
-  sangat_memuaskan: "#2563eb",
-  memuaskan: "#f59e0b",
-  perlu_peningkatan: "#dc2626",
-  belum: "#d1d5db",
+  cumlaude: "var(--chart-ok)",
+  sangat_memuaskan: "var(--chart-info)",
+  memuaskan: "var(--chart-warn)",
+  perlu_peningkatan: "var(--chart-bad)",
+  belum: "var(--chart-none)",
 };
 
 const keyOf = (p: Predicate | null) => p ?? "belum";

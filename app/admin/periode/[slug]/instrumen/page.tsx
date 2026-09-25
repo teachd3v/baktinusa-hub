@@ -29,7 +29,7 @@ export default async function InstrumentsPage({ params }: { params: Promise<{ sl
       </div>
 
       {locked && (
-        <div className="card" style={{ borderLeft: "4px solid var(--warn-border)" }}>
+        <div className="card" style={{ borderLeft: "4px solid var(--warn)" }}>
           <h2 className="section-title">Susunan terkunci</h2>
           <p className="section-hint" style={{ margin: 0 }}>
             Periode ini sudah menerima {period.responses} jawaban. Kategori dan pertanyaan tidak bisa ditambah, dihapus,

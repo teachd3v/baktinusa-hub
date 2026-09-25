@@ -92,7 +92,7 @@ export function TypeRow({ periodId, type }: { periodId: number; type: PeriodType
   const id = `tipe-${type.typeId}`;
 
   return (
-    <div className="card" style={{ background: "var(--surface)", boxShadow: "none" }}>
+    <div className="card" style={{ background: "var(--surface-sunken)", boxShadow: "none" }}>
       <div style={{ display: "flex", justifyContent: "space-between", gap: "0.75rem", flexWrap: "wrap", alignItems: "baseline" }}>
         <h3 className="section-title" style={{ margin: 0 }}>{type.name}</h3>
         <span className="section-hint" style={{ margin: 0 }}>{type.responses} jawaban masuk</span>

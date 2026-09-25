@@ -118,7 +118,7 @@ export function InstrumentRowForm({ periodId, instrument, locked }: { periodId: 
   const [open, setOpen] = useState(false);
 
   return (
-    <div style={{ borderTop: "1px solid #eee7e5", padding: "0.6rem 0" }}>
+    <div style={{ borderTop: "1px solid var(--line)", padding: "0.6rem 0" }}>
       <div style={{ display: "flex", gap: "0.75rem", alignItems: "baseline", justifyContent: "space-between" }}>
         <p style={{ margin: 0, fontSize: "0.88rem" }}>
           <b>{instrument.code}</b> · {instrument.textPublic}
@@ -160,7 +160,7 @@ export function CategoryBlock({ periodId, category, locked }: { periodId: number
   const [open, setOpen] = useState(false);
 
   return (
-    <section className="card" style={{ background: "var(--surface)", boxShadow: "none" }}>
+    <section className="card" style={{ background: "var(--surface-sunken)", boxShadow: "none" }}>
       <div style={{ display: "flex", justifyContent: "space-between", gap: "0.75rem", flexWrap: "wrap", alignItems: "baseline" }}>
         <h3 className="section-title" style={{ margin: 0 }}>{category.name}</h3>
         <span className="section-hint" style={{ margin: 0 }}>{category.instruments.length} pertanyaan</span>

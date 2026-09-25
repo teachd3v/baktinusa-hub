@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { NavIcon } from "./NavIcon";
 
 export function NavLinks({ items }: { items: { href: string; label: string }[] }) {
   const pathname = usePathname();
@@ -13,6 +14,7 @@ export function NavLinks({ items }: { items: { href: string; label: string }[] }
     <nav className="shell-nav" aria-label="Navigasi utama">
       {items.map((item) => (
         <Link key={item.href} href={item.href} aria-current={item.href === active ? "page" : undefined}>
+          <NavIcon label={item.label} />
           {item.label}
         </Link>
       ))}

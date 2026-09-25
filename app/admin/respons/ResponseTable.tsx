@@ -17,7 +17,7 @@ function DeleteCell({ row }: { row: ResponseRow }) {
   return (
     <form action={action} style={{ display: "flex", gap: "0.4rem", alignItems: "center" }}>
       <input type="hidden" name="responseId" value={row.id} />
-      <button type="submit" className="btn-link" style={{ color: "var(--primary-hover)" }} disabled={pending}>
+      <button type="submit" className="btn-link" style={{ color: "var(--bad)" }} disabled={pending}>
         {pending ? "Menghapus…" : "Ya, hapus"}
       </button>
       <button type="button" className="btn-link" onClick={() => setConfirming(false)}>Batal</button>

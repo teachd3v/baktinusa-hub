@@ -95,7 +95,7 @@ export function CategoryTable({ types }: { types: TypeResult[] }) {
         <tbody>
           {categories.map((c: CategoryScore) => (
             <tr key={c.id}>
-              <th scope="row" style={{ fontWeight: 600, textTransform: "none", letterSpacing: 0, fontSize: "0.88rem", color: "var(--text-main)" }}>
+              <th scope="row" style={{ fontWeight: 600, textTransform: "none", letterSpacing: 0, fontSize: "0.88rem", color: "var(--ink)" }}>
                 {c.name}
               </th>
               {shown.map((t) => (
@@ -104,7 +104,7 @@ export function CategoryTable({ types }: { types: TypeResult[] }) {
             </tr>
           ))}
           <tr>
-            <th scope="row" style={{ fontWeight: 800, textTransform: "none", letterSpacing: 0, fontSize: "0.88rem", color: "var(--text-main)" }}>IPK</th>
+            <th scope="row" style={{ fontWeight: 800, textTransform: "none", letterSpacing: 0, fontSize: "0.88rem", color: "var(--ink)" }}>IPK</th>
             {shown.map((t) => (
               <td key={t.code} className="num"><b>{fmt(t.ipk)}</b></td>
             ))}

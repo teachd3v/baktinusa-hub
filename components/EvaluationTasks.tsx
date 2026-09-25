@@ -63,7 +63,7 @@ export function EvaluationTasks({ tasks, basePath }: { tasks: EvalTask[]; basePa
 export function SentBanner({ receipt }: { receipt: string | undefined }) {
   if (!receipt || !/^[0-9A-F]{8}$/.test(receipt)) return null;
   return (
-    <div className="card fade-in" role="status" style={{ borderLeft: "4px solid #16a34a" }}>
+    <div className="card fade-in" role="status" style={{ borderLeft: "4px solid var(--ok)" }}>
       <h2 className="section-title">Terima kasih, penilaian terkirim ✅</h2>
       <p className="section-hint" style={{ margin: 0 }}>
         Kode bukti: <b>{receipt}</b>. Jawaban yang sudah dikirim tidak bisa diubah.
