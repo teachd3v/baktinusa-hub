@@ -23,8 +23,10 @@ import { NavIcon } from "./NavIcon";
 
 const ITEM = 48; // diameter tombol menu
 const PAD = 12; // jarak tepi pil ke tombol
-const SHIFT = 6; // tombol aktif digeser sedikit ke luar, jadi tidak pas di poros rail
-const DEPTH = 44;
+// Geseran tombol aktif ke luar. Celah putih di sisi kirinya = DEPTH + SHIFT − (ITEM + PAD);
+// kalau angkanya negatif, tombol menempel dan menumpang di atas pil.
+const SHIFT = 18;
+const DEPTH = 48;
 const REACH = 54;
 const MIDDLE = 30;
 const MARGIN = 20; // sisa ruang di atas & bawah gelombang
