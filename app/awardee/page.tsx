@@ -40,6 +40,14 @@ export default async function AwardeeHome() {
         </section>
 
         <section className="card">
+          <h2 className="section-title">Hasil penilaian Anda</h2>
+          <p className="section-hint">
+            IPK per sudut pandang, perbandingan kategori, dan masukan yang ditulis para penilai.
+          </p>
+          <Link href="/awardee/hasil" className="btn btn-small btn-inline">Lihat hasil</Link>
+        </section>
+
+        <section className="card">
           <h2 className="section-title">Penilaian untuk Anda</h2>
           {tasks.length === 0 ? (
             <p className="section-hint" style={{ margin: 0 }}>Belum ada penilaian yang dibuka untuk Anda saat ini.</p>

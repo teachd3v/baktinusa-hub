@@ -757,3 +757,184 @@ a {
 .btn-inline {
   display: inline-block;
 }
+
+/* ---------- hasil penilaian ---------- */
+
+.pill-info { background: #dbeafe; color: #1e40af; }
+
+.bar {
+  display: block;
+  height: 8px;
+  border-radius: 9999px;
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: 9999px;
+}
+
+.bar-accent { background: var(--primary); }
+.bar-muted { background: var(--text-muted); }
+
+.bar-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.bar-row {
+  display: grid;
+  grid-template-columns: minmax(7rem, 12rem) 1fr auto;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.bar-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.bar-label small {
+  display: block;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.bar-value {
+  font-size: 0.88rem;
+  font-variant-numeric: tabular-nums;
+  min-width: 2.6rem;
+  text-align: right;
+}
+
+.score-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 0.75rem;
+}
+
+.score-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.3rem;
+  padding: 0.9rem 1rem;
+  background: var(--surface);
+  border-radius: 16px;
+}
+
+.score-link {
+  text-decoration: none;
+  transition: background 0.15s ease;
+}
+
+.score-link:hover { background: #e7e9ee; }
+
+.score-label {
+  color: var(--text-muted);
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.score-value {
+  font-size: 1.75rem;
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.score-note {
+  color: var(--text-muted);
+  font-size: 0.74rem;
+  font-weight: 600;
+}
+
+.spread {
+  display: flex;
+  height: 14px;
+  border-radius: 9999px;
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.spread span { display: block; }
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1rem;
+  margin: 0.6rem 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.legend li {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.legend i {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+
+.quote {
+  margin: 0 0 0.75rem;
+  padding: 0.75rem 0.9rem;
+  background: var(--surface);
+  border-radius: 14px;
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+.quote footer {
+  margin-top: 0.4rem;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 1.25rem;
+}
+
+.tabs a {
+  padding: 0.35rem 0.8rem;
+  border-radius: 9999px;
+  background: var(--card-bg);
+  border: 1px solid #eee7e5;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.tabs a[aria-current="page"] {
+  background: var(--text-main);
+  border-color: var(--text-main);
+  color: #fff;
+}
+
+/* Di layar sempit label pindah ke barisnya sendiri, supaya batangnya tetap terbaca panjangnya. */
+@media (max-width: 560px) {
+  .bar-row {
+    grid-template-columns: 1fr auto;
+    gap: 0.25rem 0.6rem;
+  }
+
+  .bar-label {
+    grid-column: 1 / -1;
+  }
+}

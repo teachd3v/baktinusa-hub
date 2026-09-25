@@ -29,6 +29,12 @@ export default async function ManwilHome() {
       </div>
 
       <section className="card">
+        <h2 className="section-title">Hasil wilayah</h2>
+        <p className="section-hint">Rata-rata IPK, sebaran predikat, dan rincian tiap awardee binaan.</p>
+        <Link href="/manwil/hasil" className="btn btn-small btn-inline">Lihat hasil wilayah</Link>
+      </section>
+
+      <section className="card">
         <h2 className="section-title">Penilaian untuk Anda</h2>
         {tasks.length === 0 ? (
           <p className="section-hint" style={{ margin: 0 }}>Belum ada penilaian yang dibuka untuk Anda saat ini.</p>

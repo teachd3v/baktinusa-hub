@@ -5,5 +5,5 @@ export const dynamic = "force-dynamic";
 
 export default async function AwardeeLayout({ children }: { children: React.ReactNode }) {
   const user = await requireUser("awardee");
-  return <AppShell user={user} nav={[{ href: "/awardee", label: "Beranda" }, { href: "/awardee/nilai", label: "Penilaian" }]}>{children}</AppShell>;
+  return <AppShell user={user} nav={[{ href: "/awardee", label: "Beranda" }, { href: "/awardee/nilai", label: "Penilaian" }, { href: "/awardee/hasil", label: "Hasil" }]}>{children}</AppShell>;
 }

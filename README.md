@@ -107,6 +107,33 @@ keduanya memakai `components/SurveyForm.tsx` yang sama dengan form publik, varia
   yang mengirim bersamaan.
 - Tugas muncul hanya selama periodenya `open` dan jendela tipe penilainya (`period_respondent_types.opens_at/closes_at`) berjalan.
 
+## Hasil & dashboard
+
+Tiga peran melihat angka yang sama lewat lingkup yang berbeda: `/awardee/hasil` (dirinya), `/manwil/hasil` (wilayahnya,
+plus rincian per awardee di `/manwil/hasil/<kode>`), dan `/admin/hasil` (nasional, dengan matriks seluruh awardee).
+
+- **IPK = rata-rata berbobot dari rata-rata tiap kategori**, skala 0–4. Predikatnya memakai ambang program BA15:
+  Cumlaude ≥ 3.51, Sangat Memuaskan ≥ 2.76, Memuaskan ≥ 2.00, sisanya Perlu Peningkatan.
+- **Kategori dibaca dari `instruments.category_id`**, tidak pernah dari rentang nomor soal — ini yang membuat bug Q19
+  di dashboard lama tidak bisa terulang. Kategori tanpa jawaban bernilai kosong, bukan nol, supaya IPK tidak jatuh
+  hanya karena satu tipe penilai belum mengisi.
+- **Dihitung langsung dari `response_scores` saat halaman dibuka**, bukan dari tabel agregat. Cetak biru merencanakan
+  `score_snapshots` + cron; dengan ±54.000 baris skor (55 awardee × 50 soal × ±20 responden) satu `GROUP BY` masih di
+  bawah setengah detik, jadi tabel agregat ditunda sampai ada bukti ia dibutuhkan — angka yang selalu segar lebih murah
+  daripada cache yang bisa basi.
+- **Saran kualitatif tampil tanpa nama pengisi**, hanya tipe penilai dan hubungannya. Refleksi dari asesmen mandiri
+  dipisahkan dari masukan orang lain; saran untuk program hanya terlihat oleh pengelola.
+- Grafiknya dirender di server sebagai elemen biasa — tidak ada library chart dan tidak ada JavaScript di sisi klien.
+
+### Data contoh untuk mencoba dashboard
+
+```bash
+npm run demo-data            # isi D1 lokal dengan respons palsu
+npm run demo-data -- --reset # hapus lagi
+```
+
+`scripts/demo-data.mjs` sengaja tidak punya mode `--remote`, dan semua barisnya ditandai `source = 'demo'`.
+
 ## Uji
 
 ```bash
@@ -115,7 +142,7 @@ npm test
 
 Menjalankan `lib/data/*` di atas `node:sqlite` dengan migrasi yang sama persis seperti production. Uji membuktikan di lapisan
 query bahwa awardee hanya bisa menarik datanya sendiri, Manwil hanya wilayahnya, tautan masuk hanya berlaku sekali, dan
-penilaian berakun hanya bisa diisi oleh yang berhak, sekali saja.
+penilaian berakun hanya bisa diisi oleh yang berhak sekali saja, dan hitungan IPK per kategori sesuai rubrik.
 
 ## Hal yang perlu diketahui
 

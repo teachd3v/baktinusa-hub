@@ -48,7 +48,10 @@ export default async function AdminHome() {
           <p className="section-hint" style={{ margin: "0.75rem 0 1rem" }}>
             {awardeesWithAccount} dari {awardees.length} awardee sudah punya akun. {perRegion.size - count("manwil") > 0 ? `${perRegion.size - count("manwil")} wilayah belum punya akun Manwil.` : ""}
           </p>
-          <Link className="btn" href="/admin/pengguna" style={{ display: "inline-block", padding: "0.6rem 1.2rem" }}>Kelola pengguna</Link>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
+            <Link className="btn btn-inline" href="/admin/pengguna" style={{ padding: "0.6rem 1.2rem" }}>Kelola pengguna</Link>
+            <Link className="btn btn-muted btn-inline" href="/admin/hasil" style={{ padding: "0.6rem 1.2rem" }}>Hasil nasional</Link>
+          </div>
         </section>
 
         <section className="card">
