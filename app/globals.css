@@ -196,7 +196,8 @@ a {
   flex-direction: column;
   align-items: center;
   gap: 0.9rem;
-  padding: 0.7rem;
+  /* Ukuran ini dipakai juga oleh perhitungan lekukan di components/NavLinks.tsx — ubah keduanya bersamaan. */
+  padding: 12px;
   background: var(--rail);
   border-radius: 2.25rem;
 }
@@ -205,49 +206,62 @@ a {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.35rem;
+  gap: 6px;
 }
 
 .shell-nav a {
   position: relative;
   display: grid;
   place-items: center;
-  width: 3rem;
-  height: 3rem;
-  border-radius: 50%;
+  width: 48px;
+  height: 48px;
   color: var(--rail-ink);
   text-decoration: none;
-  transition: color 0.15s ease, background 0.15s ease;
+  transition: color 0.15s ease;
+}
+
+.nav-dot {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  transition: background 0.15s ease;
 }
 
 .shell-nav a svg {
   width: 1.3rem;
   height: 1.3rem;
   stroke-width: 1.7;
-  position: relative;
-  z-index: 1;
 }
 
 .shell-nav a:hover {
-  background: var(--rail-raised);
   color: var(--rail-ink-strong);
 }
 
-/* Menu aktif: lingkaran merah muda yang menyembul ke kanan, dengan pil tergigit di belakangnya. */
-.shell-nav a[aria-current="page"] {
-  background: var(--pastel-blush);
-  color: var(--primary-ink);
-  transform: translateX(1.15rem);
-  box-shadow: 0 6px 18px -8px rgba(217, 45, 67, 0.7);
+.shell-nav a:hover .nav-dot {
+  background: var(--rail-raised);
 }
 
-.shell-nav a[aria-current="page"]::before {
-  content: "";
+/* Menu aktif menyembul ke kanan; lekukan pil-nya digambar oleh .nav-notch. */
+.shell-nav a[aria-current="page"] {
+  color: var(--primary-ink);
+  transform: translateX(18px);
+}
+
+.shell-nav a[aria-current="page"] .nav-dot,
+.shell-nav a[aria-current="page"]:hover .nav-dot {
+  background: var(--pastel-blush);
+}
+
+/* Path berwarna latar halaman, dilukis di atas pil gelap. Batas kirinya jadi tepi gelap yang baru. */
+.nav-notch {
   position: absolute;
-  inset: -0.55rem;
-  background: var(--surface);
-  border-radius: 50%;
-  z-index: -1;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
 }
 
 /* Akun & keluar, di bawah pil menu. */
@@ -399,10 +413,9 @@ a {
 
   .shell-nav a[aria-current="page"] {
     transform: none;
-    box-shadow: none;
   }
 
-  .shell-nav a[aria-current="page"]::before {
+  .nav-notch {
     display: none;
   }
 
