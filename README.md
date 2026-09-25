@@ -72,40 +72,43 @@ kuesioner atau `form_config`. Yang *tidak* bisa dilakukan seed: menghapus pertan
 
 ## Masuk & peran
 
-Tiga peran — Admin, Manajer Wilayah, Awardee — masuk tanpa kata sandi lewat **tautan sekali pakai**. Responden publik tidak punya akun.
+Tiga peran — Admin, Manajer Wilayah, Awardee — masuk dengan **ID akun dan kata sandi** di `/masuk`. Halaman depan `/`
+tidak punya isi sendiri: yang sudah masuk dilempar ke berandanya, sisanya ke halaman masuk. Responden publik tidak punya
+akun dan tidak pernah lewat sini — mereka membuka `/s/<kode>` dari tautan yang dibagikan awardee.
 
+- **Kata sandi tidak pernah disimpan apa adanya.** Yang tersimpan turunan PBKDF2-HMAC-SHA256 210.000 iterasi dengan garam
+  acak per akun (`lib/data/password.ts`). Jumlah iterasi ikut ditulis di dalam string simpanannya, jadi kelak bisa
+  dinaikkan tanpa membuat kata sandi lama tidak bisa dipakai. bcrypt/argon2 tidak dipakai karena butuh modul native yang
+  tidak ada di runtime Workers.
+- **ID tidak dipakai untuk menebak daftar akun**: ID salah, kata sandi salah, dan akun nonaktif dijawab dengan pesan yang
+  sama persis. Tiap percobaan lewat Turnstile, lalu dibatasi laju **per perangkat dan per ID** — menebak satu akun dari
+  banyak perangkat pun tetap tertahan.
+- **Ganti kata sandi memutus sesi lama** akun itu, jadi kalau akunnya terlanjur dibajak, mengganti sandi benar-benar mengusir.
 - **Sesi** disimpan di D1 (tabel `sessions`), bukan KV: KV tidak menjamin tulisan langsung terbaca, sehingga sesi yang baru
   dibuat saat login bisa belum terlihat di request berikutnya. Cookie `bh_session` bersifat `HttpOnly; Secure; SameSite=Lax`.
-  Database hanya menyimpan hash SHA-256 dari token sesi dan tautan masuk.
+  Database hanya menyimpan hash SHA-256 dari token sesi.
 - **Gerbang akses** berlapis: `proxy.ts` mengarahkan `/admin`, `/manwil`, `/awardee` sesuai peran; setiap halaman dan server
   action memanggil `requireUser()` lagi; dan setiap query awardee/respons wajib lewat `scopeFor(user)` di `lib/data/`.
-- **Tautan masuk** dipakai lewat tombol "Masuk" (POST), bukan saat tautan dibuka — pemindai tautan di layanan email sering
-  membuka tautan lebih dulu dan akan menghanguskan token sekali pakai.
-- **Pengiriman tautan** (`lib/login-delivery.ts`): lewat Cloudflare Email Service begitu binding `EMAIL` dan variabel
-  `EMAIL_FROM` diisi (butuh domain pengirim terverifikasi). Sampai itu, Admin membuat tautan dari halaman **Pengguna** dan
-  membagikannya sendiri (berlaku 3 hari). Di lokal, `LOGIN_LINK_TO_LOG=1` mencetak tautan ke log dev server.
+- **Lupa kata sandi** ditangani Admin dari halaman **Pengguna**: tetapkan ID masuk dan kata sandi baru, lalu sampaikan lewat
+  jalur pribadi. Tidak ada pengaturan ulang lewat email — hub tidak menyimpan cara memverifikasi pemilik email.
 
-**Admin pertama** — atau kalau semua Admin terkunci — dibuat dari terminal. Tautannya hanya tercetak di terminal itu:
+**Admin pertama** — atau kalau semua Admin terkunci — dibuat dari terminal lewat tautan sekali pakai. Ini jalur darurat yang
+sengaja dipertahankan; tautannya hanya tercetak di terminal itu:
 
 ```bash
 npm run login-link -- nama@email.com --admin "Nama Lengkap"
 ```
 
-Tambahkan `--local` untuk D1 lokal. Tanpa `--admin`, script hanya membuat tautan untuk akun yang sudah ada.
+Tambahkan `--local` untuk D1 lokal. Setelah masuk, tetapkan ID dan kata sandinya dari halaman Pengguna.
 
-## Penilaian berakun
+### Akun uji coba (lokal saja)
 
-Asesmen mandiri (Asesmen Awal/Tengah), penilaian Peer, dan penilaian Manwil diisi dari akun, bukan dari tautan publik —
-form publik hanya menawarkan hubungan eksternal. Awardee melihat tugasnya di `/awardee/nilai`, Manwil di `/manwil/nilai`;
-keduanya memakai `components/SurveyForm.tsx` yang sama dengan form publik, varian `internal` (tanpa langkah profil dan Turnstile).
+```bash
+npm run akun-dummy
+```
 
-- **Siapa menilai siapa** ditentukan server di `lib/data/evaluations.ts`: asesmen mandiri hanya untuk diri sendiri, Peer untuk
-  rekan satu wilayah dan angkatan, Manwil untuk awardee di wilayahnya. Sasaran di luar wewenang dijawab 404, sama seperti yang
-  tidak ada. Izin diperiksa lagi saat `POST /api/evaluasi`.
-- **Asesmen mandiri** memakai teks `text_self` ("Saya …") dan saran dari `form_config.self`.
-- **Satu kali per pengisi**: `responses.submitted_by` diisi, dan indeks unik parsial menolak kiriman kedua — termasuk dari dua tab
-  yang mengirim bersamaan.
-- Tugas muncul hanya selama periodenya `open` dan jendela tipe penilainya (`period_respondent_types.opens_at/closes_at`) berjalan.
+Membuat `ADM001` (Admin), `BA00126` (Awardee Bogor), dan `MW00126` (Manwil Bogor) — semuanya berkata sandi `BA2026`.
+Script-nya tidak punya mode `--remote`. **Kata sandi ini pendek dan dipakai bertiga; jangan pernah dibawa ke production.**
 
 ## Hasil & dashboard
 

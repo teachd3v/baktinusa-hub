@@ -1,3 +1,5 @@
+import { writeAudit } from "./audit.ts";
+import { checkLoginId, checkPassword, hashPassword, normalizeLoginId } from "./password.ts";
 import { ScopeError, type Role, type SessionUser } from "./scope.ts";
 
 // Manajemen akun: hanya Admin. Setiap fungsi memeriksa pelakunya sendiri, supaya halaman yang lupa
@@ -13,6 +15,7 @@ export type UserListItem = {
   email: string;
   role: Role;
   status: "active" | "disabled";
+  loginId: string | null;
   region: string | null;
   awardee: string | null;
   lastLoginAt: string | null;
@@ -22,7 +25,7 @@ export async function listUsers(db: D1Database, actor: SessionUser): Promise<Use
   assertAdmin(actor);
   const { results } = await db
     .prepare(
-      `SELECT u.id, u.name, u.email, u.role, u.status, u.last_login_at,
+      `SELECT u.id, u.name, u.email, u.role, u.status, u.last_login_at, u.login_id,
               COALESCE(r.name, ar.name) AS region, a.name AS awardee
        FROM users u
        LEFT JOIN regions r ON r.id = u.region_id
@@ -30,20 +33,21 @@ export async function listUsers(db: D1Database, actor: SessionUser): Promise<Use
        LEFT JOIN regions ar ON ar.id = a.region_id
        ORDER BY CASE u.role WHEN 'admin' THEN 0 WHEN 'manwil' THEN 1 ELSE 2 END, region, u.name`,
     )
-    .all<{ id: number; name: string; email: string; role: Role; status: "active" | "disabled"; last_login_at: string | null; region: string | null; awardee: string | null }>();
+    .all<{ id: number; name: string; email: string; role: Role; status: "active" | "disabled"; last_login_at: string | null; login_id: string | null; region: string | null; awardee: string | null }>();
   return results.map((r) => ({
     id: r.id,
     name: r.name,
     email: r.email,
     role: r.role,
     status: r.status,
+    loginId: r.login_id,
     region: r.region,
     awardee: r.awardee,
     lastLoginAt: r.last_login_at,
   }));
 }
 
-export type NewUser = { email: string; name: string; role: Role; regionId?: number | null; awardeeId?: number | null };
+export type NewUser = { email: string; name: string; role: Role; regionId?: number | null; awardeeId?: number | null; loginId: string; password: string };
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -59,17 +63,33 @@ export async function createUser(db: D1Database, actor: SessionUser, input: NewU
   if (input.role === "manwil" && !regionId) return { ok: false, message: "Pilih wilayah yang dipegang Manwil ini." };
   if (input.role === "awardee" && !awardeeId) return { ok: false, message: "Pilih data awardee untuk akun ini." };
 
+  const badId = checkLoginId(input.loginId);
+  if (badId) return badId;
+  const badPassword = checkPassword(input.password);
+  if (badPassword) return badPassword;
+  const loginId = normalizeLoginId(input.loginId);
+
   const clash = await db
-    .prepare("SELECT email, awardee_id FROM users WHERE email = ? OR (? IS NOT NULL AND awardee_id = ?)")
-    .bind(email, awardeeId, awardeeId)
-    .first<{ email: string; awardee_id: number | null }>();
+    .prepare("SELECT email, login_id, awardee_id FROM users WHERE email = ? OR login_id = ? OR (? IS NOT NULL AND awardee_id = ?)")
+    .bind(email, loginId, awardeeId, awardeeId)
+    .first<{ email: string; login_id: string | null; awardee_id: number | null }>();
   if (clash?.email.toLowerCase() === email) return { ok: false, message: "Email ini sudah terdaftar." };
+  if (clash?.login_id === loginId) return { ok: false, message: `ID masuk "${loginId}" sudah dipakai akun lain.` };
   if (clash) return { ok: false, message: "Awardee ini sudah punya akun." };
 
   const row = await db
-    .prepare("INSERT INTO users (email, name, role, region_id, awardee_id) VALUES (?, ?, ?, ?, ?) RETURNING id")
-    .bind(email, name, input.role, regionId, awardeeId)
+    .prepare(
+      `INSERT INTO users (email, name, role, region_id, awardee_id, login_id, password_hash, password_updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`,
+    )
+    .bind(email, name, input.role, regionId, awardeeId, loginId, await hashPassword(input.password), new Date().toISOString())
     .first<{ id: number }>();
+  await writeAudit(db, actor, {
+    action: "akun.buat",
+    entity: "user",
+    entityId: row!.id,
+    summary: `Akun "${name}" (${loginId}, ${input.role}) dibuat`,
+  });
   return { ok: true, id: row!.id };
 }
 
@@ -81,14 +101,60 @@ export async function setUserStatus(db: D1Database, actor: SessionUser, userId: 
     // Menonaktifkan akun langsung memutus semua sesinya.
     ...(status === "disabled" ? [db.prepare("DELETE FROM sessions WHERE user_id = ?").bind(userId)] : []),
   ]);
+  await writeAudit(db, actor, {
+    action: "akun.status",
+    entity: "user",
+    entityId: userId,
+    summary: `Akun #${userId} diubah jadi ${status === "active" ? "aktif" : "nonaktif"}`,
+  });
+}
+
+// Admin mengatur ulang ID masuk dan/atau kata sandi. Kata sandi kosong berarti "biarkan yang lama".
+export async function setCredentials(
+  db: D1Database,
+  actor: SessionUser,
+  userId: number,
+  input: { loginId: string; password: string },
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  assertAdmin(actor);
+  const badId = checkLoginId(input.loginId);
+  if (badId) return badId;
+  const loginId = normalizeLoginId(input.loginId);
+  if (input.password && checkPassword(input.password)) return checkPassword(input.password)!;
+
+  const target = await db.prepare("SELECT name, login_id FROM users WHERE id = ?").bind(userId).first<{ name: string; login_id: string | null }>();
+  if (!target) return { ok: false, message: "Akun tidak ditemukan." };
+
+  const taken = await db.prepare("SELECT 1 AS ada FROM users WHERE login_id = ? AND id <> ?").bind(loginId, userId).first<{ ada: number }>();
+  if (taken) return { ok: false, message: `ID masuk "${loginId}" sudah dipakai akun lain.` };
+
+  if (input.password) {
+    // Kata sandi baru memutus semua sesi lama: kalau akunnya dibajak, mengganti sandi benar-benar mengusir.
+    await db.batch([
+      db
+        .prepare("UPDATE users SET login_id = ?, password_hash = ?, password_updated_at = ? WHERE id = ?")
+        .bind(loginId, await hashPassword(input.password), new Date().toISOString(), userId),
+      db.prepare("DELETE FROM sessions WHERE user_id = ?").bind(userId),
+    ]);
+  } else {
+    await db.prepare("UPDATE users SET login_id = ? WHERE id = ?").bind(loginId, userId).run();
+  }
+
+  await writeAudit(db, actor, {
+    action: "akun.kredensial",
+    entity: "user",
+    entityId: userId,
+    summary: `Akun "${target.name}": ID masuk ${loginId}${input.password ? " dan kata sandi diperbarui" : " diperbarui"}`,
+  });
+  return { ok: true };
 }
 
 export async function getUserForAdmin(db: D1Database, actor: SessionUser, userId: number) {
   assertAdmin(actor);
   return db
-    .prepare("SELECT id, name, email, role, status FROM users WHERE id = ?")
+    .prepare("SELECT id, name, email, role, status, login_id FROM users WHERE id = ?")
     .bind(userId)
-    .first<{ id: number; name: string; email: string; role: Role; status: string }>();
+    .first<{ id: number; name: string; email: string; role: Role; status: string; login_id: string | null }>();
 }
 
 // Pilihan untuk form akun baru. Wilayah bukan data pribadi; daftar awardee tanpa akun tetap khusus Admin.

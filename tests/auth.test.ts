@@ -6,7 +6,6 @@ import {
   createLoginToken,
   createSession,
   deleteSession,
-  findActiveUserByEmail,
   getSessionUser,
   hashToken,
   peekLoginToken,
@@ -44,7 +43,6 @@ describe("tautan masuk", () => {
   test("akun nonaktif tidak bisa masuk", async () => {
     const token = await createLoginToken(db, 5, EMAIL_LINK_TTL_MS);
     assert.equal(await consumeLoginToken(db, token), null);
-    assert.equal(await findActiveUserByEmail(db, "nonaktif@contoh.id"), null);
   });
 
   test("database hanya menyimpan hash, bukan token", async () => {
@@ -54,9 +52,6 @@ describe("tautan masuk", () => {
     assert.equal(stored!.token_hash, await hashToken(token));
   });
 
-  test("email dicocokkan tanpa peduli huruf besar", async () => {
-    assert.equal((await findActiveUserByEmail(db, "  AYU@Contoh.ID "))?.id, 3);
-  });
 });
 
 describe("sesi", () => {

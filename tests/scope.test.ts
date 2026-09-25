@@ -83,15 +83,15 @@ describe("manajemen akun hanya untuk Admin", () => {
   test("Manwil dan Awardee ditolak", async () => {
     await assert.rejects(listUsers(db, manwilBandung), ScopeError);
     await assert.rejects(listUsers(db, ayu), ScopeError);
-    await assert.rejects(createUser(db, ayu, { email: "x@contoh.id", name: "X", role: "admin" }), ScopeError);
+    await assert.rejects(createUser(db, ayu, { email: "x@contoh.id", name: "X", role: "admin", loginId: "ADM900", password: "rahasia123" }), ScopeError);
     await assert.rejects(setUserStatus(db, manwilBandung, 3, "disabled"), ScopeError);
   });
 
   test("validasi akun baru", async () => {
-    assert.deepEqual(await createUser(db, admin, { email: "AYU@contoh.id", name: "Dobel", role: "admin" }), { ok: false, message: "Email ini sudah terdaftar." });
-    assert.deepEqual(await createUser(db, admin, { email: "lain@contoh.id", name: "Ayu 2", role: "awardee", awardeeId: 1 }), { ok: false, message: "Awardee ini sudah punya akun." });
-    assert.equal((await createUser(db, admin, { email: "mw@contoh.id", name: "MW", role: "manwil" })).ok, false);
-    const created = await createUser(db, admin, { email: "Budi@Contoh.id ", name: "Budi", role: "awardee", awardeeId: 2 });
+    assert.deepEqual(await createUser(db, admin, { email: "AYU@contoh.id", name: "Dobel", role: "admin", loginId: "ADM901", password: "rahasia123" }), { ok: false, message: "Email ini sudah terdaftar." });
+    assert.deepEqual(await createUser(db, admin, { email: "lain@contoh.id", name: "Ayu 2", role: "awardee", awardeeId: 1, loginId: "BA900", password: "rahasia123" }), { ok: false, message: "Awardee ini sudah punya akun." });
+    assert.equal((await createUser(db, admin, { email: "mw@contoh.id", name: "MW", role: "manwil", loginId: "MW900", password: "rahasia123" })).ok, false);
+    const created = await createUser(db, admin, { email: "Budi@Contoh.id ", name: "Budi", role: "awardee", awardeeId: 2, loginId: "ba00902", password: "rahasia123" });
     assert.equal(created.ok, true);
   });
 

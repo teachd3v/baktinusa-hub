@@ -4,7 +4,7 @@ import { requireUser } from "@/lib/auth";
 import { listAwardeesWithoutAccount, listRegions, listUsers } from "@/lib/data/users";
 import { formatWib } from "@/lib/format";
 import { setStatusAction } from "./actions";
-import { LoginLinkButton } from "./LoginLinkButton";
+import { CredentialsForm } from "./CredentialsForm";
 import { NewUserForm } from "./NewUserForm";
 
 export const metadata: Metadata = { title: "Pengguna" };
@@ -39,10 +39,11 @@ export default async function UsersPage() {
             <thead>
               <tr>
                 <th scope="col">Nama</th>
+                <th scope="col">ID masuk</th>
                 <th scope="col">Peran</th>
                 <th scope="col">Wilayah</th>
                 <th scope="col">Terakhir masuk</th>
-                <th scope="col">Tautan masuk</th>
+                <th scope="col">ID &amp; kata sandi</th>
                 <th scope="col">Status</th>
               </tr>
             </thead>
@@ -53,10 +54,15 @@ export default async function UsersPage() {
                     <b>{u.name}</b>
                     <div className="section-hint" style={{ margin: 0 }}>{u.email}</div>
                   </td>
+                  <td>
+                    {u.loginId ? <code style={{ fontSize: "0.78rem" }}>{u.loginId}</code> : <span className="pill pill-warn">belum ada</span>}
+                  </td>
                   <td>{ROLE_LABEL[u.role]}</td>
                   <td>{u.region ?? "—"}</td>
                   <td>{u.lastLoginAt ? formatWib(u.lastLoginAt) : <span className="pill pill-muted">belum pernah</span>}</td>
-                  <td>{u.status === "active" ? <LoginLinkButton userId={u.id} name={u.name} /> : "—"}</td>
+                  <td>
+                    {u.status === "active" ? <CredentialsForm userId={u.id} name={u.name} loginId={u.loginId} /> : "—"}
+                  </td>
                   <td>
                     {u.id === admin.id ? (
                       <span className="pill pill-ok">aktif</span>

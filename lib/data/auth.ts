@@ -1,3 +1,4 @@
+import { normalizeLoginId } from "./password.ts";
 import type { Role, SessionUser } from "./scope.ts";
 
 // Token acak 32 byte (base64url). Database hanya menyimpan hash SHA-256-nya: kalau isi D1 bocor,
@@ -128,10 +129,21 @@ export async function deleteSession(db: D1Database, token: string | undefined): 
   await db.prepare("DELETE FROM sessions WHERE token_hash = ?").bind(await hashToken(token)).run();
 }
 
-export async function findActiveUserByEmail(db: D1Database, email: string): Promise<SessionUser | null> {
+// ---------- masuk dengan ID & kata sandi ----------
+
+// Satu-satunya jalur yang boleh membaca password_hash. Akun nonaktif tetap dicari lalu ditolak di
+// pemanggil, supaya waktu jawabnya tidak membedakan "ID salah" dari "akun dimatikan".
+export async function findUserForLogin(
+  db: D1Database,
+  loginId: string,
+): Promise<{ user: SessionUser; passwordHash: string | null; status: string } | null> {
   const row = await db
-    .prepare("SELECT id, name, email, role, region_id, awardee_id FROM users WHERE email = ? AND status = 'active'")
-    .bind(email.trim())
-    .first<UserRow>();
-  return row ? toSessionUser(row) : null;
+    .prepare(
+      `SELECT id, name, email, role, region_id, awardee_id, password_hash, status
+       FROM users WHERE login_id = ?`,
+    )
+    .bind(normalizeLoginId(loginId))
+    .first<UserRow & { password_hash: string | null; status: string }>();
+  if (!row) return null;
+  return { user: toSessionUser(row), passwordHash: row.password_hash, status: row.status };
 }

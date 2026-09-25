@@ -1,17 +1,12 @@
-import { BrandHeader } from "@/components/BrandHeader";
+import { redirect } from "next/navigation";
+import { getCurrentUser } from "@/lib/auth";
+import { homeFor } from "@/lib/data/scope";
 
-export default function Home() {
-  return (
-    <main className="page">
-      <BrandHeader title="BAKTINUSA HUB" subtitle="BAKTI NUSA · Angkatan 15" />
-      <div className="app-screen">
-        <div className="notice">
-          <h2 className="section-title">Portal pengukuran awardee</h2>
-          <p className="section-hint">
-            Ingin menilai seorang awardee? Buka tautan survei yang dibagikan awardee tersebut kepada Anda.
-          </p>
-        </div>
-      </div>
-    </main>
-  );
+export const dynamic = "force-dynamic";
+
+// Halaman depan tidak punya isi sendiri: yang sudah masuk langsung ke berandanya, sisanya ke halaman masuk.
+// Responden publik tidak pernah lewat sini — mereka membuka /s/<kode> dari tautan yang dibagikan awardee.
+export default async function Home() {
+  const user = await getCurrentUser();
+  redirect(user ? homeFor(user.role) : "/masuk");
 }

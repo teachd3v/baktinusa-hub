@@ -34,6 +34,7 @@
     "db:migrate:remote": "wrangler d1 migrations apply baktinusa-hub-db --remote",
     "seed:ba15": "node scripts/seed-ba15.mjs",
     "demo-data": "node scripts/demo-data.mjs",
+    "akun-dummy": "node --experimental-strip-types scripts/akun-dummy.mjs",
     "test": "node --test --no-warnings \"tests/*.test.ts\"",
     "login-link": "node scripts/login-link.mjs"
   }

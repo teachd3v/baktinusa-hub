@@ -12,6 +12,7 @@ export function NewUserForm({ regions, awardees }: Props) {
   const [state, action, pending] = useActionState<CreateUserState, FormData>(createUserAction, null);
   const [role, setRole] = useState("awardee");
   const [name, setName] = useState("");
+  const [loginId, setLoginId] = useState("");
 
   return (
     <form action={action}>
@@ -67,7 +68,31 @@ export function NewUserForm({ regions, awardees }: Props) {
           <label className="label" htmlFor="email">Email</label>
           <input id="email" name="email" type="email" className="input" maxLength={200} autoComplete="off" />
         </div>
+
+        <div className="field">
+          <label className="label" htmlFor="loginId">ID masuk</label>
+          <input
+            id="loginId"
+            name="loginId"
+            className="input"
+            maxLength={20}
+            autoComplete="off"
+            placeholder={role === "admin" ? "ADM002" : role === "manwil" ? "MW00226" : "BA00226"}
+            value={loginId}
+            onChange={(e) => setLoginId(e.target.value.toUpperCase())}
+          />
+        </div>
+
+        <div className="field">
+          <label className="label" htmlFor="password">Kata sandi awal</label>
+          <input id="password" name="password" type="text" className="input" maxLength={200} autoComplete="off" placeholder="Minimal 8 karakter" />
+        </div>
       </div>
+
+      <p className="section-hint" style={{ margin: 0 }}>
+        Kata sandi awal tampil apa adanya di sini supaya bisa disalin sekali, lalu tidak pernah bisa dibaca lagi —
+        yang tersimpan hanya turunannya. Kirimkan lewat jalur pribadi, dan minta yang bersangkutan menggantinya lewat Admin.
+      </p>
 
       {state && (
         <p className={state.ok ? "section-hint" : "form-error"} role={state.ok ? "status" : "alert"} style={state.ok ? { color: "var(--ok)" } : undefined}>
