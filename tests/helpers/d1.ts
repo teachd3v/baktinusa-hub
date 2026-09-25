@@ -57,7 +57,8 @@ export async function seedFixture(db: D1Database) {
       (2, 1, 'BA15', 'Budi', 'AAAA0002'),
       (3, 2, 'BA15', 'Citra', 'BBBB0003'),
       (4, 3, 'BA15', 'Dedi', 'CCCC0004');
-    INSERT INTO periods (id, slug, name, batch, kind, status) VALUES (1, 'uji', 'Periode Uji', 'BA15', 'assessment', 'open');
+    INSERT INTO measurements (id, slug, name, kind) VALUES (1, 'uji', 'Pengukuran Uji', 'assessment');
+    INSERT INTO periods (id, slug, name, batch, kind, status, measurement_id) VALUES (1, 'uji', 'Periode Uji', 'BA15', 'assessment', 'open', 1);
     INSERT INTO respondent_types (id, code, name, audience) VALUES
       (1, 'self_initial', 'Asesmen Awal', 'self'),
       (3, 'peer', 'Peer Awardee', 'internal'),
@@ -70,11 +71,11 @@ export async function seedFixture(db: D1Database) {
       (3, 1, 2, 5, 'app'),
       (4, 1, 3, 5, 'app'),
       (5, 1, 4, 5, 'app');
-    INSERT INTO instrument_categories (id, period_id, name, order_index) VALUES (1, 1, 'Kategori Uji', 1);
-    INSERT INTO instruments (id, period_id, category_id, code, text_self, text_public, order_index) VALUES
+    INSERT INTO instrument_categories (id, measurement_id, name, order_index) VALUES (1, 1, 'Kategori Uji', 1);
+    INSERT INTO instruments (id, measurement_id, category_id, code, text_self, text_public, order_index) VALUES
       (1, 1, 1, 'Q1', 'Saya jujur', 'Yang bersangkutan jujur', 1),
       (2, 1, 1, 'Q2', 'Saya disiplin', 'Yang bersangkutan disiplin', 2);
-    UPDATE periods SET form_config = '{"title":"Uji","identity":{"name":"Nama","city":"Kota"},"relation":{"question":"Hubungan","options":[{"label":"Teman","type":"external"}]},"feedback":[{"field":"saran_diri","label":"Saran","question":"Saran untuk yang bersangkutan","required":false}],"scale":[{"value":0,"label":"Tidak","emoji":"👎"},{"value":4,"label":"Sangat","emoji":"🌟"}],"self":{"title":"Asesmen Mandiri","feedback":[{"field":"saran_diri","label":"Refleksi","question":"Apa yang ingin Anda kembangkan?","required":true}]}}' WHERE id = 1;
+    UPDATE measurements SET form_config = '{"title":"Uji","identity":{"name":"Nama","city":"Kota"},"relation":{"question":"Hubungan","options":[{"label":"Teman","type":"external"}]},"feedback":[{"field":"saran_diri","label":"Saran","question":"Saran untuk yang bersangkutan","required":false}],"scale":[{"value":0,"label":"Tidak","emoji":"👎"},{"value":4,"label":"Sangat","emoji":"🌟"}],"self":{"title":"Asesmen Mandiri","feedback":[{"field":"saran_diri","label":"Refleksi","question":"Apa yang ingin Anda kembangkan?","required":true}]}}' WHERE id = 1;
     INSERT INTO users (id, email, name, role, region_id, awardee_id, status) VALUES
       (1, 'admin@contoh.id', 'Admin', 'admin', NULL, NULL, 'active'),
       (2, 'manwil.bandung@contoh.id', 'Manwil Bandung', 'manwil', 1, NULL, 'active'),

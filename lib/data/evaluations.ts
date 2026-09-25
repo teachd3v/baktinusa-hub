@@ -26,6 +26,7 @@ type OpenType = {
   period_id: number;
   slug: string;
   period_name: string;
+  measurement_id: number;
   form_config: string | null;
   type_id: number;
   type_code: string;
@@ -45,9 +46,10 @@ const earliest = (...dates: (string | null)[]) =>
 async function openTypes(db: D1Database, codes: string[], batch: string): Promise<OpenType[]> {
   const { results } = await db
     .prepare(
-      `SELECT p.id AS period_id, p.slug, p.name AS period_name, p.form_config, p.opens_at AS p_opens, p.closes_at AS p_closes,
+      `SELECT p.id AS period_id, p.measurement_id, p.slug, p.name AS period_name, m.form_config, p.opens_at AS p_opens, p.closes_at AS p_closes,
               rt.id AS type_id, rt.code AS type_code, rt.name AS type_name, prt.opens_at AS t_opens, prt.closes_at AS t_closes
        FROM periods p
+       JOIN measurements m ON m.id = p.measurement_id
        JOIN period_respondent_types prt ON prt.period_id = p.id
        JOIN respondent_types rt ON rt.id = prt.respondent_type_id
        WHERE p.status = 'open' AND p.batch = ? AND rt.code IN (SELECT value FROM json_each(?))
@@ -190,9 +192,9 @@ export async function resolveInternalForm(
     .prepare(
       `SELECT i.id, i.code, ${kind === "self" ? "COALESCE(i.text_self, i.text_public)" : "i.text_public"} AS text, i.scale_max, c.name AS category
        FROM instruments i JOIN instrument_categories c ON c.id = i.category_id
-       WHERE i.period_id = ? ORDER BY c.order_index, i.order_index`,
+       WHERE i.measurement_id = ? ORDER BY c.order_index, i.order_index`,
     )
-    .bind(open.period_id)
+    .bind(open.measurement_id)
     .all<{ id: number; code: string; text: string; scale_max: number; category: string }>();
 
   return {

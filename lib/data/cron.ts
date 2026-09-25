@@ -18,7 +18,7 @@ export async function openDuePeriods(db: D1Database, now: string): Promise<Perio
        WHERE p.status = 'draft'
          AND p.opens_at IS NOT NULL AND p.opens_at <= ?1
          AND (p.closes_at IS NULL OR p.closes_at > ?1)
-         AND (SELECT COUNT(*) FROM instruments WHERE period_id = p.id) > 0
+         AND (SELECT COUNT(*) FROM instruments WHERE measurement_id = p.measurement_id) > 0
          AND (SELECT COUNT(*) FROM period_respondent_types WHERE period_id = p.id) > 0
        ORDER BY p.id`,
     )

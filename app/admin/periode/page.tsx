@@ -4,7 +4,8 @@ import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { listPeriods } from "@/lib/data/periods";
 import { formatWib } from "@/lib/format";
-import { NewPeriodForm } from "./InstrumentForms";
+import { listMeasurements } from "@/lib/data/measurements";
+import { NewPeriodForm } from "./PeriodForms";
 
 export const metadata: Metadata = { title: "Periode" };
 
@@ -16,8 +17,8 @@ const STATUS = {
 } as const;
 
 export default async function PeriodsPage() {
-  await requireUser("admin");
-  const periods = await listPeriods(env.DB);
+  const admin = await requireUser("admin");
+  const [periods, measurements] = await Promise.all([listPeriods(env.DB), listMeasurements(env.DB, admin)]);
 
   return (
     <>
@@ -59,9 +60,9 @@ export default async function PeriodsPage() {
       <section className="card">
         <h2 className="section-title">Buat periode baru</h2>
         <p className="section-hint">
-          Untuk angkatan berikutnya. Periode baru selalu lahir sebagai draft — belum terlihat siapa pun sampai Anda membukanya.
+          Periode adalah jadwal: pilih pengukuran yang dijalankan, angkatannya, lalu atur tanggalnya. Periode baru selalu lahir sebagai draft.
         </p>
-        <NewPeriodForm periods={periods} />
+        <NewPeriodForm measurements={measurements} />
       </section>
     </>
   );

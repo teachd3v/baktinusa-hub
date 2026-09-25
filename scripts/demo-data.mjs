@@ -49,7 +49,7 @@ const awardees = d1("SELECT id, region_id, name FROM awardees ORDER BY id");
 const types = d1(
   `SELECT rt.id, rt.code FROM period_respondent_types prt JOIN respondent_types rt ON rt.id = prt.respondent_type_id WHERE prt.period_id = ${period.id}`,
 );
-const instruments = d1(`SELECT id, scale_max FROM instruments WHERE period_id = ${period.id} ORDER BY order_index`);
+const instruments = d1(`SELECT id, scale_max FROM instruments WHERE measurement_id = ${period.measurement_id} ORDER BY order_index`);
 const typeOf = Object.fromEntries(types.map((t) => [t.code, t.id]));
 const peersOf = (a) => awardees.filter((x) => x.region_id === a.region_id && x.id !== a.id);
 

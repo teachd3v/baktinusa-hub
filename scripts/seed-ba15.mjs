@@ -134,18 +134,23 @@ const statements = [
     { on: ["id"], update: ["code", "name", "audience"] }),
   ...upsertStatements("awardees", ["id", "region_id", "batch", "name", "campus", "referral_code", "photo_key", "leadpro_name", "leadpro_field", "leadpro_description"], awardees,
     { on: ["id"], update: ["region_id", "batch", "name", "campus", "referral_code", "photo_key", "leadpro_name", "leadpro_field", "leadpro_description"] }),
+  // Pengukuran memiliki kuesionernya; id-nya sengaja sama dengan id periode yang menjadwalkannya,
+  // mengikuti pemetaan yang dibuat migrasi 0006.
+  ...upsertStatements("measurements", ["id", "slug", "name", "kind", "form_config"],
+    PERIODS.map((p) => [p.id, p.slug, p.name, p.kind, JSON.stringify(formConfigs[p.key])]),
+    { on: ["id"], update: ["slug", "name", "kind", "form_config"] }),
   // Status & tanggal periode tidak ikut diperbarui: itu wewenang Admin.
-  ...upsertStatements("periods", ["id", "slug", "name", "batch", "kind", "opens_at", "closes_at", "status", "form_config"],
-    PERIODS.map((p) => [p.id, p.slug, p.name, BATCH, p.kind, null, null, "draft", JSON.stringify(formConfigs[p.key])]),
-    { on: ["id"], update: ["slug", "name", "batch", "kind", "form_config"] }),
+  ...upsertStatements("periods", ["id", "slug", "name", "batch", "kind", "opens_at", "closes_at", "status", "measurement_id"],
+    PERIODS.map((p) => [p.id, p.slug, p.name, BATCH, p.kind, null, null, "draft", p.id]),
+    { on: ["id"], update: ["slug", "name", "batch", "kind", "measurement_id"] }),
   ...upsertStatements("period_respondent_types", ["period_id", "respondent_type_id", "target_rule", "target_min", "opens_at", "closes_at"],
     PERIOD_TYPES.map((x) => [x.period, x.type, x.rule, x.min, null, null]),
     { on: ["period_id", "respondent_type_id"], update: ["target_rule", "target_min"] }),
-  ...upsertStatements("instrument_categories", ["id", "period_id", "name", "weight", "order_index"],
+  ...upsertStatements("instrument_categories", ["id", "measurement_id", "name", "weight", "order_index"],
     categories.map((c) => [c.id, c.periodId, c.name, 1, c.order]),
-    { on: ["id"], update: ["period_id", "name", "weight", "order_index"] }),
-  ...upsertStatements("instruments", ["id", "period_id", "category_id", "code", "text_self", "text_public", "scale_max", "order_index"], instruments,
-    { on: ["id"], update: ["period_id", "category_id", "code", "text_self", "text_public", "scale_max", "order_index"] }),
+    { on: ["id"], update: ["measurement_id", "name", "weight", "order_index"] }),
+  ...upsertStatements("instruments", ["id", "measurement_id", "category_id", "code", "text_self", "text_public", "scale_max", "order_index"], instruments,
+    { on: ["id"], update: ["measurement_id", "category_id", "code", "text_self", "text_public", "scale_max", "order_index"] }),
 ];
 
 await mkdir(".seed", { recursive: true });

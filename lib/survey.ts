@@ -53,6 +53,7 @@ type PeriodRow = {
   status: string;
   opens_at: string | null;
   closes_at: string | null;
+  measurement_id: number;
   form_config: string | null;
 };
 
@@ -95,7 +96,8 @@ export async function listOpenForms(referral: string) {
   const awardee = await findAwardee(referral);
   if (!awardee) return null;
   const { results: periods } = await env.DB.prepare(
-    "SELECT id, slug, name, status, opens_at, closes_at, form_config FROM periods WHERE batch = ? ORDER BY id",
+    `SELECT p.id, p.slug, p.name, p.status, p.opens_at, p.closes_at, m.form_config
+     FROM periods p JOIN measurements m ON m.id = p.measurement_id WHERE p.batch = ? ORDER BY p.id`,
   ).bind(awardee.batch).all<PeriodRow>();
   const now = Date.now();
   const types = await publicTypes(periods.map((p) => p.id));
@@ -109,7 +111,8 @@ export async function getPublicForm(referral: string, slug: string): Promise<For
   const awardee = await findAwardee(referral);
   if (!awardee) return { status: "not_found" };
   const period = await env.DB.prepare(
-    "SELECT id, slug, name, status, opens_at, closes_at, form_config FROM periods WHERE slug = ? AND batch = ?",
+    `SELECT p.id, p.slug, p.name, p.status, p.opens_at, p.closes_at, p.measurement_id, m.form_config
+     FROM periods p JOIN measurements m ON m.id = p.measurement_id WHERE p.slug = ? AND p.batch = ?`,
   ).bind(slug, awardee.batch).first<PeriodRow>();
   if (!period?.form_config) return { status: "not_found" };
 
@@ -127,8 +130,8 @@ export async function getPublicForm(referral: string, slug: string): Promise<For
   const { results } = await env.DB.prepare(
     `SELECT i.id, i.code, i.text_public, i.scale_max, c.name AS category
      FROM instruments i JOIN instrument_categories c ON c.id = i.category_id
-     WHERE i.period_id = ? ORDER BY c.order_index, i.order_index`,
-  ).bind(period.id).all<{ id: number; code: string; text_public: string; scale_max: number; category: string }>();
+     WHERE i.measurement_id = ? ORDER BY c.order_index, i.order_index`,
+  ).bind(period.measurement_id).all<{ id: number; code: string; text_public: string; scale_max: number; category: string }>();
 
   return {
     status: "open",

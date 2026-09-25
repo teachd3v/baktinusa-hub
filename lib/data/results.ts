@@ -65,7 +65,10 @@ export function ipkOf(categories: CategoryScore[]): number | null {
 
 export async function listCategories(db: D1Database, periodId: number): Promise<Category[]> {
   const { results } = await db
-    .prepare("SELECT id, name, weight, order_index FROM instrument_categories WHERE period_id = ? ORDER BY order_index")
+    .prepare(
+      `SELECT c.id, c.name, c.weight, c.order_index FROM instrument_categories c
+       JOIN periods p ON p.measurement_id = c.measurement_id WHERE p.id = ? ORDER BY c.order_index`,
+    )
     .bind(periodId)
     .all<{ id: number; name: string; weight: number; order_index: number }>();
   return results.map((r) => ({ id: r.id, name: r.name, weight: r.weight, orderIndex: r.order_index }));

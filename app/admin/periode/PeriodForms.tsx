@@ -1,9 +1,17 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import type { PeriodDetail, PeriodTypeConfig } from "@/lib/data/admin-periods";
 import { isoToWibInput } from "@/lib/waktu";
-import { addTypeAction, removeTypeAction, savePeriodAction, saveTypeAction, setStatusAction, type ActionState } from "./actions";
+import {
+  addTypeAction,
+  createPeriodAction,
+  removeTypeAction,
+  savePeriodAction,
+  saveTypeAction,
+  setStatusAction,
+  type ActionState,
+} from "./actions";
 
 // Semua waktu diketik dalam WIB; konversinya terjadi di server, bukan di zona waktu browser pengelola.
 
@@ -145,6 +153,69 @@ export function AddType({ periodId, available }: { periodId: number; available: 
         ))}
       </select>
       <button type="submit" className="btn btn-small" disabled={pending}>Tambah</button>
+      <Result state={state} />
+    </form>
+  );
+}
+
+// Periode = jadwal: ia memilih pengukuran mana yang dijalankan untuk angkatan apa.
+export function NewPeriodForm({ measurements }: { measurements: { id: number; name: string; instruments: number }[] }) {
+  const [state, action, pending] = useActionState<ActionState, FormData>(createPeriodAction, null);
+  const [batch, setBatch] = useState("BA16");
+  const [slug, setSlug] = useState("");
+  const [touched, setTouched] = useState(false);
+
+  const ikut = (nextBatch: string, measurementName: string) => {
+    if (touched) return;
+    const dasar = measurementName.toLowerCase().includes("leadership") ? "leadpro" : "pengukuran";
+    setSlug(`${nextBatch.toLowerCase().trim()}-${dasar}`);
+  };
+
+  if (measurements.length === 0) {
+    return (
+      <p className="section-hint" style={{ margin: 0 }}>
+        Belum ada pengukuran. Buat dulu di menu Pengukuran, baru periodenya bisa dijadwalkan.
+      </p>
+    );
+  }
+
+  return (
+    <form action={action}>
+      <div className="form-row">
+        <div className="field">
+          <label className="label" htmlFor="measurementId">Pengukuran yang dijalankan</label>
+          <select
+            id="measurementId"
+            className="select"
+            name="measurementId"
+            defaultValue={String(measurements[0]!.id)}
+            onChange={(e) => ikut(batch, e.target.selectedOptions[0]?.textContent ?? "")}
+          >
+            {measurements.map((m) => (
+              <option key={m.id} value={m.id}>{m.name} ({m.instruments} soal)</option>
+            ))}
+          </select>
+        </div>
+        <div className="field">
+          <label className="label" htmlFor="batch">Angkatan</label>
+          <input id="batch" className="input" name="batch" maxLength={20} value={batch}
+            onChange={(e) => { setBatch(e.target.value); ikut(e.target.value, measurements[0]!.name); }} />
+        </div>
+      </div>
+
+      <div className="form-row">
+        <div className="field">
+          <label className="label" htmlFor="periode-name">Nama periode</label>
+          <input id="periode-name" className="input" name="name" maxLength={120} placeholder="BA16 · Pengukuran Awardee" />
+        </div>
+        <div className="field">
+          <label className="label" htmlFor="periode-slug">Slug (dipakai di alamat form)</label>
+          <input id="periode-slug" className="input" name="slug" maxLength={60} value={slug}
+            onChange={(e) => { setTouched(true); setSlug(e.target.value); }} placeholder="ba16-pengukuran" />
+        </div>
+      </div>
+
+      <button type="submit" className="btn btn-small btn-inline" disabled={pending}>{pending ? "Membuat…" : "Buat periode"}</button>
       <Result state={state} />
     </form>
   );

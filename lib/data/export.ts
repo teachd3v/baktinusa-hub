@@ -59,7 +59,12 @@ export async function matrixCsv(db: D1Database, scope: Scope, periodId: number):
 export async function rawCsv(db: D1Database, scope: Scope, periodId: number): Promise<string> {
   const f = awardeeFilter(scope);
   const [{ results: instruments }, { results: responses }, { results: scores }, { results: feedback }] = await Promise.all([
-    db.prepare("SELECT id, code FROM instruments WHERE period_id = ? ORDER BY order_index").bind(periodId).all<{ id: number; code: string }>(),
+    db
+      .prepare(
+        `SELECT i.id, i.code FROM instruments i JOIN periods p ON p.measurement_id = i.measurement_id
+         WHERE p.id = ? ORDER BY i.order_index`,
+      )
+      .bind(periodId).all<{ id: number; code: string }>(),
     db
       .prepare(
         `SELECT r.id, a.name AS awardee, g.name AS region, rt.name AS tipe, r.respondent_name, r.respondent_city,

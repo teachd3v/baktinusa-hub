@@ -2,19 +2,11 @@
 
 import { env } from "cloudflare:workers";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth";
-import {
-  addCategory,
-  addInstrument,
-  createPeriod,
-  deleteCategory,
-  deleteInstrument,
-  updateFormText,
-  updateInstrument,
-} from "@/lib/data/admin-instruments";
+import { redirect } from "next/navigation";
 import {
   addTypeToPeriod,
+  createPeriod,
   isStatus,
   removeTypeFromPeriod,
   setPeriodStatus,
@@ -103,79 +95,15 @@ export async function removeTypeAction(_previous: ActionState, form: FormData): 
   return { ok: true, message: "Tipe penilai dilepas dari periode." };
 }
 
-// ---------- periode baru & kuesioner ----------
-
 export async function createPeriodAction(_previous: ActionState, form: FormData): Promise<ActionState> {
   const admin = await requireUser("admin");
-  const kind = field(form, "kind");
-  if (kind !== "assessment" && kind !== "leadpro") return gagal("Pilih jenis periode.");
-
   const result = await createPeriod(env.DB, admin, {
     slug: field(form, "slug"),
     name: field(form, "name"),
     batch: field(form, "batch"),
-    kind,
-    copyFromId: Number(form.get("copyFromId")) || null,
+    measurementId: Number(form.get("measurementId")),
   });
   if (!result.ok) return result;
   refresh();
   redirect(`/admin/periode/${field(form, "slug").trim().toLowerCase()}`);
-}
-
-export async function addCategoryAction(_previous: ActionState, form: FormData): Promise<ActionState> {
-  const admin = await requireUser("admin");
-  const result = await addCategory(env.DB, admin, Number(form.get("periodId")), field(form, "name"));
-  if (!result.ok) return result;
-  refresh();
-  return { ok: true, message: "Kategori ditambahkan." };
-}
-
-export async function deleteCategoryAction(_previous: ActionState, form: FormData): Promise<ActionState> {
-  const admin = await requireUser("admin");
-  const result = await deleteCategory(env.DB, admin, Number(form.get("periodId")), Number(form.get("categoryId")));
-  if (!result.ok) return result;
-  refresh();
-  return { ok: true, message: "Kategori dihapus." };
-}
-
-const instrumentInput = (form: FormData) => ({
-  code: field(form, "code"),
-  textPublic: field(form, "textPublic"),
-  textSelf: field(form, "textSelf") || null,
-  scaleMax: Number(form.get("scaleMax")) || 4,
-});
-
-export async function addInstrumentAction(_previous: ActionState, form: FormData): Promise<ActionState> {
-  const admin = await requireUser("admin");
-  const result = await addInstrument(env.DB, admin, Number(form.get("periodId")), Number(form.get("categoryId")), instrumentInput(form));
-  if (!result.ok) return result;
-  refresh();
-  return { ok: true, message: "Pertanyaan ditambahkan." };
-}
-
-export async function updateInstrumentAction(_previous: ActionState, form: FormData): Promise<ActionState> {
-  const admin = await requireUser("admin");
-  const result = await updateInstrument(env.DB, admin, Number(form.get("periodId")), Number(form.get("instrumentId")), instrumentInput(form));
-  if (!result.ok) return result;
-  refresh();
-  return { ok: true, message: "Pertanyaan diperbarui." };
-}
-
-export async function deleteInstrumentAction(_previous: ActionState, form: FormData): Promise<ActionState> {
-  const admin = await requireUser("admin");
-  const result = await deleteInstrument(env.DB, admin, Number(form.get("periodId")), Number(form.get("instrumentId")));
-  if (!result.ok) return result;
-  refresh();
-  return { ok: true, message: "Pertanyaan dihapus." };
-}
-
-export async function saveFormTextAction(_previous: ActionState, form: FormData): Promise<ActionState> {
-  const admin = await requireUser("admin");
-  const result = await updateFormText(env.DB, admin, Number(form.get("periodId")), {
-    title: field(form, "title"),
-    subtitle: field(form, "subtitle") || null,
-  });
-  if (!result.ok) return result;
-  refresh();
-  return { ok: true, message: "Teks form publik tersimpan." };
 }

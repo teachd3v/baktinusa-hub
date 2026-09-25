@@ -219,6 +219,32 @@ Di menu **Pengguna** ada panel impor: unduh template (CSV atau .xlsx), isi di Ex
   lewat fungsi yang sama dengan form satuan; rencana dari browser tidak pernah dipercaya begitu saja.
 - Penulisannya dipecah per 20 baris dengan indikator kemajuan, karena mengacak kata sandi butuh ±100 ms per baris.
 
+## Pengukuran, sub pengukuran, dan periode
+
+Sejak migrasi 0006, kuesioner tidak lagi menempel ke periode:
+
+```
+Pengukuran (mis. "BA15 · Pengukuran Awardee")
+└── Sub pengukuran = kategori soal, dasar hitungan IPK
+    └── Soal (teks "Saya …" & "Yang bersangkutan …", skala)
+
+Periode = jadwal: pilih pengukuran + angkatan + tanggal + target tiap tipe penilai
+```
+
+- **Satu set soal dipakai ulang** lintas angkatan. Menjadwalkan BA17 tinggal membuat periode yang menunjuk
+  pengukuran yang sama — tidak ada penyalinan soal, jadi tidak ada salinan yang perlahan berbeda isi.
+- **Susunan soal terkunci begitu pengukuran itu menghasilkan jawaban** lewat periode mana pun. Teks soal dan nama
+  sub pengukuran tetap bisa dirapikan (nilai menempel ke id, bukan ke teksnya); kode dan skala tidak.
+- **Pengukuran yang masih dijadwalkan periode tidak bisa dihapus.**
+
+### Catatan migrasi 0006
+
+`instruments` dirujuk `response_scores`, jadi tabelnya tidak bisa langsung dibongkar. `PRAGMA foreign_keys = OFF`
+**tidak menolong** — SQLite mengabaikannya di dalam transaksi, dan migrasi D1 selalu berjalan dalam transaksi;
+`PRAGMA defer_foreign_keys` juga tidak cukup, karena pelanggaran yang tercatat saat DROP tidak dihapus oleh RENAME.
+Yang dipakai: **bongkar dari anak ke induk, pasang kembali dari induk ke anak** — saat sebuah tabel dibuang, tidak ada
+lagi baris yang merujuknya. Id soal dipertahankan supaya `response_scores` lama tetap menunjuk soal yang sama.
+
 ## Uji
 
 ```bash
