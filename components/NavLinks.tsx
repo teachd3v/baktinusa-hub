@@ -53,8 +53,9 @@ const NOTCH = [
   `M ${edge} ${round(boxTop)}`,
   `L ${edge} ${round(yTop)}`,
   `A ${FILLET} ${FILLET} 0 0 1 ${round(tx)} ${round(tyTop)}`,
-  // sweep 1: busurnya melingkar ke kiri, memakan pil — bukan menjauh ke kanan.
-  `A ${bite} ${bite} 0 1 1 ${round(tx)} ${round(tyBottom)}`,
+  // sweep 0 + large-arc 1: busur panjang yang melingkar ke kiri sehingga benar-benar memakan pil.
+  // Diverifikasi dengan menelusuri path: batasnya harus mencapai x = cx - bite di tengah tombol.
+  `A ${bite} ${bite} 0 1 0 ${round(tx)} ${round(tyBottom)}`,
   `A ${FILLET} ${FILLET} 0 0 1 ${edge} ${round(yBottom)}`,
   `L ${edge} ${round(boxTop + boxHeight)}`,
   `L ${round(boxLeft + boxWidth)} ${round(boxTop + boxHeight)}`,
