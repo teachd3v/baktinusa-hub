@@ -13,9 +13,14 @@ export function NavLinks({ items }: { items: { href: string; label: string }[] }
   return (
     <nav className="shell-nav" aria-label="Navigasi utama">
       {items.map((item) => (
-        <Link key={item.href} href={item.href} aria-current={item.href === active ? "page" : undefined}>
+        <Link
+          key={item.href}
+          href={item.href}
+          aria-current={item.href === active ? "page" : undefined}
+          data-label={item.label}
+        >
           <NavIcon label={item.label} />
-          {item.label}
+          <span className="sr-only">{item.label}</span>
         </Link>
       ))}
     </nav>
