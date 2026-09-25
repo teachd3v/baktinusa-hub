@@ -382,3 +382,87 @@ export async function deleteInstrument(db: D1Database, actor: SessionUser, measu
   await writeAudit(db, actor, { action: "soal.hapus", entity: "instrument", entityId: instrumentId, summary: `Soal ${row.code} dihapus` });
   return { ok: true };
 }
+
+// ---------- soal lintas pengukuran ----------
+
+export type InstrumentListRow = InstrumentRow & {
+  measurementId: number;
+  measurementName: string;
+  measurementSlug: string;
+  categoryId: number;
+  categoryName: string;
+  locked: boolean;
+};
+
+export type InstrumentFilter = { measurementId?: number | null; categoryId?: number | null; search?: string };
+
+// Satu daftar berisi soal dari semua pengukuran, untuk halaman Instrumen. `locked` dihitung per pengukuran:
+// begitu sebuah pengukuran menghasilkan jawaban, susunannya dikunci — tapi teks soalnya tetap bisa dirapikan.
+export async function listAllInstruments(db: D1Database, actor: SessionUser, filter: InstrumentFilter = {}): Promise<InstrumentListRow[]> {
+  assertAdmin(actor);
+  const where: string[] = [];
+  const params: (string | number)[] = [];
+  if (filter.measurementId) {
+    where.push("i.measurement_id = ?");
+    params.push(filter.measurementId);
+  }
+  if (filter.categoryId) {
+    where.push("i.category_id = ?");
+    params.push(filter.categoryId);
+  }
+  const search = filter.search?.trim().toLowerCase();
+  if (search) {
+    const like = `%${search}%`;
+    where.push("(lower(i.code) LIKE ? OR lower(i.text_public) LIKE ? OR lower(COALESCE(i.text_self, '')) LIKE ?)");
+    params.push(like, like, like);
+  }
+
+  const { results } = await db
+    .prepare(
+      `SELECT i.id, i.code, i.text_self, i.text_public, i.scale_max, i.order_index,
+          i.measurement_id, m.name AS measurement_name, m.slug AS measurement_slug,
+          i.category_id, c.name AS category_name,
+          (SELECT COUNT(*) FROM response_scores s WHERE s.instrument_id = i.id) AS answers,
+          (SELECT COUNT(*) FROM responses r JOIN periods p ON p.id = r.period_id WHERE p.measurement_id = m.id) AS measurement_answers
+       FROM instruments i
+       JOIN measurements m ON m.id = i.measurement_id
+       JOIN instrument_categories c ON c.id = i.category_id
+       ${where.length ? `WHERE ${where.join(" AND ")}` : ""}
+       ORDER BY m.name, c.order_index, i.order_index`,
+    )
+    .bind(...params)
+    .all<{
+      id: number; code: string; text_self: string | null; text_public: string; scale_max: number; order_index: number;
+      measurement_id: number; measurement_name: string; measurement_slug: string;
+      category_id: number; category_name: string; answers: number; measurement_answers: number;
+    }>();
+
+  return results.map((r) => ({
+    id: r.id,
+    code: r.code,
+    textSelf: r.text_self,
+    textPublic: r.text_public,
+    scaleMax: r.scale_max,
+    orderIndex: r.order_index,
+    answers: r.answers,
+    measurementId: r.measurement_id,
+    measurementName: r.measurement_name,
+    measurementSlug: r.measurement_slug,
+    categoryId: r.category_id,
+    categoryName: r.category_name,
+    locked: r.measurement_answers > 0,
+  }));
+}
+
+// Pilihan sub pengukuran untuk form tambah soal, dikelompokkan per pengukuran.
+export async function listCategoryOptions(db: D1Database, actor: SessionUser): Promise<{ id: number; name: string; measurementId: number; measurementName: string }[]> {
+  assertAdmin(actor);
+  const { results } = await db
+    .prepare(
+      `SELECT c.id, c.name, c.measurement_id, m.name AS measurement_name
+       FROM instrument_categories c JOIN measurements m ON m.id = c.measurement_id
+       ORDER BY m.name, c.order_index`,
+    )
+    .all<{ id: number; name: string; measurement_id: number; measurement_name: string }>();
+  return results.map((r) => ({ id: r.id, name: r.name, measurementId: r.measurement_id, measurementName: r.measurement_name }));
+}

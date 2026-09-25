@@ -13,6 +13,8 @@ import {
   deleteMeasurement,
   getFormText,
   getMeasurement,
+  listAllInstruments,
+  listCategoryOptions,
   listMeasurements,
   renameCategory,
   renameMeasurement,
@@ -199,5 +201,46 @@ describe("mengganti nama pengukuran", () => {
     const detail = (await getMeasurement(db, admin, "uji"))!;
     assert.deepEqual({ nama: detail.name, soal: detail.instruments }, { nama: "Pengukuran Awardee 360°", soal: 2 });
     assert.equal((await renameMeasurement(db, admin, 1, "  ")).ok, false);
+  });
+});
+
+describe("daftar soal lintas pengukuran", () => {
+  test("tanpa saringan: semua soal, lengkap dengan asal pengukuran & sub pengukurannya", async () => {
+    const semua = await listAllInstruments(db, admin);
+    assert.deepEqual(semua.map((i) => `${i.measurementSlug}/${i.categoryName}/${i.code}`), ["uji/Kategori Uji/Q1", "uji/Kategori Uji/Q2"]);
+    assert.equal(semua[0]!.locked, true); // pengukuran fixture sudah punya jawaban
+  });
+
+  test("bisa disaring per pengukuran, per sub pengukuran, dan dicari isinya", async () => {
+    const lain = await baru({ copyFromId: 1 });
+    assert.ok(lain.ok);
+    assert.equal((await listAllInstruments(db, admin)).length, 4);
+    assert.equal((await listAllInstruments(db, admin, { measurementId: lain.id })).length, 2);
+
+    const kategoriLain = (await getMeasurement(db, admin, "pengukuran-baru"))!.categoriesList[0]!;
+    assert.equal((await listAllInstruments(db, admin, { categoryId: kategoriLain.id })).length, 2);
+
+    // Pencarian menjangkau kode, teks penilai, dan teks asesmen mandiri.
+    assert.deepEqual((await listAllInstruments(db, admin, { search: "q2" })).map((i) => i.code), ["Q2", "Q2"]);
+    assert.deepEqual((await listAllInstruments(db, admin, { search: "disiplin" })).map((i) => i.code), ["Q2", "Q2"]);
+    assert.equal((await listAllInstruments(db, admin, { search: "tidak ada" })).length, 0);
+  });
+
+  test("soal pengukuran tanpa jawaban tidak ikut terkunci", async () => {
+    const lain = await baru({ copyFromId: 1 });
+    assert.ok(lain.ok);
+    const soal = await listAllInstruments(db, admin, { measurementId: lain.id });
+    assert.ok(soal.every((i) => i.locked === false && i.answers === 0));
+  });
+
+  test("pilihan sub pengukuran dikelompokkan per pengukuran", async () => {
+    await baru({ copyFromId: 1 });
+    const opsi = await listCategoryOptions(db, admin);
+    assert.deepEqual(opsi.map((o) => `${o.measurementName}/${o.name}`), ["Pengukuran Baru/Kategori Uji", "Pengukuran Uji/Kategori Uji"]);
+  });
+
+  test("hanya Admin", async () => {
+    await assert.rejects(listAllInstruments(db, manwil), ScopeError);
+    await assert.rejects(listCategoryOptions(db, manwil), ScopeError);
   });
 });

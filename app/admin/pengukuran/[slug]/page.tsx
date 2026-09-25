@@ -68,10 +68,11 @@ export default async function MeasurementDetailPage({ params }: { params: Promis
         <h2 className="section-title">Sub pengukuran &amp; soal</h2>
         <p className="section-hint">
           Sub pengukuran adalah pengelompokan soal yang jadi dasar hitungan IPK — rata-rata tiap sub, lalu dirata-ratakan lagi.
+          Soalnya sendiri dikelola di menu Instrumen.
         </p>
         <div style={{ display: "grid", gap: "0.75rem" }}>
           {measurement.categoriesList.map((c) => (
-            <CategoryBlock key={c.id} measurementId={measurement.id} category={c} locked={measurement.locked} />
+            <CategoryBlock key={c.id} measurementId={measurement.id} measurementSlug={measurement.slug} category={c} locked={measurement.locked} />
           ))}
         </div>
       </section>

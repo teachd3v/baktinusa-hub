@@ -236,6 +236,9 @@ Periode = jadwal: pilih pengukuran + angkatan + tanggal + target tiap tipe penil
 - **Susunan soal terkunci begitu pengukuran itu menghasilkan jawaban** lewat periode mana pun. Teks soal dan nama
   sub pengukuran tetap bisa dirapikan (nilai menempel ke id, bukan ke teksnya); kode dan skala tidak.
 - **Pengukuran yang masih dijadwalkan periode tidak bisa dihapus.**
+- **Menu Instrumen** (`/admin/instrumen`) mengelola soal dari semua pengukuran dalam satu daftar, dengan saringan per
+  pengukuran dan per sub pengukuran serta pencarian ke kode maupun isi soal. Halaman Pengukuran mengurus sub
+  pengukurannya saja lalu menautkan ke sini — supaya soal tidak punya dua tempat sunting yang bisa berbeda isi.
 
 ### Catatan migrasi 0006
 
