@@ -1,39 +1,69 @@
 import { env } from "cloudflare:workers";
 import type { Metadata } from "next";
 import { requireUser } from "@/lib/auth";
-import { listAwardeesWithoutAccount, listRegions, listUsers } from "@/lib/data/users";
-import { formatWib } from "@/lib/format";
-import { setStatusAction } from "./actions";
-import { CredentialsForm } from "./CredentialsForm";
-import { NewUserForm } from "./NewUserForm";
+import { listPeople } from "@/lib/data/people";
+import { listAwardeesWithoutAccount, listRegions } from "@/lib/data/users";
+import { NewPersonForm, PersonRow } from "./PersonForms";
 
 export const metadata: Metadata = { title: "Pengguna" };
 
-const ROLE_LABEL = { admin: "Admin", manwil: "Manwil", awardee: "Awardee" } as const;
-
-export default async function UsersPage() {
+export default async function PeoplePage({ searchParams }: { searchParams: Promise<{ peran?: string; cari?: string }> }) {
   const admin = await requireUser("admin");
-  const [users, regions, freeAwardees] = await Promise.all([
-    listUsers(env.DB, admin),
+  const [{ peran, cari }, people, regions, freeAwardees] = await Promise.all([
+    searchParams,
+    listPeople(env.DB, admin),
     listRegions(env.DB),
     listAwardeesWithoutAccount(env.DB, admin),
   ]);
+
+  const needle = (cari ?? "").trim().toLowerCase();
+  const shown = people
+    .filter((p) => !peran || (peran === "tanpa-akun" ? p.userId === null : p.role === peran))
+    .filter((p) => !needle || [p.name, p.email ?? "", p.loginId ?? "", p.region ?? "", p.referralCode ?? ""].some((v) => v.toLowerCase().includes(needle)));
+
+  const count = (role: string) => people.filter((p) => p.role === role).length;
+  const tabs: [string, string][] = [
+    ["", `Semua (${people.length})`],
+    ["admin", `Admin (${count("admin")})`],
+    ["manwil", `Manwil (${count("manwil")})`],
+    ["awardee", `Awardee (${count("awardee")})`],
+    ["tanpa-akun", `Tanpa akun (${people.filter((p) => p.userId === null).length})`],
+  ];
 
   return (
     <>
       <div className="page-head">
         <h1>Pengguna</h1>
-        <p>Akun Admin, Manajer Wilayah, dan Awardee. Hub tidak memakai kata sandi — setiap orang masuk lewat tautan sekali pakai.</p>
+        <p>Satu tempat untuk semua orang: Admin, Manajer Wilayah, dan Awardee — beserta data awardee yang belum punya akun.</p>
       </div>
 
       <section className="card">
-        <h2 className="section-title">Tambah akun</h2>
-        <NewUserForm regions={regions} awardees={freeAwardees} />
+        <h2 className="section-title">Tambah orang</h2>
+        <p className="section-hint">
+          Untuk peran Awardee, data awardee ikut dibuat sekalian — atau hubungkan ke data yang sudah ada.
+        </p>
+        <NewPersonForm regions={regions} freeAwardees={freeAwardees} />
       </section>
 
       <section className="card">
-        <h2 className="section-title">Daftar akun</h2>
-        <p className="section-hint">{users.length} akun</p>
+        <h2 className="section-title">Daftar</h2>
+
+        <div className="tabs">
+          {tabs.map(([value, label]) => (
+            <a key={value || "semua"} href={value ? `/admin/pengguna?peran=${value}` : "/admin/pengguna"} aria-current={(peran ?? "") === value ? "page" : undefined}>
+              {label}
+            </a>
+          ))}
+        </div>
+
+        <form method="get" className="copy-row" style={{ margin: "0 0 1rem" }}>
+          {peran && <input type="hidden" name="peran" value={peran} />}
+          <input className="input" type="search" name="cari" defaultValue={cari ?? ""} placeholder="Cari nama, ID, email, wilayah…" aria-label="Cari orang" />
+          <button type="submit" className="btn btn-small">Cari</button>
+        </form>
+
+        <p className="section-hint">{shown.length} ditampilkan</p>
+
         <div className="table-wrap">
           <table className="table">
             <thead>
@@ -42,40 +72,14 @@ export default async function UsersPage() {
                 <th scope="col">ID masuk</th>
                 <th scope="col">Peran</th>
                 <th scope="col">Wilayah</th>
-                <th scope="col">Terakhir masuk</th>
-                <th scope="col">ID &amp; kata sandi</th>
+                <th scope="col">Data awardee</th>
                 <th scope="col">Status</th>
+                <th scope="col"><span className="sr-only">Aksi</span></th>
               </tr>
             </thead>
             <tbody>
-              {users.map((u) => (
-                <tr key={u.id}>
-                  <td>
-                    <b>{u.name}</b>
-                    <div className="section-hint" style={{ margin: 0 }}>{u.email}</div>
-                  </td>
-                  <td>
-                    {u.loginId ? <code style={{ fontSize: "0.78rem" }}>{u.loginId}</code> : <span className="pill pill-warn">belum ada</span>}
-                  </td>
-                  <td>{ROLE_LABEL[u.role]}</td>
-                  <td>{u.region ?? "—"}</td>
-                  <td>{u.lastLoginAt ? formatWib(u.lastLoginAt) : <span className="pill pill-muted">belum pernah</span>}</td>
-                  <td>
-                    {u.status === "active" ? <CredentialsForm userId={u.id} name={u.name} loginId={u.loginId} /> : "—"}
-                  </td>
-                  <td>
-                    {u.id === admin.id ? (
-                      <span className="pill pill-ok">aktif</span>
-                    ) : (
-                      <form action={setStatusAction}>
-                        <input type="hidden" name="userId" value={u.id} />
-                        <input type="hidden" name="status" value={u.status === "active" ? "disabled" : "active"} />
-                        <span className={`pill ${u.status === "active" ? "pill-ok" : "pill-bad"}`}>{u.status === "active" ? "aktif" : "nonaktif"}</span>{" "}
-                        <button type="submit" className="btn-link">{u.status === "active" ? "Nonaktifkan" : "Aktifkan"}</button>
-                      </form>
-                    )}
-                  </td>
-                </tr>
+              {shown.map((p) => (
+                <PersonRow key={`${p.userId ?? "a"}-${p.awardeeId ?? "u"}`} person={p} regions={regions} />
               ))}
             </tbody>
           </table>

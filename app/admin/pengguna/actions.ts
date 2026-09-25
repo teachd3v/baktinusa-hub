@@ -3,45 +3,86 @@
 import { env } from "cloudflare:workers";
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth";
-import { createUser, setCredentials, setUserStatus } from "@/lib/data/users";
+import { deleteAwardee } from "@/lib/data/admin-awardees";
+import { createPerson, deleteAccount, updateAwardeeData, updatePerson, type PersonInput } from "@/lib/data/people";
+import type { Role } from "@/lib/data/scope";
 
 // Server action adalah endpoint publik: masing-masing memeriksa ulang bahwa pemanggilnya Admin.
 
-export type CreateUserState = { ok: boolean; message: string } | null;
+export type PersonState = { ok: boolean; message: string } | null;
 
-export async function createUserAction(_previous: CreateUserState, form: FormData): Promise<CreateUserState> {
-  const admin = await requireUser("admin");
+const text = (form: FormData, name: string) => String(form.get(name) ?? "");
+
+function inputOf(form: FormData): PersonInput | null {
   const role = form.get("role");
-  if (role !== "admin" && role !== "manwil" && role !== "awardee") return { ok: false, message: "Pilih peran akun." };
-  const result = await createUser(env.DB, admin, {
-    email: String(form.get("email") ?? ""),
-    name: String(form.get("name") ?? ""),
-    role,
+  if (role !== "admin" && role !== "manwil" && role !== "awardee") return null;
+  return {
+    role: role as Role,
+    loginId: text(form, "loginId"),
+    name: text(form, "name"),
+    email: text(form, "email"),
+    password: text(form, "password"),
+    status: form.get("status") === "disabled" ? "disabled" : "active",
     regionId: Number(form.get("regionId")) || null,
     awardeeId: Number(form.get("awardeeId")) || null,
-    loginId: String(form.get("loginId") ?? ""),
-    password: String(form.get("password") ?? ""),
-  });
-  if (!result.ok) return { ok: false, message: result.message };
-  revalidatePath("/admin", "layout");
-  return { ok: true, message: "Akun dibuat. Berikan ID dan kata sandinya kepada yang bersangkutan lewat jalur pribadi." };
+    batch: text(form, "batch"),
+    campus: text(form, "campus"),
+    referralCode: text(form, "referralCode"),
+  };
 }
 
-// Mengatur ulang ID masuk dan kata sandi — dipakai saat orang lupa kata sandinya.
-export async function setCredentialsAction(_previous: CreateUserState, form: FormData): Promise<CreateUserState> {
+const refresh = () => revalidatePath("/admin", "layout");
+
+export async function createPersonAction(_previous: PersonState, form: FormData): Promise<PersonState> {
   const admin = await requireUser("admin");
-  const result = await setCredentials(env.DB, admin, Number(form.get("userId")), {
-    loginId: String(form.get("loginId") ?? ""),
-    password: String(form.get("password") ?? ""),
-  });
-  if (!result.ok) return { ok: false, message: result.message };
-  revalidatePath("/admin", "layout");
-  return { ok: true, message: "Kredensial akun diperbarui. Sesi lama akun itu ikut diputus." };
+  const input = inputOf(form);
+  if (!input) return { ok: false, message: "Pilih peran akun." };
+
+  const result = await createPerson(env.DB, admin, input);
+  if (!result.ok) return result;
+  refresh();
+  return { ok: true, message: "Tersimpan. Berikan ID dan kata sandinya lewat jalur pribadi." };
 }
 
-export async function setStatusAction(form: FormData): Promise<void> {
+export async function updatePersonAction(_previous: PersonState, form: FormData): Promise<PersonState> {
   const admin = await requireUser("admin");
-  const status = form.get("status") === "disabled" ? "disabled" : "active";
-  await setUserStatus(env.DB, admin, Number(form.get("userId")), status);
-  revalidatePath("/admin", "layout");
+  const input = inputOf(form);
+  if (!input) return { ok: false, message: "Peran akun tidak dikenal." };
+
+  const result = await updatePerson(env.DB, admin, Number(form.get("userId")), input);
+  if (!result.ok) return result;
+  refresh();
+  return { ok: true, message: "Perubahan tersimpan." };
+}
+
+export async function deleteAccountAction(_previous: PersonState, form: FormData): Promise<PersonState> {
+  const admin = await requireUser("admin");
+  const result = await deleteAccount(env.DB, admin, Number(form.get("userId")));
+  if (!result.ok) return result;
+  refresh();
+  return { ok: true, message: "Akun dihapus. Data awardee-nya tetap tersimpan." };
+}
+
+// ---------- data awardee yang belum punya akun ----------
+
+export async function updateAwardeeDataAction(_previous: PersonState, form: FormData): Promise<PersonState> {
+  const admin = await requireUser("admin");
+  const result = await updateAwardeeData(env.DB, admin, Number(form.get("awardeeId")), {
+    name: text(form, "name"),
+    batch: text(form, "batch"),
+    regionId: Number(form.get("regionId")) || null,
+    campus: text(form, "campus"),
+    referralCode: text(form, "referralCode"),
+  });
+  if (!result.ok) return result;
+  refresh();
+  return { ok: true, message: "Data awardee tersimpan." };
+}
+
+export async function deleteAwardeeDataAction(_previous: PersonState, form: FormData): Promise<PersonState> {
+  const admin = await requireUser("admin");
+  const result = await deleteAwardee(env.DB, admin, Number(form.get("awardeeId")));
+  if (!result.ok) return result;
+  refresh();
+  return { ok: true, message: "Data awardee dihapus." };
 }
