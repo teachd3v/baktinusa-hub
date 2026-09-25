@@ -15,7 +15,12 @@ export type AuditEntry = {
 
 export type AuditInput = { action: string; entity: string; entityId?: number | null; summary: string; detail?: unknown };
 
-export async function writeAudit(db: D1Database, actor: SessionUser, input: AuditInput): Promise<void> {
+// Pelaku bisa berupa akun, atau sistem untuk tugas terjadwal — yang terakhir tanpa user_id.
+export type AuditActor = Pick<SessionUser, "id" | "name"> | { id: null; name: string };
+
+export const SYSTEM_ACTOR: AuditActor = { id: null, name: "Sistem (terjadwal)" };
+
+export async function writeAudit(db: D1Database, actor: AuditActor, input: AuditInput): Promise<void> {
   await db
     .prepare(
       "INSERT INTO audit_log (user_id, actor_name, action, entity, entity_id, summary, detail) VALUES (?, ?, ?, ?, ?, ?, ?)",

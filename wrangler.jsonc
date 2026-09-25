@@ -55,6 +55,14 @@
     // Hostname frontend yang sah menurut siteverify. Jangan pernah memasukkan localhost di sini.
     "TURNSTILE_HOSTNAMES": "baktinusa-hub.te4ch.workers.dev"
   },
+  // Tugas terjadwal (lihat worker/index.ts): tiap 15 menit memindahkan status periode yang jadwalnya tiba,
+  // dan sekali sehari pukul 00.10 WIB mencadangkan D1 ke R2.
+  "triggers": {
+    "crons": [
+      "*/15 * * * *",
+      "10 17 * * *"
+    ]
+  },
   // Secret (wrangler secret put): TURNSTILE_SECRET, FINGERPRINT_SALT.
   "observability": {
     "enabled": true

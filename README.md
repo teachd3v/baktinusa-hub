@@ -161,6 +161,28 @@ npm run demo-data -- --reset # hapus lagi
 - **`/admin/jejak`** — setiap perubahan lewat konsol tercatat di `audit_log` beserta nama pelakunya. Jejak ditulis di
   `lib/data/*`, bukan di halaman, supaya tidak ada jalur ubah yang lolos tanpa tercatat. Tidak ada tombol hapus jejak.
 
+## Otomasi (Cron Triggers)
+
+Dua jadwal di `wrangler.jsonc`, satu handler di `worker/index.ts`, logikanya di `lib/data/cron.ts`:
+
+- **`*/15 * * * *`** — periode draft yang jadwal bukanya sudah lewat **dibuka sendiri** (dengan pagar yang sama seperti
+  tombol di konsol: tanpa pertanyaan atau tipe penilai, ia dibiarkan draft), dan periode yang deadline-nya lewat **ditutup**.
+  Deadline yang dulu ditulis tangan di enam berkas sekarang dijalankan platform.
+- **`10 17 * * *`** (00.10 WIB) — **cadangan D1 ke R2** sebagai NDJSON di `backup/<tanggal>.ndjson`, lalu cadangan
+  lebih tua dari 30 hari dibuang. `sessions` dan `login_tokens` sengaja tidak ikut: isinya kredensial berumur pendek.
+  Tabel besar dibaca bertahap 5.000 baris supaya tidak melewati batas ukuran balasan D1.
+
+Setiap tindakan otomatis tercatat di jejak audit atas nama **Sistem (terjadwal)**, jadi status periode yang berubah
+sendiri tetap bisa ditelusuri. Kegagalan satu jalan ditangkap dan dicatat, tidak menghentikan jadwal berikutnya.
+
+**Pengingat** ada di `/admin/pengingat`: siapa yang respondennya belum penuh, dikelompokkan per wilayah, lengkap dengan
+pesan siap salin untuk Manwil. Pengiriman otomatis lewat email menunggu domain pengirim BAKTI NUSA — sampai itu,
+halaman ini yang dipakai dan pengirimannya manual lewat WhatsApp.
+
+Menguji lokal: `npm run build`, lalu `npx wrangler dev --config dist/server/wrangler.json` dan buka
+`/cdn-cgi/handler/scheduled?cron=*/15+*+*+*+*`. Catatan: worker hasil build memakai state D1 lokalnya sendiri di
+`dist/server/.wrangler/` — `--persist-to` diabaikan karena config-nya ada di folder itu.
+
 ## Uji
 
 ```bash
@@ -182,9 +204,8 @@ CLOUDFLARE_ACCOUNT_ID=6dea7431212db790894cca82864822c0 npx wrangler r2 bucket li
 ```
 
 **Handler `scheduled()` ada di `worker/index.ts`**, membungkus entry vinext supaya Cron Triggers hidup di Worker yang sama.
-Jadwal cron belum dipasang — itu Fase 6. Untuk menguji handler secara lokal, jalankan `npm run build && npm run start`
-lalu buka `/cdn-cgi/handler/scheduled?cron=0+17+*+*+*`. Rute `/__scheduled` dari `--test-scheduled` **tidak** berfungsi di
-project ini karena bundle vinext sudah prebuilt (`no_bundle: true`).
+Jadwalnya ada di bagian **Otomasi** di atas. Rute `/__scheduled` dari `--test-scheduled` **tidak** berfungsi di project
+ini karena bundle vinext sudah prebuilt (`no_bundle: true`); pakai `/cdn-cgi/handler/scheduled?cron=...`.
 
 **D1 tidak mengizinkan semua fungsi SQLite** — misalnya `sqlite_version()` ditolak dengan `SQLITE_ERROR [code: 7500]`.
 
