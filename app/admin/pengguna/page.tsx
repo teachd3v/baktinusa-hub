@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { requireUser } from "@/lib/auth";
 import { listPeople } from "@/lib/data/people";
 import { listAwardeesWithoutAccount, listRegions } from "@/lib/data/users";
+import { ImportPanel } from "./ImportPanel";
 import { NewPersonForm, PersonRow } from "./PersonForms";
 
 export const metadata: Metadata = { title: "Pengguna" };
@@ -43,6 +44,11 @@ export default async function PeoplePage({ searchParams }: { searchParams: Promi
           Untuk peran Awardee, data awardee ikut dibuat sekalian — atau hubungkan ke data yang sudah ada.
         </p>
         <NewPersonForm regions={regions} freeAwardees={freeAwardees} />
+      </section>
+
+      <section className="card">
+        <h2 className="section-title">Impor massal</h2>
+        <ImportPanel />
       </section>
 
       <section className="card">

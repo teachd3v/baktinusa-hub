@@ -4,6 +4,7 @@ import { env } from "cloudflare:workers";
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth";
 import { deleteAwardee } from "@/lib/data/admin-awardees";
+import { applyPlan, planImport, type RawRow, type RowPlan, type RowResult } from "@/lib/data/import-people";
 import { createPerson, deleteAccount, updateAwardeeData, updatePerson, type PersonInput } from "@/lib/data/people";
 import type { Role } from "@/lib/data/scope";
 
@@ -85,4 +86,23 @@ export async function deleteAwardeeDataAction(_previous: PersonState, form: Form
   if (!result.ok) return result;
   refresh();
   return { ok: true, message: "Data awardee dihapus." };
+}
+
+// ---------- impor massal ----------
+
+export async function planImportAction(rows: RawRow[]): Promise<RowPlan[]> {
+  const admin = await requireUser("admin");
+  if (!Array.isArray(rows) || rows.length === 0 || rows.length > 2000) {
+    throw new Error("Berkas kosong atau terlalu besar (maksimal 2000 baris).");
+  }
+  return planImport(env.DB, admin, rows);
+}
+
+// Dipanggil berulang per potongan kecil; penulisannya tetap divalidasi ulang di lapisan data.
+export async function applyImportAction(plans: RowPlan[]): Promise<RowResult[]> {
+  const admin = await requireUser("admin");
+  if (!Array.isArray(plans) || plans.length > 50) throw new Error("Potongan impor terlalu besar.");
+  const results = await applyPlan(env.DB, admin, plans);
+  refresh();
+  return results;
 }

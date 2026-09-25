@@ -202,6 +202,23 @@ dirender memakai kelas yang sama persis seperti halaman sungguhan, jadi panduan 
 - **Warna grafik** punya tokennya sendiri (`--chart-*`), lebih pekat dari token status karena dipakai dalam potongan kecil.
 - Status tidak pernah disampaikan lewat warna saja — selalu ada kata di sebelahnya.
 
+## Impor massal pengguna
+
+Di menu **Pengguna** ada panel impor: unduh template (CSV atau .xlsx), isi di Excel, lalu unggah kembali.
+
+- **Dua langkah, selalu.** Berkas diperiksa dulu dan hasilnya ditampilkan per baris — akan dibuat, akan diperbarui,
+  atau ditolak beserta alasannya. Tidak ada yang tersimpan sampai tombol terapkan ditekan.
+- **Kolom:** ID · Nama · Email · Peran · Wilayah · Angkatan · Kode Referal · Kampus · Kata Sandi · Status. Judul kolom
+  tidak peka huruf besar-kecil, dan peran boleh ditulis "Manwil" maupun "Manajer Wilayah".
+- **Kode referal yang sudah ada berarti "buatkan akunnya"** — barisnya menempel ke data awardee itu, bukan membuat data
+  kedua. Inilah cara membuatkan akun untuk 55 awardee yang sudah ada sekaligus.
+- **ID yang sudah ada berarti perbarui.** Kata sandi kosong pada baris itu berarti kata sandinya tidak diganti.
+- Bentrok antarbaris di dalam berkas (ID, email, atau kode referal kembar) ikut ketahuan di tahap pemeriksaan.
+- **Berkas dibaca di browser**, jadi pustaka Excel (SheetJS) tidak ikut terbawa ke Worker — ia hanya jadi potongan klien
+  yang dimuat saat dipakai. Worker tetap 0,19 MB. Barisnya dikirim sebagai JSON dan **divalidasi ulang di server**
+  lewat fungsi yang sama dengan form satuan; rencana dari browser tidak pernah dipercaya begitu saja.
+- Penulisannya dipecah per 20 baris dengan indikator kemajuan, karena mengacak kata sandi butuh ±100 ms per baris.
+
 ## Uji
 
 ```bash
