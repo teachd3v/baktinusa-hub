@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { listMeasurements } from "@/lib/data/measurements";
+import { AddButton } from "@/components/Modal";
 import { NewMeasurementForm } from "./MeasurementForms";
 
 export const metadata: Metadata = { title: "Pengukuran" };
@@ -21,7 +22,16 @@ export default async function MeasurementsPage() {
       </div>
 
       <section className="card">
-        <h2 className="section-title">Daftar pengukuran</h2>
+        <div className="card-head">
+          <h2 className="section-title">Daftar pengukuran</h2>
+          <AddButton
+            label="Buat pengukuran"
+            title="Buat pengukuran"
+            hint="Untuk jenis penilaian baru. Kuesionernya bisa dimulai dari nol atau menyalin pengukuran yang sudah ada."
+          >
+            <NewMeasurementForm measurements={measurements} />
+          </AddButton>
+        </div>
         <div className="table-wrap">
           <table className="table">
             <thead>
@@ -55,13 +65,6 @@ export default async function MeasurementsPage() {
         </div>
       </section>
 
-      <section className="card">
-        <h2 className="section-title">Buat pengukuran</h2>
-        <p className="section-hint">
-          Untuk jenis penilaian baru. Kuesionernya bisa dimulai dari nol atau menyalin pengukuran yang sudah ada.
-        </p>
-        <NewMeasurementForm measurements={measurements} />
-      </section>
     </>
   );
 }

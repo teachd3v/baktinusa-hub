@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { requireUser } from "@/lib/auth";
 import { listPeople } from "@/lib/data/people";
 import { listAwardeesWithoutAccount, listRegions } from "@/lib/data/users";
+import { AddButton } from "@/components/Modal";
 import { ImportPanel } from "./ImportPanel";
 import { NewPersonForm, PersonRow } from "./PersonForms";
 
@@ -39,20 +40,21 @@ export default async function PeoplePage({ searchParams }: { searchParams: Promi
       </div>
 
       <section className="card">
-        <h2 className="section-title">Tambah orang</h2>
-        <p className="section-hint">
-          Untuk peran Awardee, data awardee ikut dibuat sekalian — atau hubungkan ke data yang sudah ada.
-        </p>
-        <NewPersonForm regions={regions} freeAwardees={freeAwardees} />
-      </section>
-
-      <section className="card">
         <h2 className="section-title">Impor massal</h2>
         <ImportPanel />
       </section>
 
       <section className="card">
-        <h2 className="section-title">Daftar</h2>
+        <div className="card-head">
+          <h2 className="section-title">Daftar</h2>
+          <AddButton
+            label="Tambah orang"
+            title="Tambah orang"
+            hint="Untuk peran Awardee, data awardee ikut dibuat sekalian — atau hubungkan ke data yang sudah ada."
+          >
+            <NewPersonForm regions={regions} freeAwardees={freeAwardees} />
+          </AddButton>
+        </div>
 
         <div className="tabs">
           {tabs.map(([value, label]) => (

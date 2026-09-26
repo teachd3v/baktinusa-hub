@@ -117,7 +117,13 @@ export function CategoryBlock({
 
       <CategoryNameForm measurementId={measurementId} category={category} />
 
-      {!locked && category.instruments.length === 0 && (
+      {locked || category.instruments.length > 0 ? (
+        <p className="section-hint" style={{ margin: "0.5rem 0 0" }}>
+          {locked
+            ? "Pengukuran ini sudah punya jawaban, jadi sub pengukuran tidak bisa dihapus."
+            : `Masih berisi ${category.instruments.length} soal, jadi belum bisa dihapus — pindahkan atau hapus soalnya dulu lewat menu Instrumen.`}
+        </p>
+      ) : (
         <form action={hapusAction} style={{ marginTop: "0.5rem" }}>
           <input type="hidden" name="measurementId" value={measurementId} />
           <input type="hidden" name="categoryId" value={category.id} />

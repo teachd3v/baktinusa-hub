@@ -480,6 +480,16 @@ a {
   font-weight: 700;
 }
 
+/* Judul kartu dengan tombol aksi di kanannya. */
+.card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gap-md);
+  flex-wrap: wrap;
+  margin-bottom: 0.4rem;
+}
+
 .section-hint {
   margin: 0 0 var(--gap-md);
   color: var(--ink-muted);
@@ -780,7 +790,14 @@ a {
   flex-wrap: wrap;
 }
 
-/* Tombol di baris salin/cari tidak ikut melebar saat isian membungkus ke baris berikutnya. */
+/* Di baris salin/cari, isian mengisi sisa ruang dan tombolnya tetap di sampingnya. */
+.copy-row .input,
+.copy-row .select {
+  flex: 1;
+  width: auto;
+  min-width: 12rem;
+}
+
 .copy-row .btn {
   flex: none;
 }
@@ -1204,6 +1221,58 @@ a {
   margin: 0 0 var(--gap-md);
   color: var(--ink-muted);
   font-size: var(--text-sm);
+}
+
+/* Jendela untuk form tambah: lebih lebar, rata kiri, dan isinya bisa digulir di layar pendek. */
+.modal-form {
+  width: min(44rem, 100%);
+  max-height: min(85vh, 48rem);
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  text-align: left;
+}
+
+.modal-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--gap-md);
+  padding: var(--gap-lg) var(--gap-lg) var(--gap-sm);
+  border-bottom: 1px solid var(--line);
+}
+
+.modal-head .section-title {
+  margin: 0;
+}
+
+.modal-body {
+  overflow-y: auto;
+  padding: var(--gap-md) var(--gap-lg) var(--gap-lg);
+}
+
+.modal-close {
+  flex: none;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  background: var(--surface-sunken);
+  border: none;
+  border-radius: 50%;
+  color: var(--ink-muted);
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.modal-close:hover {
+  background: var(--line-strong);
+  color: var(--ink);
+}
+
+.add-button span {
+  font-size: 1.05em;
+  font-weight: 700;
 }
 
 .modal-emoji {

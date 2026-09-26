@@ -67,8 +67,8 @@ export default async function MeasurementDetailPage({ params }: { params: Promis
       <section className="card">
         <h2 className="section-title">Sub pengukuran &amp; soal</h2>
         <p className="section-hint">
-          Sub pengukuran adalah pengelompokan soal yang jadi dasar hitungan IPK — rata-rata tiap sub, lalu dirata-ratakan lagi.
-          Soalnya sendiri dikelola di menu Instrumen.
+          Sub pengukuran adalah pengelompokan soal yang jadi dasar hitungan IPK — rata-rata tiap sub, lalu dirata-ratakan lagi.{" "}
+          Soalnya sendiri dikelola di <Link href={`/admin/instrumen?pengukuran=${measurement.slug}`}>menu Instrumen</Link>.
         </p>
         <div style={{ display: "grid", gap: "0.75rem" }}>
           {measurement.categoriesList.map((c) => (
@@ -77,12 +77,17 @@ export default async function MeasurementDetailPage({ params }: { params: Promis
         </div>
       </section>
 
-      {!measurement.locked && (
-        <section className="card">
-          <h2 className="section-title">Tambah sub pengukuran</h2>
+      <section className="card">
+        <h2 className="section-title">Tambah sub pengukuran</h2>
+        {measurement.locked ? (
+          <p className="section-hint" style={{ margin: 0 }}>
+            Tidak bisa ditambah karena pengukuran ini sudah menghasilkan {measurement.responses} jawaban. Untuk susunan
+            baru, buat pengukuran baru dan salin yang ini sebagai titik awal.
+          </p>
+        ) : (
           <AddCategory measurementId={measurement.id} />
-        </section>
-      )}
+        )}
+      </section>
 
       <section className="card">
         <h2 className="section-title">Pengaturan</h2>
