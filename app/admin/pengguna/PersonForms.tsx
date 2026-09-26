@@ -182,7 +182,19 @@ export function NewPersonForm({ regions, freeAwardees }: { regions: Region[]; fr
   );
 }
 
-export function PersonRow({ person, regions }: { person: Person; regions: Region[] }) {
+export function PersonRow({
+  person,
+  regions,
+  checked,
+  onCheck,
+  lockedReason,
+}: {
+  person: Person;
+  regions: Region[];
+  checked: boolean;
+  onCheck: () => void;
+  lockedReason?: string;
+}) {
   const [state, action, pending] = useActionState<PersonState, FormData>(updatePersonAction, null);
   const [hapus, hapusAction, menghapus] = useActionState<PersonState, FormData>(deleteAccountAction, null);
   const [open, setOpen] = useState(false);
@@ -193,6 +205,16 @@ export function PersonRow({ person, regions }: { person: Person; regions: Region
   return (
     <>
       <tr>
+        <td className="check-col">
+          <input
+            type="checkbox"
+            checked={checked}
+            onChange={onCheck}
+            disabled={Boolean(lockedReason)}
+            aria-label={lockedReason ? `${person.name} tidak bisa dipilih: ${lockedReason}` : `Pilih ${person.name}`}
+            title={lockedReason}
+          />
+        </td>
         <td>
           <b>{person.name}</b>
           {person.email && <div className="section-hint" style={{ margin: 0 }}>{person.email}</div>}
@@ -226,7 +248,7 @@ export function PersonRow({ person, regions }: { person: Person; regions: Region
 
       {open && !person.userId && person.awardeeId && (
         <tr>
-          <td colSpan={7} style={{ background: "var(--surface-sunken)" }}>
+          <td colSpan={8} style={{ background: "var(--surface-sunken)" }}>
             <AwardeeDataForm person={person} regions={regions} />
           </td>
         </tr>
@@ -234,7 +256,7 @@ export function PersonRow({ person, regions }: { person: Person; regions: Region
 
       {open && person.userId && person.role && (
         <tr>
-          <td colSpan={7} style={{ background: "var(--surface-sunken)" }}>
+          <td colSpan={8} style={{ background: "var(--surface-sunken)" }}>
             <form action={action}>
               <input type="hidden" name="userId" value={person.userId} />
               <Fields regions={regions} person={person} role={person.role} />

@@ -4,7 +4,8 @@ import assert from "node:assert/strict";
 import { beforeEach, describe, test } from "node:test";
 import { findUserForLogin } from "../lib/data/auth.ts";
 import { verifyPassword } from "../lib/data/password.ts";
-import { createPerson, deleteAccount, listPeople, updateAwardeeData, updatePerson, type PersonInput } from "../lib/data/people.ts";
+import { listAudit } from "../lib/data/audit.ts";
+import { createPerson, deleteAccount, deleteMany, listPeople, updateAwardeeData, updatePerson, type PersonInput } from "../lib/data/people.ts";
 import { ScopeError, type SessionUser } from "../lib/data/scope.ts";
 import { createTestDb, seedFixture } from "./helpers/d1.ts";
 
@@ -184,5 +185,48 @@ describe("data awardee tanpa akun", () => {
 
     const bentrok = await updateAwardeeData(db, admin, 2, { name: "Budi", regionId: 1, batch: "BA15", campus: "", referralCode: "AAAA0001" });
     assert.match((bentrok as { message: string }).message, /sudah dipakai awardee lain/);
+  });
+});
+
+describe("hapus massal", () => {
+  test("memakai pagar yang sama: yang terlindungi dilewati, sisanya tetap terhapus", async () => {
+    await db.prepare("UPDATE responses SET submitted_by = 2 WHERE id = 1").run(); // akun Manwil pernah mengisi
+    await db.prepare("DELETE FROM responses WHERE awardee_id = 2").run(); // Budi jadi belum dinilai
+
+    const hasil = await deleteMany(db, admin, [
+      { userId: null, awardeeId: 2 }, // data awardee bersih → boleh
+      { userId: 3, awardeeId: null }, // akun Ayu; datanya sudah dinilai, tapi akunnya boleh dihapus
+      { userId: 1, awardeeId: null }, // Admin yang sedang menghapus → ditolak
+      { userId: 2, awardeeId: null }, // akun yang pernah mengirim penilaian → ditolak
+      { userId: null, awardeeId: null },
+    ]);
+
+    assert.deepEqual(hasil.map((h) => h.ok), [true, true, false, false, false]);
+    assert.match(hasil[2]!.message, /akun sendiri/);
+    assert.match(hasil[3]!.message, /sudah mengirim 1 penilaian/);
+    assert.equal(hasil[4]!.message, "Baris tidak dikenali.");
+
+    const orang = await listPeople(db, admin);
+    assert.ok(!orang.some((p) => p.name === "Budi")); // data awardee-nya hilang
+    const ayu = orang.find((p) => p.name === "Ayu")!;
+    assert.deepEqual({ akun: ayu.userId, penilaian: ayu.responses }, { akun: null, penilaian: 2 }); // akun hilang, penilaian utuh
+  });
+
+  test("meninggalkan satu ringkasan di jejak, selain jejak per baris", async () => {
+    await db.prepare("DELETE FROM responses WHERE awardee_id = 2").run();
+    await deleteMany(db, admin, [{ userId: null, awardeeId: 2 }, { userId: 1, awardeeId: null }]);
+    const jejak = await listAudit(db, admin);
+    assert.match(jejak.find((e) => e.action === "pengguna.hapus-massal")!.summary, /1 dari 2 baris dihapus/);
+    assert.ok(jejak.some((e) => e.action === "awardee.hapus"));
+  });
+
+  test("permintaan kelewat besar ditolak, bukan dijalankan sebagian", async () => {
+    const banyak = Array.from({ length: 201 }, () => ({ userId: null, awardeeId: 2 }));
+    await assert.rejects(deleteMany(db, admin, banyak), ScopeError);
+    assert.ok((await listPeople(db, admin)).some((p) => p.name === "Budi"));
+  });
+
+  test("hanya Admin", async () => {
+    await assert.rejects(deleteMany(db, manwil, [{ userId: null, awardeeId: 2 }]), ScopeError);
   });
 });

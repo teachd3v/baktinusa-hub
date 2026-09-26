@@ -4,6 +4,7 @@
 // menunjuk ke akun, dan ada 55 awardee yang memang belum punya akun. Yang disatukan hanya tampilannya:
 // modul ini yang menjahit keduanya supaya halaman Pengguna cukup satu daftar dan satu form.
 
+import { deleteAwardee } from "./admin-awardees.ts";
 import { writeAudit } from "./audit.ts";
 import { checkLoginId, checkPassword, hashPassword, normalizeLoginId } from "./password.ts";
 import { ScopeError, type Role, type SessionUser } from "./scope.ts";
@@ -370,4 +371,44 @@ export async function updateAwardeeData(
     summary: `Data awardee "${name}" (${code}) diperbarui`,
   });
   return { ok: true };
+}
+
+// ---------- hapus massal ----------
+
+export type DeleteTarget = { userId: number | null; awardeeId: number | null };
+export type DeleteOutcome = DeleteTarget & { ok: boolean; message: string };
+
+const BATCH_LIMIT = 200;
+
+// Menghapus banyak baris sekaligus, tapi tidak pernah melonggarkan pagarnya: tiap baris tetap lewat
+// jalur yang sama dengan hapus satuan, jadi akun yang pernah mengirim penilaian dan awardee yang sudah
+// dinilai tetap ditolak — satu per satu, dengan alasannya masing-masing.
+export async function deleteMany(db: D1Database, actor: SessionUser, targets: DeleteTarget[]): Promise<DeleteOutcome[]> {
+  assertAdmin(actor);
+  if (targets.length > BATCH_LIMIT) {
+    throw new ScopeError(`Terlalu banyak baris sekaligus (maksimal ${BATCH_LIMIT}).`);
+  }
+
+  const outcomes: DeleteOutcome[] = [];
+  for (const target of targets) {
+    if (target.userId) {
+      const hasil = await deleteAccount(db, actor, target.userId);
+      outcomes.push({ ...target, ok: hasil.ok, message: hasil.ok ? "Akun dihapus." : hasil.message });
+    } else if (target.awardeeId) {
+      const hasil = await deleteAwardee(db, actor, target.awardeeId);
+      outcomes.push({ ...target, ok: hasil.ok, message: hasil.ok ? "Data awardee dihapus." : hasil.message });
+    } else {
+      outcomes.push({ ...target, ok: false, message: "Baris tidak dikenali." });
+    }
+  }
+
+  const berhasil = outcomes.filter((o) => o.ok).length;
+  // Jejak per baris sudah ditulis di dalam masing-masing fungsi; yang ini ringkasan tindakannya.
+  await writeAudit(db, actor, {
+    action: "pengguna.hapus-massal",
+    entity: "user",
+    summary: `Hapus massal: ${berhasil} dari ${outcomes.length} baris dihapus`,
+    detail: outcomes.filter((o) => !o.ok).map((o) => o.message),
+  });
+  return outcomes;
 }

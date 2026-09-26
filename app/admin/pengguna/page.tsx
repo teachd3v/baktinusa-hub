@@ -5,7 +5,8 @@ import { listPeople } from "@/lib/data/people";
 import { listAwardeesWithoutAccount, listRegions } from "@/lib/data/users";
 import { AddButton } from "@/components/Modal";
 import { ImportPanel } from "./ImportPanel";
-import { NewPersonForm, PersonRow } from "./PersonForms";
+import { PeopleTable } from "./PeopleTable";
+import { NewPersonForm } from "./PersonForms";
 
 export const metadata: Metadata = { title: "Pengguna" };
 
@@ -72,26 +73,7 @@ export default async function PeoplePage({ searchParams }: { searchParams: Promi
 
         <p className="section-hint">{shown.length} ditampilkan</p>
 
-        <div className="table-wrap">
-          <table className="table">
-            <thead>
-              <tr>
-                <th scope="col">Nama</th>
-                <th scope="col">ID masuk</th>
-                <th scope="col">Peran</th>
-                <th scope="col">Wilayah</th>
-                <th scope="col">Data awardee</th>
-                <th scope="col">Status</th>
-                <th scope="col"><span className="sr-only">Aksi</span></th>
-              </tr>
-            </thead>
-            <tbody>
-              {shown.map((p) => (
-                <PersonRow key={`${p.userId ?? "a"}-${p.awardeeId ?? "u"}`} person={p} regions={regions} />
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <PeopleTable people={shown} regions={regions} selfId={admin.id} />
       </section>
     </>
   );

@@ -5,7 +5,16 @@ import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth";
 import { deleteAwardee } from "@/lib/data/admin-awardees";
 import { applyPlan, planImport, type RawRow, type RowPlan, type RowResult } from "@/lib/data/import-people";
-import { createPerson, deleteAccount, updateAwardeeData, updatePerson, type PersonInput } from "@/lib/data/people";
+import {
+  createPerson,
+  deleteAccount,
+  deleteMany,
+  listPeople,
+  updateAwardeeData,
+  updatePerson,
+  type DeleteTarget,
+  type PersonInput,
+} from "@/lib/data/people";
 import type { Role } from "@/lib/data/scope";
 
 // Server action adalah endpoint publik: masing-masing memeriksa ulang bahwa pemanggilnya Admin.
@@ -62,6 +71,43 @@ export async function deleteAccountAction(_previous: PersonState, form: FormData
   if (!result.ok) return result;
   refresh();
   return { ok: true, message: "Akun dihapus. Data awardee-nya tetap tersimpan." };
+}
+
+// ---------- hapus massal ----------
+
+export type BulkState = { ok: boolean; message: string; failures: { name: string; message: string }[] } | null;
+
+// Kotak centang mengirim kunci baris, bukan indeks: "u:12" akun, "a:34" data awardee tanpa akun.
+// Baris yang punya keduanya mengirim "u:" — menghapus akunnya, data awardee-nya sengaja ditinggal.
+function targetOf(key: string): DeleteTarget | null {
+  const id = Number(key.slice(2));
+  if (!Number.isInteger(id) || id <= 0) return null;
+  if (key.startsWith("u:")) return { userId: id, awardeeId: null };
+  if (key.startsWith("a:")) return { userId: null, awardeeId: id };
+  return null;
+}
+
+export async function deleteManyAction(_previous: BulkState, form: FormData): Promise<BulkState> {
+  const admin = await requireUser("admin");
+  const targets = form.getAll("pilih").map((v) => targetOf(String(v))).filter((t): t is DeleteTarget => t !== null);
+  if (targets.length === 0) return { ok: false, message: "Belum ada baris yang dipilih.", failures: [] };
+  if (targets.length > 200) return { ok: false, message: "Maksimal 200 baris sekali hapus.", failures: [] };
+
+  // Namanya dibaca sebelum penghapusan, supaya pesan penolakan bisa menyebut siapa yang dilewati.
+  const before = await listPeople(env.DB, admin);
+  const nameOf = (t: DeleteTarget) =>
+    before.find((p) => (t.userId !== null ? p.userId === t.userId : p.awardeeId === t.awardeeId))?.name ?? "Baris";
+
+  const outcomes = await deleteMany(env.DB, admin, targets);
+  const failures = outcomes.filter((o) => !o.ok).map((o) => ({ name: nameOf(o), message: o.message }));
+  refresh();
+
+  const berhasil = outcomes.length - failures.length;
+  return {
+    ok: failures.length === 0,
+    message: `${berhasil} dari ${outcomes.length} baris dihapus.`,
+    failures,
+  };
 }
 
 // ---------- data awardee yang belum punya akun ----------
