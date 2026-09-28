@@ -35,7 +35,9 @@ describe("matriks", () => {
     assert.match(rows[0]!, /^Nama;Wilayah;Kampus;Kode referal;/);
     assert.match(rows[0]!, /Jejaring Eksternal — IPK;Jejaring Eksternal — responden/);
     const ayu = rows.find((r) => r.startsWith("Ayu"))!;
-    assert.match(ayu, /Ayu;Bandung;;AAAA0001;/); // kampus kosong tetap jadi sel kosong
+    assert.match(ayu, /Ayu;Bandung;ITB;AAAA0001;/); // nama kampusnya, bukan id-nya
+    const budi = rows.find((r) => r.startsWith("Budi"))!;
+    assert.match(budi, /Budi;Bandung;;AAAA0002;/); // tanpa kampus tetap jadi sel kosong
     assert.match(ayu, /;3\.5;1;/); // IPK jejaring eksternal Ayu dari satu respons bernilai 4 & 3
   });
 

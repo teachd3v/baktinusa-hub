@@ -20,7 +20,7 @@ const input = (over: Partial<AwardeeInput> = {}): AwardeeInput => ({
   name: "Eka Wulandari",
   batch: "BA16",
   regionId: 1,
-  campus: "Universitas Padjadjaran",
+  campusId: 2,
   referralCode: "EKA12345",
   photoKey: null,
   leadproName: null,

@@ -20,7 +20,7 @@ const baris = (over: Partial<RawRow> = {}): RawRow => ({
   Wilayah: "Bandung",
   Angkatan: "BA16",
   "Kode Referal": "BARU0301",
-  Kampus: "Universitas Uji",
+  Kampus: "ITB",
   "Kata Sandi": "BA2026",
   Status: "aktif",
   ...over,
@@ -62,6 +62,36 @@ describe("membaca berkas", () => {
     }
     const [nonaktif] = await rencana([baris({ Status: "Non-Aktif" })]);
     assert.equal(nonaktif!.input!.status, "disabled");
+  });
+});
+
+// Kampus sengaja tidak dibuat otomatis: kalau salah ketik lolos jadi kampus baru, daftar pilihannya
+// akan berisi banyak ejaan untuk satu kampus — persis masalah yang tabel kampus hindari.
+describe("kampus harus sudah terdaftar di wilayahnya", () => {
+  test("salah ketik ditolak, bukan diam-diam dibuatkan kampus baru", async () => {
+    assert.match(
+      await alasan(baris({ Kampus: "Institut Teknologi Bandungg" })),
+      /belum ada di wilayah Bandung. Tambahkan dulu lewat menu Wilayah/,
+    );
+    const jumlah = await db.prepare("SELECT COUNT(*) AS n FROM campuses").first<{ n: number }>();
+    assert.equal(jumlah!.n, 3); // tidak ada kampus baru yang lahir dari pemeriksaan
+  });
+
+  test("kampus milik wilayah lain juga ditolak", async () => {
+    // USU ada, tapi di Medan — barisnya berwilayah Bandung.
+    assert.match(await alasan(baris({ Kampus: "USU" })), /belum ada di wilayah Bandung/);
+  });
+
+  test("ejaan beda huruf besar-kecil tetap diterima", async () => {
+    const [baris1] = await rencana([baris({ Kampus: "itb" })]);
+    assert.equal(baris1!.action, "buat");
+    assert.equal(baris1!.input!.campusId, 1);
+  });
+
+  test("kampus kosong berarti tidak diisi, bukan galat", async () => {
+    const [baris1] = await rencana([baris({ Kampus: "" })]);
+    assert.equal(baris1!.action, "buat");
+    assert.equal(baris1!.input!.campusId, null);
   });
 });
 

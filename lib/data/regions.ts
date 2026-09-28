@@ -19,6 +19,7 @@ export type RegionRow = {
   awardees: number;
   manwils: number;
   responses: number;
+  campuses: number;
 };
 
 export async function listRegionsForAdmin(db: D1Database, actor: SessionUser): Promise<RegionRow[]> {
@@ -28,7 +29,8 @@ export async function listRegionsForAdmin(db: D1Database, actor: SessionUser): P
       `SELECT g.id, g.name,
           (SELECT COUNT(*) FROM awardees a WHERE a.region_id = g.id) AS awardees,
           (SELECT COUNT(*) FROM users u WHERE u.region_id = g.id) AS manwils,
-          (SELECT COUNT(*) FROM responses r JOIN awardees a ON a.id = r.awardee_id WHERE a.region_id = g.id) AS responses
+          (SELECT COUNT(*) FROM responses r JOIN awardees a ON a.id = r.awardee_id WHERE a.region_id = g.id) AS responses,
+          (SELECT COUNT(*) FROM campuses c WHERE c.region_id = g.id) AS campuses
        FROM regions g ORDER BY g.name`,
     )
     .all<RegionRow>();
@@ -95,11 +97,12 @@ export async function deleteRegion(db: D1Database, actor: SessionUser, regionId:
     .prepare(
       `SELECT g.name,
           (SELECT COUNT(*) FROM awardees a WHERE a.region_id = g.id) AS awardees,
-          (SELECT COUNT(*) FROM users u WHERE u.region_id = g.id) AS manwils
+          (SELECT COUNT(*) FROM users u WHERE u.region_id = g.id) AS manwils,
+          (SELECT COUNT(*) FROM campuses c WHERE c.region_id = g.id) AS campuses
        FROM regions g WHERE g.id = ?`,
     )
     .bind(regionId)
-    .first<{ name: string; awardees: number; manwils: number }>();
+    .first<{ name: string; awardees: number; manwils: number; campuses: number }>();
   if (!row) return { ok: false, message: "Wilayah tidak ditemukan." };
 
   const dipakai = [
@@ -110,12 +113,20 @@ export async function deleteRegion(db: D1Database, actor: SessionUser, regionId:
     return { ok: false, message: `"${row.name}" masih dipakai ${dipakai.join(" dan ")}. Pindahkan dulu, baru wilayahnya bisa dihapus.` };
   }
 
-  await db.prepare("DELETE FROM regions WHERE id = ?").bind(regionId).run();
+  // Kampus ikut terhapus. Tidak ada yang kehilangan rujukan: wilayah ini sudah dipastikan tanpa awardee
+  // di atas, dan kampus hanya bisa dipakai awardee dari wilayahnya sendiri.
+  await db.batch([
+    db.prepare("DELETE FROM campuses WHERE region_id = ?").bind(regionId),
+    db.prepare("DELETE FROM regions WHERE id = ?").bind(regionId),
+  ]);
   await writeAudit(db, actor, {
     action: "wilayah.hapus",
     entity: "region",
     entityId: regionId,
-    summary: `Wilayah "${row.name}" dihapus`,
+    summary:
+      row.campuses > 0
+        ? `Wilayah "${row.name}" dihapus beserta ${row.campuses} kampusnya`
+        : `Wilayah "${row.name}" dihapus`,
   });
   return { ok: true };
 }

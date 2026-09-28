@@ -5,6 +5,7 @@
 // modul ini yang menjahit keduanya supaya halaman Pengguna cukup satu daftar dan satu form.
 
 import { deleteAwardee } from "./admin-awardees.ts";
+import { campusBelongsTo } from "./campuses.ts";
 import { writeAudit } from "./audit.ts";
 import { checkLoginId, checkPassword, hashPassword, normalizeLoginId } from "./password.ts";
 import { ScopeError, type Role, type SessionUser } from "./scope.ts";
@@ -27,7 +28,8 @@ export type Person = {
   regionId: number | null;
   region: string | null;
   batch: string | null;
-  campus: string | null;
+  campusId: number | null;
+  campus: string | null; // nama kampusnya, untuk ditampilkan
   referralCode: string | null;
   lastLoginAt: string | null;
   responses: number;
@@ -44,7 +46,7 @@ export async function listPeople(db: D1Database, actor: SessionUser): Promise<Pe
     .prepare(
       `SELECT * FROM (
          SELECT u.id AS user_id, a.id AS awardee_id, COALESCE(u.name, a.name) AS name, u.email, u.login_id, u.role,
-          u.status, u.last_login_at, a.batch, a.campus, a.referral_code,
+          u.status, u.last_login_at, a.batch, a.campus_id, ca.name AS campus, a.referral_code,
           COALESCE(u.region_id, a.region_id) AS region_id,
           COALESCE(gu.name, ga.name) AS region,
           (SELECT COUNT(*) FROM responses r WHERE a.id IS NOT NULL AND r.awardee_id = a.id) AS responses,
@@ -53,13 +55,15 @@ export async function listPeople(db: D1Database, actor: SessionUser): Promise<Pe
        LEFT JOIN awardees a ON a.id = u.awardee_id
        LEFT JOIN regions gu ON gu.id = u.region_id
        LEFT JOIN regions ga ON ga.id = a.region_id
+       LEFT JOIN campuses ca ON ca.id = a.campus_id
 
        UNION ALL
 
-       SELECT NULL, a.id, a.name, NULL, NULL, NULL, NULL, NULL, a.batch, a.campus, a.referral_code,
+       SELECT NULL, a.id, a.name, NULL, NULL, NULL, NULL, NULL, a.batch, a.campus_id, ca.name, a.referral_code,
           a.region_id, g.name,
           (SELECT COUNT(*) FROM responses r WHERE r.awardee_id = a.id), 0
        FROM awardees a JOIN regions g ON g.id = a.region_id
+       LEFT JOIN campuses ca ON ca.id = a.campus_id
        WHERE NOT EXISTS (SELECT 1 FROM users u2 WHERE u2.awardee_id = a.id)
 
        )
@@ -75,6 +79,7 @@ export async function listPeople(db: D1Database, actor: SessionUser): Promise<Pe
       status: "active" | "disabled" | null;
       last_login_at: string | null;
       batch: string | null;
+      campus_id: number | null;
       campus: string | null;
       referral_code: string | null;
       region_id: number | null;
@@ -94,6 +99,7 @@ export async function listPeople(db: D1Database, actor: SessionUser): Promise<Pe
     regionId: r.region_id,
     region: r.region,
     batch: r.batch,
+    campusId: r.campus_id,
     campus: r.campus,
     referralCode: r.referral_code,
     lastLoginAt: r.last_login_at,
@@ -112,7 +118,7 @@ export type PersonInput = {
   regionId: number | null;
   awardeeId: number | null; // hubungkan ke data awardee yang sudah ada
   batch: string;            // dipakai saat membuat data awardee baru
-  campus: string;
+  campusId: number | null;
   referralCode: string;
 };
 
@@ -172,10 +178,14 @@ export async function createPerson(db: D1Database, actor: SessionUser, input: Pe
     if (taken) return { ok: false, message: `Kode referal "${code}" sudah dipakai awardee lain.` };
     const region = await db.prepare("SELECT 1 AS ada FROM regions WHERE id = ?").bind(input.regionId).first<{ ada: number }>();
     if (!region) return { ok: false, message: "Wilayah tidak dikenal." };
+    if (input.campusId !== null) {
+      const salah = await campusBelongsTo(db, input.campusId, input.regionId);
+      if (salah) return salah;
+    }
 
     const row = await db
-      .prepare("INSERT INTO awardees (region_id, batch, name, campus, referral_code) VALUES (?, ?, ?, ?, ?) RETURNING id")
-      .bind(input.regionId, input.batch.trim().toUpperCase(), name, clean(input.campus), code)
+      .prepare("INSERT INTO awardees (region_id, batch, name, campus_id, referral_code) VALUES (?, ?, ?, ?, ?) RETURNING id")
+      .bind(input.regionId, input.batch.trim().toUpperCase(), name, input.campusId, code)
       .first<{ id: number }>();
     awardeeId = row!.id;
   }
@@ -264,10 +274,10 @@ export async function updatePerson(
     statements.push(
       db
         .prepare(
-          `UPDATE awardees SET name = ?, campus = ?, region_id = COALESCE(?, region_id), batch = COALESCE(?, batch),
+          `UPDATE awardees SET name = ?, campus_id = ?, region_id = COALESCE(?, region_id), batch = COALESCE(?, batch),
               referral_code = COALESCE(?, referral_code) WHERE id = ?`,
         )
-        .bind(name, clean(input.campus), input.regionId, clean(input.batch)?.toUpperCase() ?? null, code || null, before.awardee_id),
+        .bind(name, input.campusId, input.regionId, clean(input.batch)?.toUpperCase() ?? null, code || null, before.awardee_id),
     );
   }
 
@@ -333,7 +343,7 @@ export async function updateAwardeeData(
   db: D1Database,
   actor: SessionUser,
   awardeeId: number,
-  input: { name: string; regionId: number | null; batch: string; campus: string; referralCode: string },
+  input: { name: string; regionId: number | null; batch: string; campusId: number | null; referralCode: string },
 ): Promise<Ok | Fail> {
   assertAdmin(actor);
   const name = input.name.trim();
@@ -361,8 +371,8 @@ export async function updateAwardeeData(
   if (taken) return { ok: false, message: `Kode referal "${code}" sudah dipakai awardee lain.` };
 
   await db
-    .prepare("UPDATE awardees SET name = ?, region_id = ?, batch = ?, campus = ?, referral_code = ? WHERE id = ?")
-    .bind(name, input.regionId, batch, clean(input.campus), code, awardeeId)
+    .prepare("UPDATE awardees SET name = ?, region_id = ?, batch = ?, campus_id = ?, referral_code = ? WHERE id = ?")
+    .bind(name, input.regionId, batch, input.campusId, code, awardeeId)
     .run();
   await writeAudit(db, actor, {
     action: "awardee.ubah",

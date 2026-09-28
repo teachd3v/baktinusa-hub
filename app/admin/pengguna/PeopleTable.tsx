@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState } from "react";
+import type { CampusOption } from "@/lib/data/campuses";
 import type { Person } from "@/lib/data/people";
 import { deleteManyAction, type BulkState } from "./actions";
 import { PersonRow } from "./PersonForms";
@@ -12,7 +13,17 @@ type Region = { id: number; name: string };
 // supaya penilaian yang sudah masuk tetap punya pemilik.
 const keyOf = (p: Person) => (p.userId ? `u:${p.userId}` : `a:${p.awardeeId}`);
 
-export function PeopleTable({ people, regions, selfId }: { people: Person[]; regions: Region[]; selfId: number }) {
+export function PeopleTable({
+  people,
+  regions,
+  campuses,
+  selfId,
+}: {
+  people: Person[];
+  regions: Region[];
+  campuses: CampusOption[];
+  selfId: number;
+}) {
   const [picked, setPicked] = useState<string[]>([]);
   const [confirming, setConfirming] = useState(false);
   const [state, action, pending] = useActionState<BulkState, FormData>(deleteManyAction, null);
@@ -133,6 +144,7 @@ export function PeopleTable({ people, regions, selfId }: { people: Person[]; reg
                   key={key}
                   person={p}
                   regions={regions}
+                  campuses={campuses}
                   checked={dipilih.includes(key)}
                   onCheck={() => toggle(key)}
                   lockedReason={p.userId === selfId ? "Akun Anda sendiri" : undefined}

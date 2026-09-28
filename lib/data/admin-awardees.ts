@@ -12,7 +12,8 @@ export type AwardeeAdminRow = {
   id: number;
   name: string;
   batch: string;
-  campus: string | null;
+  campusId: number | null;
+  campus: string | null; // nama kampusnya, untuk ditampilkan
   referralCode: string;
   regionId: number;
   region: string;
@@ -26,7 +27,7 @@ export type AwardeeInput = {
   name: string;
   batch: string;
   regionId: number;
-  campus: string | null;
+  campusId: number | null;
   referralCode: string;
   photoKey: string | null;
   leadproName: string | null;
@@ -41,20 +42,22 @@ export async function listAwardeesForAdmin(db: D1Database, actor: SessionUser, b
   assertAdmin(actor);
   const { results } = await db
     .prepare(
-      `SELECT a.id, a.name, a.batch, a.campus, a.referral_code, a.region_id, a.photo_key, a.leadpro_name, g.name AS region,
+      `SELECT a.id, a.name, a.batch, a.campus_id, c.name AS campus, a.referral_code, a.region_id, a.photo_key, a.leadpro_name, g.name AS region,
           (SELECT COUNT(*) FROM users u WHERE u.awardee_id = a.id) AS accounts,
           (SELECT COUNT(*) FROM responses r WHERE r.awardee_id = a.id) AS responses
        FROM awardees a JOIN regions g ON g.id = a.region_id
+       LEFT JOIN campuses c ON c.id = a.campus_id
        ${batch ? "WHERE a.batch = ?" : ""}
        ORDER BY a.batch DESC, g.name, a.name`,
     )
     .bind(...(batch ? [batch] : []))
-    .all<{ id: number; name: string; batch: string; campus: string | null; referral_code: string; region_id: number; photo_key: string | null; leadpro_name: string | null; region: string; accounts: number; responses: number }>();
+    .all<{ id: number; name: string; batch: string; campus_id: number | null; campus: string | null; referral_code: string; region_id: number; photo_key: string | null; leadpro_name: string | null; region: string; accounts: number; responses: number }>();
 
   return results.map((r) => ({
     id: r.id,
     name: r.name,
     batch: r.batch,
+    campusId: r.campus_id,
     campus: r.campus,
     referralCode: r.referral_code,
     regionId: r.region_id,
@@ -97,14 +100,14 @@ export async function createAwardee(db: D1Database, actor: SessionUser, input: A
 
   const row = await db
     .prepare(
-      `INSERT INTO awardees (region_id, batch, name, campus, referral_code, photo_key, leadpro_name, leadpro_field, leadpro_description)
+      `INSERT INTO awardees (region_id, batch, name, campus_id, referral_code, photo_key, leadpro_name, leadpro_field, leadpro_description)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`,
     )
     .bind(
       input.regionId,
       input.batch.trim().toUpperCase(),
       input.name.trim(),
-      clean(input.campus),
+      input.campusId,
       code,
       clean(input.photoKey),
       clean(input.leadproName),
@@ -145,14 +148,14 @@ export async function updateAwardee(db: D1Database, actor: SessionUser, id: numb
 
   await db
     .prepare(
-      `UPDATE awardees SET region_id = ?, batch = ?, name = ?, campus = ?, referral_code = ?, photo_key = ?,
+      `UPDATE awardees SET region_id = ?, batch = ?, name = ?, campus_id = ?, referral_code = ?, photo_key = ?,
           leadpro_name = ?, leadpro_field = ?, leadpro_description = ? WHERE id = ?`,
     )
     .bind(
       input.regionId,
       input.batch.trim().toUpperCase(),
       input.name.trim(),
-      clean(input.campus),
+      input.campusId,
       code,
       clean(input.photoKey),
       clean(input.leadproName),

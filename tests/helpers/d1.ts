@@ -52,11 +52,12 @@ export function createTestDb(): D1Database {
 export async function seedFixture(db: D1Database) {
   await db.exec(`
     INSERT INTO regions (id, name) VALUES (1, 'Bandung'), (2, 'Medan'), (3, 'Makassar');
-    INSERT INTO awardees (id, region_id, batch, name, referral_code) VALUES
-      (1, 1, 'BA15', 'Ayu', 'AAAA0001'),
-      (2, 1, 'BA15', 'Budi', 'AAAA0002'),
-      (3, 2, 'BA15', 'Citra', 'BBBB0003'),
-      (4, 3, 'BA15', 'Dedi', 'CCCC0004');
+    INSERT INTO campuses (id, region_id, name) VALUES (1, 1, 'ITB'), (2, 1, 'Unpad'), (3, 2, 'USU');
+    INSERT INTO awardees (id, region_id, batch, name, referral_code, campus_id) VALUES
+      (1, 1, 'BA15', 'Ayu', 'AAAA0001', 1),
+      (2, 1, 'BA15', 'Budi', 'AAAA0002', NULL),
+      (3, 2, 'BA15', 'Citra', 'BBBB0003', 3),
+      (4, 3, 'BA15', 'Dedi', 'CCCC0004', NULL);
     INSERT INTO measurements (id, slug, name, kind) VALUES (1, 'uji', 'Pengukuran Uji', 'assessment');
     INSERT INTO periods (id, slug, name, batch, kind, status, measurement_id) VALUES (1, 'uji', 'Periode Uji', 'BA15', 'assessment', 'open', 1);
     INSERT INTO respondent_types (id, code, name, audience) VALUES

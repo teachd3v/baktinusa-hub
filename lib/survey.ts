@@ -73,8 +73,9 @@ export async function findAwardee(referral: string): Promise<(PublicAwardee & { 
   const code = normalizeReferral(referral);
   if (!REFERRAL_PATTERN.test(code)) return null;
   const row = await env.DB.prepare(
-    `SELECT a.id, a.name, a.campus, a.referral_code, a.batch, a.photo_key, r.name AS region
+    `SELECT a.id, a.name, c.name AS campus, a.referral_code, a.batch, a.photo_key, r.name AS region
      FROM awardees a JOIN regions r ON r.id = a.region_id
+     LEFT JOIN campuses c ON c.id = a.campus_id
      WHERE a.referral_code = ?`,
   ).bind(code).first<{ id: number; name: string; campus: string | null; referral_code: string; batch: string; photo_key: string | null; region: string }>();
   if (!row) return null;

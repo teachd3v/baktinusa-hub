@@ -22,8 +22,9 @@ const toSummary = (r: AwardeeRow): AwardeeSummary => ({
   region: r.region,
 });
 
-const SELECT_AWARDEE = `SELECT a.id, a.name, a.campus, a.referral_code, a.region_id, r.name AS region
-  FROM awardees a JOIN regions r ON r.id = a.region_id`;
+const SELECT_AWARDEE = `SELECT a.id, a.name, c.name AS campus, a.referral_code, a.region_id, r.name AS region
+  FROM awardees a JOIN regions r ON r.id = a.region_id
+  LEFT JOIN campuses c ON c.id = a.campus_id`;
 
 export async function listAwardees(db: D1Database, scope: Scope): Promise<AwardeeSummary[]> {
   const f = awardeeFilter(scope);

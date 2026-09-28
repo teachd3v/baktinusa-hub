@@ -81,6 +81,20 @@ const master = (await readCsv(AWARDEE_CSV)).filter((r) => clean(r["Nama Awardee"
 const regionNames = [...new Set(master.map((r) => clean(r.Wilayah)))].sort((a, b) => a.localeCompare(b, "id"));
 const regionId = new Map(regionNames.map((name, i) => [name, i + 1]));
 
+// Kampus jadi daftar pilihan milik wilayah (migrasi 0007), jadi ikut dibentuk dari CSV yang sama.
+// Dikunci per wilayah dan tanpa peduli huruf besar-kecil, mengikuti indeks unik di basis data:
+// kalau CSV memuat "IPB" dan "ipb" di satu wilayah, keduanya jadi satu baris dengan ejaan yang pertama muncul.
+const campusKey = (region, campus) => `${region.toLowerCase()}|${campus.toLowerCase()}`;
+const campusSeen = new Map(); // kunci -> { region, name }
+for (const r of master) {
+  const campus = clean(r.Kampus);
+  if (!campus) continue;
+  const key = campusKey(clean(r.Wilayah), campus);
+  if (!campusSeen.has(key)) campusSeen.set(key, { region: clean(r.Wilayah), name: campus });
+}
+const campusId = new Map([...campusSeen.keys()].map((key, i) => [key, i + 1]));
+const campuses = [...campusSeen.entries()].map(([key, c]) => [campusId.get(key), regionId.get(c.region), c.name]);
+
 const numbers = master.map((r) => Number.parseInt(clean(r.No), 10));
 const useSourceNumbers = new Set(numbers).size === master.length && numbers.every((n) => n >= 1 && n <= master.length);
 const ordered = useSourceNumbers
@@ -91,7 +105,7 @@ const awardees = ordered.map((r, i) => [
   regionId.get(clean(r.Wilayah)),
   BATCH,
   clean(r["Nama Awardee"]),
-  clean(r.Kampus) || null,
+  clean(r.Kampus) ? campusId.get(campusKey(clean(r.Wilayah), clean(r.Kampus))) : null,
   clean(r.Referal),
   `awardees/${BATCH.toLowerCase()}/${clean(r.Referal)}.webp`,
   clean(r.Leadpro) || null,
@@ -132,8 +146,9 @@ const statements = [
   ...upsertStatements("regions", ["id", "name"], regionNames.map((name) => [regionId.get(name), name]), { on: ["id"], update: ["name"] }),
   ...upsertStatements("respondent_types", ["id", "code", "name", "audience"], RESPONDENT_TYPES.map((t) => [t.id, t.code, t.name, t.audience]),
     { on: ["id"], update: ["code", "name", "audience"] }),
-  ...upsertStatements("awardees", ["id", "region_id", "batch", "name", "campus", "referral_code", "photo_key", "leadpro_name", "leadpro_field", "leadpro_description"], awardees,
-    { on: ["id"], update: ["region_id", "batch", "name", "campus", "referral_code", "photo_key", "leadpro_name", "leadpro_field", "leadpro_description"] }),
+  ...upsertStatements("campuses", ["id", "region_id", "name"], campuses, { on: ["id"], update: ["region_id", "name"] }),
+  ...upsertStatements("awardees", ["id", "region_id", "batch", "name", "campus_id", "referral_code", "photo_key", "leadpro_name", "leadpro_field", "leadpro_description"], awardees,
+    { on: ["id"], update: ["region_id", "batch", "name", "campus_id", "referral_code", "photo_key", "leadpro_name", "leadpro_field", "leadpro_description"] }),
   // Pengukuran memiliki kuesionernya; id-nya sengaja sama dengan id periode yang menjadwalkannya,
   // mengikuti pemetaan yang dibuat migrasi 0006.
   ...upsertStatements("measurements", ["id", "slug", "name", "kind", "form_config"],

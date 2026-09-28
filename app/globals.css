@@ -1423,3 +1423,29 @@ a {
     overflow: visible;
   }
 }
+
+/* ---------- kampus di dalam baris wilayah ---------- */
+
+.campus-list {
+  margin: 0.5rem 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.campus-item {
+  padding: 0.5rem 0.7rem;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+}
+
+.campus-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gap-sm);
+}

@@ -1,6 +1,7 @@
 import { env } from "cloudflare:workers";
 import type { Metadata } from "next";
 import { requireUser } from "@/lib/auth";
+import { listCampusOptions } from "@/lib/data/campuses";
 import { listPeople } from "@/lib/data/people";
 import { listAwardeesWithoutAccount, listRegions } from "@/lib/data/users";
 import { AddButton } from "@/components/Modal";
@@ -12,10 +13,11 @@ export const metadata: Metadata = { title: "Pengguna" };
 
 export default async function PeoplePage({ searchParams }: { searchParams: Promise<{ peran?: string; cari?: string }> }) {
   const admin = await requireUser("admin");
-  const [{ peran, cari }, people, regions, freeAwardees] = await Promise.all([
+  const [{ peran, cari }, people, regions, campuses, freeAwardees] = await Promise.all([
     searchParams,
     listPeople(env.DB, admin),
     listRegions(env.DB),
+    listCampusOptions(env.DB),
     listAwardeesWithoutAccount(env.DB, admin),
   ]);
 
@@ -53,7 +55,7 @@ export default async function PeoplePage({ searchParams }: { searchParams: Promi
             title="Tambah orang"
             hint="Untuk peran Awardee, data awardee ikut dibuat sekalian — atau hubungkan ke data yang sudah ada."
           >
-            <NewPersonForm regions={regions} freeAwardees={freeAwardees} />
+            <NewPersonForm regions={regions} campuses={campuses} freeAwardees={freeAwardees} />
           </AddButton>
         </div>
 
@@ -73,7 +75,7 @@ export default async function PeoplePage({ searchParams }: { searchParams: Promi
 
         <p className="section-hint">{shown.length} ditampilkan</p>
 
-        <PeopleTable people={shown} regions={regions} selfId={admin.id} />
+        <PeopleTable people={shown} regions={regions} campuses={campuses} selfId={admin.id} />
       </section>
     </>
   );

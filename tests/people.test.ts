@@ -22,7 +22,7 @@ const input = (over: Partial<PersonInput> = {}): PersonInput => ({
   regionId: 1,
   awardeeId: null,
   batch: "BA16",
-  campus: "Universitas Padjadjaran",
+  campusId: 2,
   referralCode: "EKA12345",
   ...over,
 });
@@ -173,17 +173,17 @@ describe("data awardee tanpa akun", () => {
   test("kolom lain — foto R2 dan data Leadpro — tidak ikut terhapus saat nama diubah", async () => {
     await db.prepare("UPDATE awardees SET photo_key = 'awardees/ba15/AAAA0002.webp', leadpro_name = 'Kelas Inspirasi' WHERE id = 2").run();
     assert.ok(
-      (await updateAwardeeData(db, admin, 2, { name: "Budi Santoso", regionId: 1, batch: "BA15", campus: "ITB", referralCode: "AAAA0002" })).ok,
+      (await updateAwardeeData(db, admin, 2, { name: "Budi Santoso", regionId: 1, batch: "BA15", campusId: 1, referralCode: "AAAA0002" })).ok,
     );
     const row = await db.prepare("SELECT name, photo_key, leadpro_name FROM awardees WHERE id = 2").first<{ name: string; photo_key: string; leadpro_name: string }>();
     assert.deepEqual(row, { name: "Budi Santoso", photo_key: "awardees/ba15/AAAA0002.webp", leadpro_name: "Kelas Inspirasi" });
   });
 
   test("angkatan tidak bisa dipindah kalau sudah dinilai, dan kode referal tidak boleh bentrok", async () => {
-    const pindah = await updateAwardeeData(db, admin, 1, { name: "Ayu", regionId: 1, batch: "BA16", campus: "", referralCode: "AAAA0001" });
+    const pindah = await updateAwardeeData(db, admin, 1, { name: "Ayu", regionId: 1, batch: "BA16", campusId: null, referralCode: "AAAA0001" });
     assert.match((pindah as { message: string }).message, /tidak bisa dipindah/);
 
-    const bentrok = await updateAwardeeData(db, admin, 2, { name: "Budi", regionId: 1, batch: "BA15", campus: "", referralCode: "AAAA0001" });
+    const bentrok = await updateAwardeeData(db, admin, 2, { name: "Budi", regionId: 1, batch: "BA15", campusId: null, referralCode: "AAAA0001" });
     assert.match((bentrok as { message: string }).message, /sudah dipakai awardee lain/);
   });
 });

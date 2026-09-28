@@ -132,8 +132,9 @@ export async function resultsForScope(db: D1Database, scope: Scope, periodId: nu
       .all<AggRow>(),
     db
       .prepare(
-        `SELECT a.id, a.name, a.campus, a.referral_code, a.region_id, g.name AS region
+        `SELECT a.id, a.name, c.name AS campus, a.referral_code, a.region_id, g.name AS region
          FROM awardees a JOIN regions g ON g.id = a.region_id
+         LEFT JOIN campuses c ON c.id = a.campus_id
          WHERE ${f.sql} ORDER BY g.name, a.name`,
       )
       .bind(...f.params)
@@ -167,8 +168,9 @@ export async function awardeeDetail(
   const f = awardeeFilter(scope);
   const awardee = await db
     .prepare(
-      `SELECT a.id, a.name, a.campus, a.referral_code, a.region_id, g.name AS region
+      `SELECT a.id, a.name, c.name AS campus, a.referral_code, a.region_id, g.name AS region
        FROM awardees a JOIN regions g ON g.id = a.region_id
+       LEFT JOIN campuses c ON c.id = a.campus_id
        WHERE ${f.sql} AND a.referral_code = ?`,
     )
     .bind(...f.params, referralCode.trim().toUpperCase())

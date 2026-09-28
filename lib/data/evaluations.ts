@@ -17,8 +17,9 @@ export type EvalTarget = { id: number; name: string; campus: string | null; refe
 type TargetRow = { id: number; name: string; campus: string | null; referral_code: string; region: string; batch: string; region_id: number };
 const toTarget = (r: TargetRow): EvalTarget => ({ id: r.id, name: r.name, campus: r.campus, referralCode: r.referral_code, region: r.region });
 
-const SELECT_TARGET = `SELECT a.id, a.name, a.campus, a.referral_code, a.batch, a.region_id, r.name AS region
-  FROM awardees a JOIN regions r ON r.id = a.region_id`;
+const SELECT_TARGET = `SELECT a.id, a.name, c.name AS campus, a.referral_code, a.batch, a.region_id, r.name AS region
+  FROM awardees a JOIN regions r ON r.id = a.region_id
+  LEFT JOIN campuses c ON c.id = a.campus_id`;
 
 // ---------- periode & jendela waktu ----------
 

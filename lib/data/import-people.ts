@@ -123,13 +123,17 @@ const tolak = (line: number, row: RawRow, reason: string): RowPlan => ({
 export async function planImport(db: D1Database, actor: SessionUser, rows: RawRow[]): Promise<RowPlan[]> {
   assertAdmin(actor);
 
-  const [{ results: regions }, { results: users }, { results: awardees }] = await Promise.all([
+  const [{ results: regions }, { results: users }, { results: awardees }, { results: campuses }] = await Promise.all([
     db.prepare("SELECT id, name FROM regions").all<{ id: number; name: string }>(),
     db.prepare("SELECT id, login_id, email, role, awardee_id FROM users").all<{ id: number; login_id: string | null; email: string; role: Role; awardee_id: number | null }>(),
     db.prepare("SELECT id, referral_code, name FROM awardees").all<{ id: number; referral_code: string; name: string }>(),
+    db.prepare("SELECT id, region_id, name FROM campuses").all<{ id: number; region_id: number; name: string }>(),
   ]);
 
   const regionByName = new Map(regions.map((r) => [r.name.toLowerCase(), r.id]));
+  // Kampus dikunci per wilayah: dua wilayah boleh punya kampus bernama sama, dan yang dipakai
+  // harus kampus milik wilayah di baris itu.
+  const campusByRegionName = new Map(campuses.map((c) => [`${c.region_id}|${c.name.toLowerCase()}`, c.id]));
   const userByLoginId = new Map(users.filter((u) => u.login_id).map((u) => [u.login_id!.toUpperCase(), u]));
   const userByEmail = new Map(users.map((u) => [u.email.toLowerCase(), u]));
   const awardeeByCode = new Map(awardees.map((a) => [a.referral_code.toUpperCase(), a]));
@@ -189,6 +193,19 @@ export async function planImport(db: D1Database, actor: SessionUser, rows: RawRo
     }
     if (role === "manwil" && !regionId) return void plans.push(tolak(line, row, "Manwil wajib punya wilayah."));
 
+    // Kampus sengaja TIDAK dibuat otomatis dari berkas. Kalau salah ketik jadi kampus baru, daftar
+    // pilihannya akan berisi banyak ejaan untuk satu kampus — persis masalah yang tabel ini hindari.
+    let campusId: number | null = null;
+    if (campus) {
+      if (!regionId) return void plans.push(tolak(line, row, `Kampus "${campus}" perlu wilayah; isi dulu kolom Wilayah.`));
+      campusId = campusByRegionName.get(`${regionId}|${campus.toLowerCase()}`) ?? null;
+      if (!campusId) {
+        return void plans.push(
+          tolak(line, row, `Kampus "${campus}" belum ada di wilayah ${regionName}. Tambahkan dulu lewat menu Wilayah.`),
+        );
+      }
+    }
+
     if (existing && existing.role !== role) {
       return void plans.push(tolak(line, row, `ID "${loginId}" sudah dipakai akun ${existing.role}; peran tidak bisa diubah lewat impor.`));
     }
@@ -229,7 +246,7 @@ export async function planImport(db: D1Database, actor: SessionUser, rows: RawRo
       regionId,
       awardeeId,
       batch,
-      campus,
+      campusId,
       referralCode: code,
     };
 

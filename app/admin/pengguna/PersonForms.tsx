@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import type { CampusOption } from "@/lib/data/campuses";
 import type { Person } from "@/lib/data/people";
 import {
   createPersonAction,
@@ -28,12 +29,14 @@ function Result({ state }: { state: PersonState }) {
 // Manwil punya wilayah, Awardee punya wilayah plus angkatan, kampus, dan kode referal.
 function Fields({
   regions,
+  campuses,
   freeAwardees,
   person,
   role,
   setRole,
 }: {
   regions: Region[];
+  campuses: CampusOption[];
   freeAwardees?: FreeAwardee[];
   person?: Person;
   role: string;
@@ -42,6 +45,9 @@ function Fields({
   const editing = Boolean(person);
   const [link, setLink] = useState("");
   const [name, setName] = useState(person?.name ?? "");
+  // Wilayah dipegang state supaya daftar kampusnya ikut menyempit saat wilayahnya diganti.
+  const [regionId, setRegionId] = useState(String(person?.regionId ?? ""));
+  const [campusId, setCampusId] = useState(String(person?.campusId ?? ""));
 
   return (
     <>
@@ -115,7 +121,16 @@ function Fields({
         {role !== "admin" && (
           <div className="field">
             <label className="label">Wilayah</label>
-            <select className="select" name="regionId" defaultValue={String(person?.regionId ?? "")} disabled={!editing && role === "awardee" && link !== ""}>
+            <select
+              className="select"
+              name="regionId"
+              value={regionId}
+              onChange={(e) => {
+                setRegionId(e.target.value);
+                setCampusId(""); // kampus wilayah lama tidak berlaku lagi
+              }}
+              disabled={!editing && role === "awardee" && link !== ""}
+            >
               <option value="">Pilih wilayah…</option>
               {regions.map((r) => (
                 <option key={r.id} value={r.id}>{r.name}</option>
@@ -145,7 +160,7 @@ function Fields({
           </div>
           <div className="field">
             <label className="label">Kampus</label>
-            <input className="input" name="campus" maxLength={160} defaultValue={person?.campus ?? ""} />
+            <CampusPicker campuses={campuses} regionId={regionId} value={campusId} onChange={setCampusId} />
           </div>
         </div>
       )}
@@ -165,13 +180,21 @@ function Fields({
   );
 }
 
-export function NewPersonForm({ regions, freeAwardees }: { regions: Region[]; freeAwardees: FreeAwardee[] }) {
+export function NewPersonForm({
+  regions,
+  campuses,
+  freeAwardees,
+}: {
+  regions: Region[];
+  campuses: CampusOption[];
+  freeAwardees: FreeAwardee[];
+}) {
   const [state, action, pending] = useActionState<PersonState, FormData>(createPersonAction, null);
   const [role, setRole] = useState("awardee");
 
   return (
     <form action={action}>
-      <Fields regions={regions} freeAwardees={freeAwardees} role={role} setRole={setRole} />
+      <Fields regions={regions} campuses={campuses} freeAwardees={freeAwardees} role={role} setRole={setRole} />
       <p className="section-hint">
         Kata sandi tampil apa adanya di sini supaya bisa disalin sekali — setelah tersimpan, yang tersisa hanya turunannya
         dan tidak ada yang bisa membacanya lagi.
@@ -185,12 +208,14 @@ export function NewPersonForm({ regions, freeAwardees }: { regions: Region[]; fr
 export function PersonRow({
   person,
   regions,
+  campuses,
   checked,
   onCheck,
   lockedReason,
 }: {
   person: Person;
   regions: Region[];
+  campuses: CampusOption[];
   checked: boolean;
   onCheck: () => void;
   lockedReason?: string;
@@ -249,7 +274,7 @@ export function PersonRow({
       {open && !person.userId && person.awardeeId && (
         <tr>
           <td colSpan={8} style={{ background: "var(--surface-sunken)" }}>
-            <AwardeeDataForm person={person} regions={regions} />
+            <AwardeeDataForm person={person} regions={regions} campuses={campuses} />
           </td>
         </tr>
       )}
@@ -259,7 +284,7 @@ export function PersonRow({
           <td colSpan={8} style={{ background: "var(--surface-sunken)" }}>
             <form action={action}>
               <input type="hidden" name="userId" value={person.userId} />
-              <Fields regions={regions} person={person} role={person.role} />
+              <Fields regions={regions} campuses={campuses} person={person} role={person.role} />
               <button type="submit" className="btn btn-small btn-inline" disabled={pending}>{pending ? "Menyimpan…" : "Simpan"}</button>
               <Result state={state} />
             </form>
@@ -286,10 +311,12 @@ export function PersonRow({
 }
 
 // Baris awardee yang belum punya akun: data masternya tetap bisa dirapikan dari sini.
-function AwardeeDataForm({ person, regions }: { person: Person; regions: Region[] }) {
+function AwardeeDataForm({ person, regions, campuses }: { person: Person; regions: Region[]; campuses: CampusOption[] }) {
   const [state, action, pending] = useActionState<PersonState, FormData>(updateAwardeeDataAction, null);
   const [hapus, hapusAction, menghapus] = useActionState<PersonState, FormData>(deleteAwardeeDataAction, null);
   const [confirming, setConfirming] = useState(false);
+  const [regionId, setRegionId] = useState(String(person.regionId ?? ""));
+  const [campusId, setCampusId] = useState(String(person.campusId ?? ""));
 
   return (
     <>
@@ -302,7 +329,15 @@ function AwardeeDataForm({ person, regions }: { person: Person; regions: Region[
           </div>
           <div className="field">
             <label className="label">Wilayah</label>
-            <select className="select" name="regionId" defaultValue={String(person.regionId ?? "")}>
+            <select
+              className="select"
+              name="regionId"
+              value={regionId}
+              onChange={(e) => {
+                setRegionId(e.target.value);
+                setCampusId("");
+              }}
+            >
               {regions.map((r) => (
                 <option key={r.id} value={r.id}>{r.name}</option>
               ))}
@@ -320,7 +355,7 @@ function AwardeeDataForm({ person, regions }: { person: Person; regions: Region[
           </div>
           <div className="field">
             <label className="label">Kampus</label>
-            <input className="input" name="campus" maxLength={160} defaultValue={person.campus ?? ""} />
+            <CampusPicker campuses={campuses} regionId={regionId} value={campusId} onChange={setCampusId} />
           </div>
         </div>
         <button type="submit" className="btn btn-small btn-inline" disabled={pending}>{pending ? "Menyimpan…" : "Simpan"}</button>
@@ -349,5 +384,41 @@ function AwardeeDataForm({ person, regions }: { person: Person; regions: Region[
         </form>
       )}
     </>
+  );
+}
+
+// Pilihan kampus disaring oleh wilayah yang sedang dipilih — itu sebabnya kampus disimpan per wilayah
+// di menu Wilayah. Kalau wilayahnya belum punya kampus, yang muncul arahan, bukan dropdown kosong.
+function CampusPicker({
+  campuses,
+  regionId,
+  value,
+  onChange,
+}: {
+  campuses: CampusOption[];
+  regionId: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  if (!regionId) {
+    return <p className="section-hint" style={{ margin: "0.4rem 0 0" }}>Pilih wilayahnya dulu.</p>;
+  }
+
+  const pilihan = campuses.filter((c) => String(c.regionId) === regionId);
+  if (pilihan.length === 0) {
+    return (
+      <p className="section-hint" style={{ margin: "0.4rem 0 0" }}>
+        Wilayah ini belum punya kampus. Tambahkan dulu di <a href="/admin/wilayah">menu Wilayah</a>.
+      </p>
+    );
+  }
+
+  return (
+    <select className="select" name="campusId" value={value} onChange={(e) => onChange(e.target.value)}>
+      <option value="">Tidak diisi</option>
+      {pilihan.map((c) => (
+        <option key={c.id} value={c.id}>{c.name}</option>
+      ))}
+    </select>
   );
 }

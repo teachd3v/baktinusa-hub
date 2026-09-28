@@ -36,7 +36,7 @@ function inputOf(form: FormData): PersonInput | null {
     regionId: Number(form.get("regionId")) || null,
     awardeeId: Number(form.get("awardeeId")) || null,
     batch: text(form, "batch"),
-    campus: text(form, "campus"),
+    campusId: Number(form.get("campusId")) || null,
     referralCode: text(form, "referralCode"),
   };
 }
@@ -118,7 +118,7 @@ export async function updateAwardeeDataAction(_previous: PersonState, form: Form
     name: text(form, "name"),
     batch: text(form, "batch"),
     regionId: Number(form.get("regionId")) || null,
-    campus: text(form, "campus"),
+    campusId: Number(form.get("campusId")) || null,
     referralCode: text(form, "referralCode"),
   });
   if (!result.ok) return result;
