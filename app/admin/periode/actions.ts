@@ -5,16 +5,17 @@ import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import {
-  addTypeToPeriod,
+  addMeasurementToPeriod,
   createPeriod,
   isStatus,
-  removeTypeFromPeriod,
+  removeMeasurementFromPeriod,
   setPeriodStatus,
+  updateMeasurementConfig,
   updatePeriod,
-  updateTypeConfig,
   type Fail,
-  type PeriodTypeConfig,
+  type PeriodMeasurementConfig,
 } from "@/lib/data/admin-periods";
+import { isCycle } from "@/lib/data/periods";
 import { wibInputToIso } from "@/lib/waktu";
 
 // Server action adalah endpoint publik: tiap fungsi memeriksa ulang bahwa pemanggilnya Admin.
@@ -68,42 +69,41 @@ export async function saveTypeAction(_previous: ActionState, form: FormData): Pr
   const rule = field(form, "targetRule");
   if (rule !== "none" && rule !== "fixed" && rule !== "region_peers") return gagal("Aturan target tidak dikenal.");
 
-  const result = await updateTypeConfig(env.DB, admin, Number(form.get("periodId")), Number(form.get("typeId")), {
-    targetRule: rule as PeriodTypeConfig["targetRule"],
+  const result = await updateMeasurementConfig(env.DB, admin, Number(form.get("periodId")), Number(form.get("measurementId")), {
+    targetRule: rule as PeriodMeasurementConfig["targetRule"],
     targetMin: Number(form.get("targetMin")) || null,
     opensAt: window.opensAt,
     closesAt: window.closesAt,
   });
   if (!result.ok) return result;
   refresh();
-  return { ok: true, message: "Jadwal & target tipe penilai tersimpan." };
+  return { ok: true, message: "Jadwal & target jenis pengukuran tersimpan." };
 }
 
 export async function addTypeAction(_previous: ActionState, form: FormData): Promise<ActionState> {
   const admin = await requireUser("admin");
-  const result = await addTypeToPeriod(env.DB, admin, Number(form.get("periodId")), Number(form.get("typeId")));
+  const result = await addMeasurementToPeriod(env.DB, admin, Number(form.get("periodId")), Number(form.get("measurementId")));
   if (!result.ok) return result;
   refresh();
-  return { ok: true, message: "Tipe penilai ditambahkan. Atur jadwal dan targetnya di bawah." };
+  return { ok: true, message: "Jenis pengukuran ditambahkan. Atur jadwal dan targetnya di bawah." };
 }
 
 export async function removeTypeAction(_previous: ActionState, form: FormData): Promise<ActionState> {
   const admin = await requireUser("admin");
-  const result = await removeTypeFromPeriod(env.DB, admin, Number(form.get("periodId")), Number(form.get("typeId")));
+  const result = await removeMeasurementFromPeriod(env.DB, admin, Number(form.get("periodId")), Number(form.get("measurementId")));
   if (!result.ok) return result;
   refresh();
-  return { ok: true, message: "Tipe penilai dilepas dari periode." };
+  return { ok: true, message: "Jenis pengukuran dilepas dari siklus." };
 }
 
 export async function createPeriodAction(_previous: ActionState, form: FormData): Promise<ActionState> {
   const admin = await requireUser("admin");
-  const result = await createPeriod(env.DB, admin, {
-    slug: field(form, "slug"),
-    name: field(form, "name"),
-    batch: field(form, "batch"),
-    measurementId: Number(form.get("measurementId")),
-  });
+  const cycle = field(form, "cycle");
+  if (!isCycle(cycle)) return gagal("Pilih siklusnya: Awal, Tengah, atau Akhir.");
+
+  const batch = field(form, "batch").trim().toUpperCase();
+  const result = await createPeriod(env.DB, admin, { batch, cycle, slug: field(form, "slug"), name: field(form, "name") });
   if (!result.ok) return result;
   refresh();
-  redirect(`/admin/periode/${field(form, "slug").trim().toLowerCase()}`);
+  redirect(`/admin/periode/${(field(form, "slug").trim() || `${batch}-${cycle}`).toLowerCase()}`);
 }

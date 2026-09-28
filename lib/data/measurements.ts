@@ -442,7 +442,7 @@ export async function listAllInstruments(db: D1Database, actor: SessionUser, fil
   if (search) {
     const like = `%${search}%`;
     where.push("(lower(i.code) LIKE ? OR lower(i.statement) LIKE ?)");
-    params.push(like, like, like);
+    params.push(like, like);
   }
 
   const { results } = await db

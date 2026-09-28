@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from "react";
 import Link from "next/link";
-import type { CategoryRow, FormText, MeasurementRow } from "@/lib/data/measurements";
+import { FILLED_BY_LABEL, type CategoryRow, type FilledBy, type FormText, type MeasurementRow } from "@/lib/data/measurements";
 import {
   addCategoryAction,
   createMeasurementAction,
@@ -46,11 +46,23 @@ export function NewMeasurementForm({ measurements }: { measurements: Measurement
             onChange={(e) => ikutNama(e.target.value)} placeholder="Pengukuran Awardee 360°" />
         </div>
         <div className="field">
-          <label className="label" htmlFor="kind">Jenis</label>
-          <select id="kind" className="select" name="kind" defaultValue="assessment">
-            <option value="assessment">Asesmen &amp; 360°</option>
-            <option value="leadpro">Leadership Project</option>
+          <label className="label" htmlFor="code">Kode</label>
+          <input id="code" className="input" name="code" maxLength={8} placeholder="SA"
+            onChange={(e) => (e.target.value = e.target.value.toUpperCase())} />
+        </div>
+      </div>
+
+      <div className="form-row">
+        <div className="field">
+          <label className="label" htmlFor="filledBy">Diisi oleh</label>
+          <select id="filledBy" className="select" name="filledBy" defaultValue="public">
+            {(Object.keys(FILLED_BY_LABEL) as FilledBy[]).map((value) => (
+              <option key={value} value={value}>{FILLED_BY_LABEL[value]}</option>
+            ))}
           </select>
+          <p className="section-hint" style={{ margin: "0.3rem 0 0" }}>
+            Ini yang menentukan rutenya: siapa yang bisa membuka formnya, dan lewat jalur mana.
+          </p>
         </div>
       </div>
 
@@ -176,7 +188,7 @@ export function FormTextForm({ measurementId, text }: { measurementId: number; t
   );
 }
 
-// Ganti nama selalu aman; hapus hanya kalau tidak ada periode yang menjadwalkannya.
+// Ganti nama selalu aman; hapus hanya kalau tidak ada siklus yang menjalankannya.
 export function MeasurementSettings({ measurement }: { measurement: MeasurementRow }) {
   const [state, action, pending] = useActionState<MeasurementState, FormData>(renameMeasurementAction, null);
   const [hapus, hapusAction, menghapus] = useActionState<MeasurementState, FormData>(deleteMeasurementAction, null);
@@ -193,7 +205,7 @@ export function MeasurementSettings({ measurement }: { measurement: MeasurementR
 
       {measurement.periods > 0 ? (
         <p className="section-hint" style={{ margin: "0.75rem 0 0" }}>
-          Dipakai {measurement.periods} periode, jadi belum bisa dihapus. Lepas dari periodenya dulu.
+          Dijalankan {measurement.periods} siklus, jadi belum bisa dihapus. Lepas dari siklusnya dulu.
         </p>
       ) : (
         <form action={hapusAction} style={{ marginTop: "0.75rem" }}>

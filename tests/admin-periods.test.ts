@@ -2,12 +2,12 @@
 import assert from "node:assert/strict";
 import { beforeEach, describe, test } from "node:test";
 import {
-  addTypeToPeriod,
+  addMeasurementToPeriod,
   getPeriodDetail,
-  removeTypeFromPeriod,
+  removeMeasurementFromPeriod,
   setPeriodStatus,
   updatePeriod,
-  updateTypeConfig,
+  updateMeasurementConfig,
 } from "../lib/data/admin-periods.ts";
 import { listAudit } from "../lib/data/audit.ts";
 import { ScopeError, type SessionUser } from "../lib/data/scope.ts";
@@ -62,7 +62,7 @@ describe("jadwal periode", () => {
     assert.equal(after.closesAt, "2026-12-31T16:59:00.000Z");
 
     const [entry] = await listAudit(db, admin);
-    assert.equal(entry!.action, "periode.ubah");
+    assert.equal(entry!.action, "siklus.ubah");
     assert.equal(entry!.actorName, "Admin");
     assert.match(entry!.summary, /Pengukuran BA16/);
   });
@@ -73,7 +73,7 @@ describe("status periode", () => {
     await db.prepare("DELETE FROM instruments").run();
     await db.prepare("UPDATE periods SET status = 'draft'").run();
     const hasil = await setPeriodStatus(db, admin, 1, "open");
-    assert.deepEqual(hasil, { ok: false, message: "Periode belum punya pertanyaan, jadi belum bisa dibuka." });
+    assert.deepEqual(hasil, { ok: false, message: "Jenis pengukuran yang dipilih belum punya satu pun soal, jadi belum bisa dibuka." });
   });
 
   test("periode yang sudah menerima jawaban tidak bisa dikembalikan ke draft", async () => {
@@ -88,25 +88,25 @@ describe("status periode", () => {
     assert.equal((await detail())!.status, "closed");
     assert.ok((await setPeriodStatus(db, admin, 1, "closed")).ok);
     // Status yang tidak berubah tidak perlu meninggalkan jejak.
-    assert.equal((await listAudit(db, admin)).filter((e) => e.action === "periode.status").length, 1);
+    assert.equal((await listAudit(db, admin)).filter((e) => e.action === "siklus.status").length, 1);
   });
 });
 
-describe("tipe penilai dalam periode", () => {
+describe("jenis pengukuran dalam siklus", () => {
   test("target 'fixed' wajib punya angka, aturan lain mengosongkannya", async () => {
-    const kosong = await updateTypeConfig(db, admin, 1, 5, { targetRule: "fixed", targetMin: null, opensAt: null, closesAt: null });
+    const kosong = await updateMeasurementConfig(db, admin, 1, 1, { targetRule: "fixed", targetMin: null, opensAt: null, closesAt: null });
     assert.deepEqual(kosong, { ok: false, message: "Isi target minimal responden (1–1000)." });
 
-    assert.ok((await updateTypeConfig(db, admin, 1, 5, { targetRule: "fixed", targetMin: 25, opensAt: null, closesAt: null })).ok);
-    assert.ok((await updateTypeConfig(db, admin, 1, 3, { targetRule: "region_peers", targetMin: 99, opensAt: null, closesAt: null })).ok);
+    assert.ok((await updateMeasurementConfig(db, admin, 1, 1, { targetRule: "fixed", targetMin: 25, opensAt: null, closesAt: null })).ok);
+    assert.ok((await updateMeasurementConfig(db, admin, 1, 3, { targetRule: "region_peers", targetMin: 99, opensAt: null, closesAt: null })).ok);
 
-    const types = (await detail())!.types;
-    assert.equal(types.find((t) => t.code === "external")!.targetMin, 25);
-    assert.equal(types.find((t) => t.code === "peer")!.targetMin, null);
+    const jenis = (await detail())!.measurements;
+    assert.equal(jenis.find((m) => m.code === "PU")!.targetMin, 25);
+    assert.equal(jenis.find((m) => m.code === "PA")!.targetMin, null);
   });
 
   test("jendela per tipe tersimpan, dan urutannya diperiksa", async () => {
-    const terbalik = await updateTypeConfig(db, admin, 1, 1, {
+    const terbalik = await updateMeasurementConfig(db, admin, 1, 2, {
       targetRule: "fixed",
       targetMin: 1,
       opensAt: "2026-11-01T00:00:00.000Z",
@@ -115,34 +115,34 @@ describe("tipe penilai dalam periode", () => {
     assert.equal(terbalik.ok, false);
 
     assert.ok(
-      (await updateTypeConfig(db, admin, 1, 1, {
+      (await updateMeasurementConfig(db, admin, 1, 2, {
         targetRule: "fixed",
         targetMin: 1,
         opensAt: "2026-10-01T00:00:00.000Z",
         closesAt: "2026-11-01T00:00:00.000Z",
       })).ok,
     );
-    const awal = (await detail())!.types.find((t) => t.code === "self_initial")!;
+    const awal = (await detail())!.measurements.find((m) => m.code === "SA")!;
     assert.equal(awal.opensAt, "2026-10-01T00:00:00.000Z");
   });
 
-  test("tipe bisa ditambah, tapi yang sudah punya jawaban tidak bisa dilepas", async () => {
-    await db.prepare("INSERT INTO respondent_types (id, code, name, audience) VALUES (9, 'lp_team', 'Tim Proyek', 'external')").run();
-    assert.ok((await addTypeToPeriod(db, admin, 1, 9)).ok);
-    assert.equal((await addTypeToPeriod(db, admin, 1, 9)).ok, false); // tidak dobel
-    assert.ok((await detail())!.types.some((t) => t.code === "lp_team"));
+  test("jenis bisa ditambah, tapi yang sudah punya jawaban tidak bisa dilepas", async () => {
+    await db.prepare("INSERT INTO measurements (id, code, slug, name, filled_by) VALUES (9, 'LA', 'la', 'Leadership Project', 'public')").run();
+    assert.ok((await addMeasurementToPeriod(db, admin, 1, 9)).ok);
+    assert.equal((await addMeasurementToPeriod(db, admin, 1, 9)).ok, false); // tidak dobel
+    assert.ok((await detail())!.measurements.some((m) => m.code === "LA"));
 
-    assert.ok((await removeTypeFromPeriod(db, admin, 1, 9)).ok);
-    const dipakai = await removeTypeFromPeriod(db, admin, 1, 5); // jejaring eksternal punya 5 respons di fixture
+    assert.ok((await removeMeasurementFromPeriod(db, admin, 1, 9)).ok);
+    const dipakai = await removeMeasurementFromPeriod(db, admin, 1, 1); // PU punya 5 respons di fixture
     assert.equal(dipakai.ok, false);
     assert.match((dipakai as { message: string }).message, /5 jawaban/);
   });
 
-  test("rincian periode menghitung pertanyaan, respons, dan tipe yang belum dipakai", async () => {
+  test("rincian siklus menghitung soal, respons, dan jenis yang belum dipakai", async () => {
     const d = (await detail())!;
-    assert.equal(d.instruments, 2);
+    assert.equal(d.instruments, 8); // empat jenis, dua soal masing-masing
     assert.equal(d.responses, 5);
-    assert.deepEqual(d.types.map((t) => t.code), ["self_initial", "peer", "manwil", "external"]);
+    assert.deepEqual(d.measurements.map((m) => m.code), ["MA", "PA", "PU", "SA"]);
     assert.deepEqual(d.available, []);
   });
 });

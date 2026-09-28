@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { EvalTask } from "@/lib/data/evaluations";
 import { formatWib } from "@/lib/format";
 
-const KIND_LABEL = { self: "Asesmen mandiri", peer: "Menilai rekan", manwil: "Menilai binaan" } as const;
+const KIND_LABEL = { self: "Asesmen mandiri", peer: "Menilai rekan", manwil: "Menilai binaan", admin: "Penilaian Admin" } as const;
 
 // Daftar penilaian berakun, dikelompokkan per periode. `basePath` = "/awardee/nilai" atau "/manwil/nilai".
 export function EvaluationTasks({ tasks, basePath }: { tasks: EvalTask[]; basePath: string }) {

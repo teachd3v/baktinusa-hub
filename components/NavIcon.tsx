@@ -22,7 +22,7 @@ const KEY_OF: [RegExp, string][] = [
   [/beranda|ringkasan/i, "beranda"],
   [/penilaian/i, "nilai"],
   [/hasil/i, "hasil"],
-  [/periode/i, "periode"],
+  [/periode|siklus/i, "periode"],
   [/awardee/i, "awardee"],
   [/respons/i, "respons"],
   [/pengingat/i, "pengingat"],

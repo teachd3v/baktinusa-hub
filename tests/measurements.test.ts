@@ -2,7 +2,7 @@
 // Pagar terpentingnya — susunan soal terkunci begitu ada jawaban lewat periode mana pun.
 import assert from "node:assert/strict";
 import { beforeEach, describe, test } from "node:test";
-import { createPeriod, getPeriodDetail } from "../lib/data/admin-periods.ts";
+import { addMeasurementToPeriod, createPeriod, getPeriodDetail } from "../lib/data/admin-periods.ts";
 import { listAudit } from "../lib/data/audit.ts";
 import {
   addCategory,
@@ -34,20 +34,21 @@ beforeEach(async () => {
 });
 
 const baru = (over: Partial<Parameters<typeof createMeasurement>[2]> = {}) =>
-  createMeasurement(db, admin, { slug: "pengukuran-baru", name: "Pengukuran Baru", kind: "assessment", ...over });
+  createMeasurement(db, admin, { code: "XX", slug: "pengukuran-baru", name: "Pengukuran Baru", filledBy: "public", ...over });
 
 describe("hanya Admin", () => {
   test("peran lain ditolak", async () => {
     await assert.rejects(listMeasurements(db, manwil), ScopeError);
-    await assert.rejects(createMeasurement(db, manwil, { slug: "x", name: "X", kind: "assessment" }), ScopeError);
+    await assert.rejects(createMeasurement(db, manwil, { code: "XX", slug: "x", name: "X", filledBy: "public" }), ScopeError);
     await assert.rejects(addCategory(db, manwil, 1, "X"), ScopeError);
   });
 });
 
 describe("daftar & rincian", () => {
   test("menghitung sub pengukuran, soal, periode pemakai, dan jawaban", async () => {
-    const [m] = await listMeasurements(db, admin);
-    // Fixture: 1 pengukuran, 1 kategori, 2 soal, dipakai 1 periode yang sudah punya 5 respons.
+    // Daftarnya urut kode, jadi yang dicari disebut kodenya — bukan yang pertama.
+    const m = (await listMeasurements(db, admin)).find((x) => x.code === "PU");
+    // Fixture: PU punya 1 kategori, 2 soal, dijalankan 1 siklus yang sudah punya 5 respons.
     assert.deepEqual(
       { kategori: m!.categories, soal: m!.instruments, periode: m!.periods, jawaban: m!.responses },
       { kategori: 1, soal: 2, periode: 1, jawaban: 5 },
@@ -84,17 +85,18 @@ describe("membuat pengukuran", () => {
   });
 });
 
-describe("periode memakai pengukuran", () => {
-  test("periode baru menunjuk pengukuran, dan soalnya ikut terbaca dari sana", async () => {
+describe("siklus menjalankan jenis pengukuran", () => {
+  test("siklus baru menjalankan jenis, dan soalnya ikut terbaca dari sana", async () => {
     const pengukuran = await baru({ copyFromId: 1 });
     assert.ok(pengukuran.ok);
-    const periode = await createPeriod(db, admin, { slug: "ba16-uji", name: "BA16 Uji", batch: "BA16", measurementId: pengukuran.id });
+    const periode = await createPeriod(db, admin, { batch: "BA16", cycle: "awal", slug: "ba16-uji", name: "BA16 Uji" });
     assert.ok(periode.ok);
+    assert.ok((await addMeasurementToPeriod(db, admin, periode.id, pengukuran.id)).ok);
 
     const detail = (await getPeriodDetail(db, admin, "ba16-uji"))!;
     assert.deepEqual(
-      { status: detail.status, soal: detail.instruments, respons: detail.responses, pengukuran: detail.measurementSlug },
-      { status: "draft", soal: 2, respons: 0, pengukuran: "pengukuran-baru" },
+      { status: detail.status, soal: detail.instruments, respons: detail.responses, jenis: detail.measurements.map((m) => m.code) },
+      { status: "draft", soal: 2, respons: 0, jenis: ["XX"] },
     );
   });
 
@@ -128,7 +130,7 @@ describe("sub pengukuran & soal", () => {
     const kategori = (await getMeasurement(db, admin, "pengukuran-baru"))!.categoriesList[0]!;
 
     assert.ok((await renameCategory(db, admin, id, kategori.id, "Kematangan Pribadi")).ok);
-    assert.ok((await addInstrument(db, admin, id, kategori.id, { code: "Q1", textPublic: "Yang bersangkutan jujur", textSelf: "Saya jujur", scaleMax: 4 })).ok);
+    assert.ok((await addInstrument(db, admin, id, kategori.id, { code: "Q1", statement: "Yang bersangkutan jujur", scaleMax: 4 })).ok);
 
     const terisi = await deleteCategory(db, admin, id, kategori.id);
     assert.match((terisi as { message: string }).message, /masih berisi 1 soal/);
@@ -137,10 +139,10 @@ describe("sub pengukuran & soal", () => {
   test("kode soal unik per pengukuran, dan isian divalidasi", async () => {
     await addCategory(db, admin, id, "Kategori");
     const kategori = (await getMeasurement(db, admin, "pengukuran-baru"))!.categoriesList[0]!;
-    const soal = { code: "Q1", textPublic: "Pernyataan", textSelf: null, scaleMax: 4 };
+    const soal = { code: "Q1", statement: "Pernyataan", scaleMax: 4 };
     assert.ok((await addInstrument(db, admin, id, kategori.id, soal)).ok);
     assert.equal((await addInstrument(db, admin, id, kategori.id, soal)).ok, false);
-    assert.equal((await addInstrument(db, admin, id, kategori.id, { ...soal, code: "Q2", textPublic: " " })).ok, false);
+    assert.equal((await addInstrument(db, admin, id, kategori.id, { ...soal, code: "Q2", statement: " " })).ok, false);
     assert.equal((await addInstrument(db, admin, id, kategori.id, { ...soal, code: "Q2", scaleMax: 99 })).ok, false);
     // Kategori milik pengukuran lain tidak bisa dipakai.
     assert.equal((await addInstrument(db, admin, id, 1, { ...soal, code: "Q3" })).ok, false);
@@ -150,7 +152,7 @@ describe("sub pengukuran & soal", () => {
     await addCategory(db, admin, id, "Kategori");
     const kategori = (await getMeasurement(db, admin, "pengukuran-baru"))!.categoriesList[0]!;
     // Q1 sudah ada di pengukuran fixture; di pengukuran lain seharusnya tidak bentrok.
-    assert.ok((await addInstrument(db, admin, id, kategori.id, { code: "Q1", textPublic: "Pernyataan", textSelf: null, scaleMax: 4 })).ok);
+    assert.ok((await addInstrument(db, admin, id, kategori.id, { code: "Q1", statement: "Pernyataan", scaleMax: 4 })).ok);
   });
 });
 
@@ -160,15 +162,15 @@ describe("pengukuran yang sudah menghasilkan jawaban", () => {
     assert.match((kunci as { message: string }).message, /tidak bisa diubah lagi/);
 
     await db.exec("INSERT INTO response_scores (response_id, instrument_id, score) VALUES (1, 1, 4)");
-    const gantiKode = await updateInstrument(db, admin, 1, 1, { code: "Q99", textPublic: "Yang bersangkutan jujur", textSelf: null, scaleMax: 4 });
+    const gantiKode = await updateInstrument(db, admin, 1, 1, { code: "Q99", statement: "Yang bersangkutan jujur", scaleMax: 4 });
     assert.match((gantiKode as { message: string }).message, /kode dan skalanya tidak bisa diubah/);
 
-    assert.ok((await updateInstrument(db, admin, 1, 1, { code: "Q1", textPublic: "Yang bersangkutan berlaku jujur", textSelf: "Saya berlaku jujur", scaleMax: 4 })).ok);
+    assert.ok((await updateInstrument(db, admin, 1, 1, { code: "Q1", statement: "Yang bersangkutan berlaku jujur", scaleMax: 4 })).ok);
     assert.ok((await renameCategory(db, admin, 1, 1, "Kategori Uji Baru")).ok);
 
     const detail = (await getMeasurement(db, admin, "uji"))!;
     assert.equal(detail.categoriesList[0]!.name, "Kategori Uji Baru");
-    assert.equal(detail.categoriesList[0]!.instruments[0]!.textPublic, "Yang bersangkutan berlaku jujur");
+    assert.equal(detail.categoriesList[0]!.instruments[0]!.statement, "Yang bersangkutan berlaku jujur");
 
     // Soal yang sudah dijawab tidak bisa dihapus.
     assert.match((await deleteInstrument(db, admin, 1, 1) as { message: string }).message, /sudah dijawab 1 kali/);
@@ -207,22 +209,30 @@ describe("mengganti nama pengukuran", () => {
 describe("daftar soal lintas pengukuran", () => {
   test("tanpa saringan: semua soal, lengkap dengan asal pengukuran & sub pengukurannya", async () => {
     const semua = await listAllInstruments(db, admin);
-    assert.deepEqual(semua.map((i) => `${i.measurementSlug}/${i.categoryName}/${i.code}`), ["uji/Kategori Uji/Q1", "uji/Kategori Uji/Q2"]);
-    assert.equal(semua[0]!.locked, true); // pengukuran fixture sudah punya jawaban
+    // Urut nama pengukuran: Manajer Wilayah, Peer, Pengukuran Uji, Self.
+    assert.deepEqual(semua.map((i) => `${i.measurementSlug}/${i.categoryName}/${i.code}`), [
+      "ma/Kategori Uji/Q1", "ma/Kategori Uji/Q2",
+      "pa/Kategori Uji/Q1", "pa/Kategori Uji/Q2",
+      "uji/Kategori Uji/Q1", "uji/Kategori Uji/Q2",
+      "sa/Kategori Uji/Q1", "sa/Kategori Uji/Q2",
+    ]);
+    // Hanya PU yang sudah punya jawaban, jadi hanya soalnya yang terkunci.
+    assert.equal(semua.find((i) => i.measurementSlug === "uji")!.locked, true);
+    assert.equal(semua.find((i) => i.measurementSlug === "sa")!.locked, false);
   });
 
   test("bisa disaring per pengukuran, per sub pengukuran, dan dicari isinya", async () => {
     const lain = await baru({ copyFromId: 1 });
     assert.ok(lain.ok);
-    assert.equal((await listAllInstruments(db, admin)).length, 4);
+    assert.equal((await listAllInstruments(db, admin)).length, 10); // 4 jenis fixture + salinan baru, 2 soal masing-masing
     assert.equal((await listAllInstruments(db, admin, { measurementId: lain.id })).length, 2);
 
     const kategoriLain = (await getMeasurement(db, admin, "pengukuran-baru"))!.categoriesList[0]!;
     assert.equal((await listAllInstruments(db, admin, { categoryId: kategoriLain.id })).length, 2);
 
-    // Pencarian menjangkau kode, teks penilai, dan teks asesmen mandiri.
-    assert.deepEqual((await listAllInstruments(db, admin, { search: "q2" })).map((i) => i.code), ["Q2", "Q2"]);
-    assert.deepEqual((await listAllInstruments(db, admin, { search: "disiplin" })).map((i) => i.code), ["Q2", "Q2"]);
+    // Pencarian menjangkau kode dan bunyi soalnya.
+    assert.equal((await listAllInstruments(db, admin, { search: "q2" })).length, 5);
+    assert.equal((await listAllInstruments(db, admin, { search: "disiplin" })).length, 5);
     assert.equal((await listAllInstruments(db, admin, { search: "tidak ada" })).length, 0);
   });
 
@@ -236,7 +246,13 @@ describe("daftar soal lintas pengukuran", () => {
   test("pilihan sub pengukuran dikelompokkan per pengukuran", async () => {
     await baru({ copyFromId: 1 });
     const opsi = await listCategoryOptions(db, admin);
-    assert.deepEqual(opsi.map((o) => `${o.measurementName}/${o.name}`), ["Pengukuran Baru/Kategori Uji", "Pengukuran Uji/Kategori Uji"]);
+    assert.deepEqual(opsi.map((o) => `${o.measurementName}/${o.name}`), [
+      "Manajer Wilayah Assessment/Kategori Uji",
+      "Peer Awardee Assessment/Kategori Uji",
+      "Pengukuran Baru/Kategori Uji",
+      "Pengukuran Uji/Kategori Uji",
+      "Self Assessment/Kategori Uji",
+    ]);
   });
 
   test("hanya Admin", async () => {

@@ -21,7 +21,7 @@ export default async function MeasurementDetailPage({ params }: { params: Promis
         <Link href="/admin/pengukuran" className="back-link">← Semua pengukuran</Link>
         <h1>{measurement.name}</h1>
         <p>
-          {measurement.categories} sub pengukuran · {measurement.instruments} soal · dipakai {measurement.periods} periode
+          {measurement.categories} sub pengukuran · {measurement.instruments} soal · dijalankan {measurement.periods} siklus
         </p>
       </div>
 
@@ -43,7 +43,7 @@ export default async function MeasurementDetailPage({ params }: { params: Promis
             <table className="table">
               <thead>
                 <tr>
-                  <th scope="col">Periode</th>
+                  <th scope="col">Siklus</th>
                   <th scope="col">Angkatan</th>
                   <th scope="col">Status</th>
                   <th scope="col" className="num">Jawaban</th>

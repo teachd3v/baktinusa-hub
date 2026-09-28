@@ -58,25 +58,34 @@ export async function seedFixture(db: D1Database) {
       (2, 1, 'BA15', 'Budi', 'AAAA0002', NULL),
       (3, 2, 'BA15', 'Citra', 'BBBB0003', 3),
       (4, 3, 'BA15', 'Dedi', 'CCCC0004', NULL);
-    INSERT INTO measurements (id, slug, name, kind) VALUES (1, 'uji', 'Pengukuran Uji', 'assessment');
-    INSERT INTO periods (id, slug, name, batch, kind, status, measurement_id) VALUES (1, 'uji', 'Periode Uji', 'BA15', 'assessment', 'open', 1);
-    INSERT INTO respondent_types (id, code, name, audience) VALUES
-      (1, 'self_initial', 'Asesmen Awal', 'self'),
-      (3, 'peer', 'Peer Awardee', 'internal'),
-      (4, 'manwil', 'Manajer Wilayah', 'internal'),
-      (5, 'external', 'Jejaring Eksternal', 'external');
-    INSERT INTO period_respondent_types (period_id, respondent_type_id, target_rule, target_min) VALUES
-      (1, 1, 'fixed', 1), (1, 3, 'region_peers', NULL), (1, 4, 'fixed', 1), (1, 5, 'fixed', 20);
-    INSERT INTO responses (id, period_id, awardee_id, respondent_type_id, source) VALUES
-      (1, 1, 1, 5, 'app'), (2, 1, 1, 5, 'app'),
-      (3, 1, 2, 5, 'app'),
-      (4, 1, 3, 5, 'app'),
-      (5, 1, 4, 5, 'app');
-    INSERT INTO instrument_categories (id, measurement_id, name, order_index) VALUES (1, 1, 'Kategori Uji', 1);
-    INSERT INTO instruments (id, measurement_id, category_id, code, text_self, text_public, order_index) VALUES
-      (1, 1, 1, 'Q1', 'Saya jujur', 'Yang bersangkutan jujur', 1),
-      (2, 1, 1, 'Q2', 'Saya disiplin', 'Yang bersangkutan disiplin', 2);
-    UPDATE measurements SET form_config = '{"title":"Uji","identity":{"name":"Nama","city":"Kota"},"relation":{"question":"Hubungan","options":[{"label":"Teman","type":"external"}]},"feedback":[{"field":"saran_diri","label":"Saran","question":"Saran untuk yang bersangkutan","required":false}],"scale":[{"value":0,"label":"Tidak","emoji":"👎"},{"value":4,"label":"Sangat","emoji":"🌟"}],"self":{"title":"Asesmen Mandiri","feedback":[{"field":"saran_diri","label":"Refleksi","question":"Apa yang ingin Anda kembangkan?","required":true}]}}' WHERE id = 1;
+    -- Empat jenis pengukuran, masing-masing dengan kuesionernya sendiri. Kode & pengisinya yang
+    -- menentukan rute; Pengukuran Uji (PU) adalah yang publik, dan semua respons fixture miliknya.
+    INSERT INTO measurements (id, code, slug, name, filled_by) VALUES
+      (1, 'PU', 'uji', 'Pengukuran Uji', 'public'),
+      (2, 'SA', 'sa', 'Self Assessment', 'self'),
+      (3, 'PA', 'pa', 'Peer Awardee Assessment', 'peer'),
+      (4, 'MA', 'ma', 'Manajer Wilayah Assessment', 'manwil');
+    INSERT INTO periods (id, slug, name, batch, cycle, status) VALUES (1, 'uji', 'Periode Uji', 'BA15', 'tengah', 'open');
+    INSERT INTO period_measurements (period_id, measurement_id, target_rule, target_min) VALUES
+      (1, 1, 'fixed', 20), (1, 2, 'fixed', 1), (1, 3, 'region_peers', NULL), (1, 4, 'fixed', 1);
+    INSERT INTO responses (id, period_id, awardee_id, measurement_id, source) VALUES
+      (1, 1, 1, 1, 'app'), (2, 1, 1, 1, 'app'),
+      (3, 1, 2, 1, 'app'),
+      (4, 1, 3, 1, 'app'),
+      (5, 1, 4, 1, 'app');
+    INSERT INTO instrument_categories (id, measurement_id, name, order_index) VALUES
+      (1, 1, 'Kategori Uji', 1), (2, 2, 'Kategori Uji', 1), (3, 3, 'Kategori Uji', 1), (4, 4, 'Kategori Uji', 1);
+    -- Soal 1 & 2 milik PU: itu yang dinilai response_scores di berkas-berkas uji.
+    INSERT INTO instruments (id, measurement_id, category_id, code, statement, order_index) VALUES
+      (1, 1, 1, 'Q1', 'Yang bersangkutan jujur', 1),
+      (2, 1, 1, 'Q2', 'Yang bersangkutan disiplin', 2),
+      (3, 2, 2, 'Q1', 'Saya jujur', 1),
+      (4, 2, 2, 'Q2', 'Saya disiplin', 2),
+      (5, 3, 3, 'Q1', 'Yang bersangkutan jujur', 1),
+      (6, 3, 3, 'Q2', 'Yang bersangkutan disiplin', 2),
+      (7, 4, 4, 'Q1', 'Yang bersangkutan jujur', 1),
+      (8, 4, 4, 'Q2', 'Yang bersangkutan disiplin', 2);
+    UPDATE measurements SET form_config = '{"title":"Uji","identity":{"name":"Nama","city":"Kota"},"relation":{"question":"Hubungan","options":[{"label":"Teman","type":"external"}]},"feedback":[{"field":"saran_diri","label":"Saran","question":"Saran untuk yang bersangkutan","required":false}],"scale":[{"value":0,"label":"Tidak","emoji":"👎"},{"value":4,"label":"Sangat","emoji":"🌟"}],"self":{"title":"Asesmen Mandiri","feedback":[{"field":"saran_diri","label":"Refleksi","question":"Apa yang ingin Anda kembangkan?","required":true}]}}';
     INSERT INTO users (id, email, name, role, region_id, awardee_id, status) VALUES
       (1, 'admin@contoh.id', 'Admin', 'admin', NULL, NULL, 'active'),
       (2, 'manwil.bandung@contoh.id', 'Manwil Bandung', 'manwil', 1, NULL, 'active'),

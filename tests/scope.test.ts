@@ -58,9 +58,9 @@ describe("awardee hanya melihat dirinya sendiri", () => {
     const progress = await progressForScope(db, scopeFor(ayu), 1);
     assert.equal(progress.length, 1);
     const byCode = Object.fromEntries(progress[0]!.types.map((t) => [t.code, t]));
-    assert.equal(byCode.external!.count, 2);
-    assert.equal(byCode.external!.target, 20);
-    assert.equal(byCode.peer!.target, 1); // Bandung punya 2 awardee → 1 rekan
+    assert.equal(byCode.PU!.count, 2);
+    assert.equal(byCode.PU!.target, 20);
+    assert.equal(byCode.PA!.target, 1); // Bandung punya 2 awardee → 1 rekan
   });
 });
 

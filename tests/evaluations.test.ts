@@ -46,59 +46,59 @@ describe("daftar tugas", () => {
 
 describe("siapa boleh membuka form apa", () => {
   test("asesmen mandiri: hanya untuk dirinya, memakai teks versi 'Saya'", async () => {
-    const r = await resolve(ayu, "self_initial", "AAAA0001");
+    const r = await resolve(ayu, "SA", "AAAA0001");
     assert.ok(r.ok);
     assert.deepEqual(r.form.instruments.map((i) => i.text), ["Saya jujur", "Saya disiplin"]);
     assert.equal(r.form.feedback[0]!.label, "Refleksi");
-    assert.equal(await reason(ayu, "self_initial", "AAAA0002"), "forbidden");
+    assert.equal(await reason(ayu, "SA", "AAAA0002"), "forbidden");
   });
 
   test("Peer: rekan se-wilayah boleh, diri sendiri & wilayah lain tidak", async () => {
-    const r = await resolve(ayu, "peer", "AAAA0002");
+    const r = await resolve(ayu, "PA", "AAAA0002");
     assert.ok(r.ok);
     assert.equal(r.form.instruments[0]!.text, "Yang bersangkutan jujur");
-    assert.equal(await reason(ayu, "peer", "AAAA0001"), "forbidden");
-    assert.equal(await reason(ayu, "peer", "BBBB0003"), "forbidden");
+    assert.equal(await reason(ayu, "PA", "AAAA0001"), "forbidden");
+    assert.equal(await reason(ayu, "PA", "BBBB0003"), "forbidden");
   });
 
   test("Manwil: binaan boleh, wilayah lain tidak; peran lain tidak bisa memakai form Manwil", async () => {
-    assert.equal(await reason(manwilBandung, "manwil", "AAAA0001"), "ok");
-    assert.equal(await reason(manwilBandung, "manwil", "BBBB0003"), "forbidden");
-    assert.equal(await reason(ayu, "manwil", "AAAA0002"), "forbidden");
-    assert.equal(await reason(manwilBandung, "peer", "AAAA0001"), "forbidden");
-    assert.equal(await reason(admin, "manwil", "AAAA0001"), "forbidden");
+    assert.equal(await reason(manwilBandung, "MA", "AAAA0001"), "ok");
+    assert.equal(await reason(manwilBandung, "MA", "BBBB0003"), "forbidden");
+    assert.equal(await reason(ayu, "MA", "AAAA0002"), "forbidden");
+    assert.equal(await reason(manwilBandung, "PA", "AAAA0001"), "forbidden");
+    assert.equal(await reason(admin, "MA", "AAAA0001"), "forbidden");
   });
 
   test("tipe publik tidak bisa dipakai lewat jalur berakun", async () => {
-    assert.equal(await reason(ayu, "external", "AAAA0002"), "not_found");
+    assert.equal(await reason(ayu, "PU", "AAAA0002"), "not_found");
   });
 
   test("jendela tipe yang sudah lewat → ditutup", async () => {
-    await db.prepare("UPDATE period_respondent_types SET closes_at = '2000-01-01T00:00:00.000Z' WHERE respondent_type_id = 3").run();
-    assert.equal(await reason(ayu, "peer", "AAAA0002"), "closed");
-    assert.equal(await reason(ayu, "self_initial", "AAAA0001"), "ok");
+    await db.prepare("UPDATE period_measurements SET closes_at = '2000-01-01T00:00:00.000Z' WHERE measurement_id = 3").run();
+    assert.equal(await reason(ayu, "PA", "AAAA0002"), "closed");
+    assert.equal(await reason(ayu, "SA", "AAAA0001"), "ok");
   });
 
   test("periode draft → ditutup, dan tidak muncul di daftar tugas", async () => {
     await db.prepare("UPDATE periods SET status = 'draft'").run();
-    assert.equal(await reason(ayu, "self_initial", "AAAA0001"), "closed");
+    assert.equal(await reason(ayu, "SA", "AAAA0001"), "closed");
     assert.deepEqual(await listTasks(db, ayu), []);
   });
 });
 
 describe("mengirim penilaian", () => {
   test("tersimpan dengan pengisinya, lalu tidak bisa diisi dua kali", async () => {
-    const r = await resolve(ayu, "peer", "AAAA0002");
+    const r = await resolve(ayu, "PA", "AAAA0002");
     assert.ok(r.ok);
     const saved = await saveInternalResponse(db, ayu, r.form, { scores: { Q1: 4, Q2: 3 }, feedback: { saran_diri: "Terus semangat" } });
     assert.ok(saved.ok);
     assert.match(saved.receipt, /^[0-9A-F]{8}$/);
 
-    const row = await db.prepare("SELECT id, awardee_id, respondent_type_id, submitted_by, relation FROM responses WHERE submitted_by IS NOT NULL").first<{ id: number }>();
-    assert.deepEqual({ ...row, id: undefined }, { id: undefined, awardee_id: 2, respondent_type_id: 3, submitted_by: 3, relation: "Peer Awardee" });
+    const row = await db.prepare("SELECT id, awardee_id, measurement_id, submitted_by, relation FROM responses WHERE submitted_by IS NOT NULL").first<{ id: number }>();
+    assert.deepEqual({ ...row, id: undefined }, { id: undefined, awardee_id: 2, measurement_id: 3, submitted_by: 3, relation: "Peer Awardee Assessment" });
     assert.equal((await db.prepare("SELECT COUNT(*) AS n FROM response_scores WHERE response_id = ?").bind(row!.id).first<{ n: number }>())!.n, 2);
 
-    assert.equal(await reason(ayu, "peer", "AAAA0002"), "submitted");
+    assert.equal(await reason(ayu, "PA", "AAAA0002"), "submitted");
     // Dua tab yang mengirim bersamaan: indeks unik menolak yang kedua.
     const again = await saveInternalResponse(db, ayu, r.form, { scores: { Q1: 4, Q2: 3 }, feedback: {} });
     assert.deepEqual(again, { ok: false, status: 409, message: "Anda sudah mengisi penilaian ini." });
@@ -108,7 +108,7 @@ describe("mengirim penilaian", () => {
   });
 
   test("skor tidak lengkap & saran wajib ditolak", async () => {
-    const r = await resolve(ayu, "self_initial", "AAAA0001");
+    const r = await resolve(ayu, "SA", "AAAA0001");
     assert.ok(r.ok);
     assert.equal((await saveInternalResponse(db, ayu, r.form, { scores: { Q1: 4 }, feedback: { saran_diri: "x" } })).ok, false);
     assert.equal((await saveInternalResponse(db, ayu, r.form, { scores: { Q1: 4, Q2: 9 }, feedback: { saran_diri: "x" } })).ok, false);

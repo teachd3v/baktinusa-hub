@@ -94,11 +94,11 @@ describe("siapa yang respondennya belum penuh", () => {
     // Fixture: target eksternal 20 dengan 2 masuk; asesmen awal target 1, belum ada; peer = rekan se-wilayah (1).
     assert.deepEqual(
       ayu.missing.map((m) => `${m.typeCode}:${m.count}/${m.target}`).sort(),
-      ["external:2/20", "manwil:0/1", "peer:0/1", "self_initial:0/1"],
+      ["MA:0/1", "PA:0/1", "PU:2/20", "SA:0/1"],
     );
 
     // Penuhi asesmen awal Ayu, lalu tipe itu hilang dari daftar kurang.
-    await db.prepare("INSERT INTO responses (period_id, awardee_id, respondent_type_id, source) VALUES (1, 1, 1, 'app')").run();
+    await db.prepare("INSERT INTO responses (period_id, awardee_id, measurement_id, source) VALUES (1, 1, 1, 'app')").run();
     const lagi = (await shortfalls(db, 1)).find((k) => k.awardee === "Ayu")!;
     assert.ok(!lagi.missing.some((m) => m.typeCode === "self_initial"));
   });
@@ -112,11 +112,11 @@ describe("siapa yang respondennya belum penuh", () => {
 
     // Ia juga tidak menaikkan target Peer awardee BA15 se-wilayahnya.
     const ayu = kurang.find((k) => k.awardee === "Ayu")!;
-    assert.equal(ayu.missing.find((m) => m.typeCode === "peer")!.target, 1);
+    assert.equal(ayu.missing.find((m) => m.typeCode === "PA")!.target, 1);
   });
 
   test("awardee yang semua targetnya penuh tidak ikut terdaftar", async () => {
-    await db.prepare("UPDATE period_respondent_types SET target_rule = 'none', target_min = NULL").run();
+    await db.prepare("UPDATE period_measurements SET target_rule = 'none', target_min = NULL").run();
     assert.deepEqual(await shortfalls(db, 1), []);
   });
 });
@@ -138,8 +138,8 @@ describe("cadangan ke R2", () => {
 
   test("tabel besar tetap lengkap walau dibaca bertahap", async () => {
     // Lebih dari satu halaman (5000) supaya paging benar-benar terpakai.
-    const values = Array.from({ length: 5200 }, (_, i) => `(${i + 100}, 1, 1, 5, 'app')`).join(",");
-    await db.exec(`INSERT INTO responses (id, period_id, awardee_id, respondent_type_id, source) VALUES ${values}`);
+    const values = Array.from({ length: 5200 }, (_, i) => `(${i + 100}, 1, 1, 1, 'app')`).join(",");
+    await db.exec(`INSERT INTO responses (id, period_id, awardee_id, measurement_id, source) VALUES ${values}`);
 
     const bucket = fakeBucket();
     const hasil = await backupToR2(db, bucket, "2026-10-01T00:00:00.000Z");

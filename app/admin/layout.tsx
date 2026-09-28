@@ -13,7 +13,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         { href: "/admin/wilayah", label: "Wilayah" },
         { href: "/admin/pengukuran", label: "Pengukuran" },
         { href: "/admin/instrumen", label: "Instrumen" },
-        { href: "/admin/periode", label: "Periode" },
+        { href: "/admin/periode", label: "Siklus" },
       ]}
     >
       {children}

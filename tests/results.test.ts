@@ -58,17 +58,18 @@ describe("hasil per awardee", () => {
   test("rata-rata kategori dan IPK dihitung dari semua respons tipe itu", async () => {
     const results = await resultsForScope(db, scopeFor(admin), 1);
     const ayuResult = results.find((r) => r.name === "Ayu")!;
-    const external = ayuResult.types.find((t) => t.code === "external")!;
+    const pu = ayuResult.types.find((t) => t.code === "PU")!;
     // Empat jawaban Ayu: 4, 3, 3, 2 → 3.00
-    assert.equal(external.responses, 2);
-    assert.equal(external.categories[0]!.average, 3);
-    assert.equal(external.ipk, 3);
-    assert.equal(external.predicate, "sangat_memuaskan");
+    assert.equal(pu.responses, 2);
+    // Kategori siklus ini datang dari keempat jenis, jadi disebut namanya — bukan indeksnya.
+    assert.equal(pu.categories.find((c) => c.name === "PU·Kategori Uji")!.average, 3);
+    assert.equal(pu.ipk, 3);
+    assert.equal(pu.predicate, "sangat_memuaskan");
   });
 
   test("tipe tanpa jawaban tetap muncul dengan IPK kosong, bukan nol", async () => {
     const [first] = await resultsForScope(db, scopeFor(admin), 1);
-    const self = first!.types.find((t) => t.code === "self_initial")!;
+    const self = first!.types.find((t) => t.code === "SA")!;
     assert.deepEqual({ responses: self.responses, ipk: self.ipk, predicate: self.predicate }, { responses: 0, ipk: null, predicate: null });
   });
 
@@ -95,17 +96,17 @@ describe("lingkup", () => {
 
   test("rincian berisi nilai per soal dan saran, dikelompokkan per tipe penilai", async () => {
     const detail = (await awardeeDetail(db, scopeFor(ayu), 1, "aaaa0001"))!;
-    assert.deepEqual(detail.questions["external"]!.map((q) => `${q.code}:${q.average}`), ["Q1:3.5", "Q2:2.5"]);
-    assert.equal(detail.questions["external"]![0]!.responses, 2);
+    assert.deepEqual(detail.questions["PU"]!.map((q) => `${q.code}:${q.average}`), ["Q1:3.5", "Q2:2.5"]);
+    assert.equal(detail.questions["PU"]![0]!.responses, 2);
     assert.deepEqual(detail.feedback.map((f) => f.field), ["saran_diri", "saran_program"]);
-    assert.equal(detail.feedback[0]!.typeName, "Jejaring Eksternal");
+    assert.equal(detail.feedback[0]!.typeName, "Pengukuran Uji");
   });
 });
 
 describe("ringkasan dashboard", () => {
   test("rata-rata wilayah memberi bobot sama tiap awardee, bukan tiap jawaban", async () => {
     const results = await resultsForScope(db, scopeFor(admin), 1);
-    const regions = summarizeRegions(results, "external");
+    const regions = summarizeRegions(results, "PU");
     // Bandung: Ayu 3.00 (dari 2 responden) dan Budi 4.00 (1 responden) → 3.50, bukan 3.33.
     assert.deepEqual(
       regions.map((r) => [r.region, r.ipk, r.awardees]),
@@ -117,7 +118,7 @@ describe("ringkasan dashboard", () => {
     const results = await resultsForScope(db, scopeFor(admin), 1);
     // Ayu 3.00 & Dedi 3.00 sangat memuaskan, Budi 4.00 cumlaude, Citra 0.50 perlu peningkatan.
     assert.deepEqual(
-      predicateSpread(results, "external").map((p) => [p.predicate, p.count]),
+      predicateSpread(results, "PU").map((p) => [p.predicate, p.count]),
       [["cumlaude", 1], ["sangat_memuaskan", 2], ["memuaskan", 0], ["perlu_peningkatan", 1], [null, 0]],
     );
     // Belum ada asesmen mandiri sama sekali: keempatnya masuk kolom "belum dinilai", bukan dianggap nol.

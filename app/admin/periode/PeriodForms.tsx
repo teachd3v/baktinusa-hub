@@ -1,7 +1,8 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import type { PeriodDetail, PeriodTypeConfig } from "@/lib/data/admin-periods";
+import type { PeriodDetail, PeriodMeasurementConfig } from "@/lib/data/admin-periods";
+import { CYCLES, CYCLE_LABEL, type Cycle } from "@/lib/data/periods";
 import { isoToWibInput } from "@/lib/waktu";
 import {
   addTypeAction,
@@ -46,11 +47,11 @@ export function PeriodSchedule({ period }: { period: PeriodDetail }) {
     <form action={action}>
       <input type="hidden" name="periodId" value={period.id} />
       <div className="field">
-        <label className="label" htmlFor="period-name">Nama periode</label>
+        <label className="label" htmlFor="period-name">Nama siklus</label>
         <input id="period-name" className="input" name="name" maxLength={120} defaultValue={period.name} />
       </div>
       <WindowFields opensAt={period.opensAt} closesAt={period.closesAt} idPrefix="period" />
-      <p className="section-hint">Kosongkan salah satunya kalau periode ini tidak dibatasi waktu di sisi itu.</p>
+      <p className="section-hint">Kosongkan salah satunya kalau siklus ini tidak dibatasi waktu di sisi itu.</p>
       <button type="submit" className="btn btn-small btn-inline" disabled={pending}>{pending ? "Menyimpan…" : "Simpan jadwal"}</button>
       <Result state={state} />
     </form>
@@ -58,8 +59,8 @@ export function PeriodSchedule({ period }: { period: PeriodDetail }) {
 }
 
 const NEXT: Record<string, { status: string; label: string; hint: string }[]> = {
-  draft: [{ status: "open", label: "Buka periode", hint: "Form mulai bisa diisi." }],
-  open: [{ status: "closed", label: "Tutup periode", hint: "Jawaban baru ditolak, hasil tetap terbaca." }],
+  draft: [{ status: "open", label: "Buka siklus", hint: "Form mulai bisa diisi." }],
+  open: [{ status: "closed", label: "Tutup siklus", hint: "Jawaban baru ditolak, hasil tetap terbaca." }],
   closed: [
     { status: "open", label: "Buka lagi", hint: "Mis. memberi perpanjangan waktu." },
     { status: "archived", label: "Arsipkan", hint: "Disembunyikan dari daftar aktif." },
@@ -81,7 +82,7 @@ export function StatusSwitch({ period }: { period: PeriodDetail }) {
         ))}
       </div>
       {period.status === "draft" && period.instruments === 0 && (
-        <p className="section-hint" style={{ margin: "0.5rem 0 0" }}>Periode ini belum punya pertanyaan, jadi belum bisa dibuka.</p>
+        <p className="section-hint" style={{ margin: "0.5rem 0 0" }}>Siklus ini belum punya satu pun soal, jadi belum bisa dibuka.</p>
       )}
       <Result state={state} />
     </form>
@@ -94,21 +95,23 @@ const RULE_LABEL = {
   region_peers: "Semua rekan se-wilayah",
 } as const;
 
-export function TypeRow({ periodId, type }: { periodId: number; type: PeriodTypeConfig }) {
+export function MeasurementRow({ periodId, type }: { periodId: number; type: PeriodMeasurementConfig }) {
   const [state, action, pending] = useActionState<ActionState, FormData>(saveTypeAction, null);
   const [removeState, removeAction, removing] = useActionState<ActionState, FormData>(removeTypeAction, null);
-  const id = `tipe-${type.typeId}`;
+  const id = `jenis-${type.measurementId}`;
 
   return (
     <div className="card" style={{ background: "var(--surface-sunken)", boxShadow: "none" }}>
       <div style={{ display: "flex", justifyContent: "space-between", gap: "0.75rem", flexWrap: "wrap", alignItems: "baseline" }}>
-        <h3 className="section-title" style={{ margin: 0 }}>{type.name}</h3>
-        <span className="section-hint" style={{ margin: 0 }}>{type.responses} jawaban masuk</span>
+        <h3 className="section-title" style={{ margin: 0 }}>
+          <code style={{ fontSize: "0.78rem" }}>{type.code}</code> {type.name}
+        </h3>
+        <span className="section-hint" style={{ margin: 0 }}>{type.instruments} soal · {type.responses} jawaban masuk</span>
       </div>
 
       <form action={action}>
         <input type="hidden" name="periodId" value={periodId} />
-        <input type="hidden" name="typeId" value={type.typeId} />
+        <input type="hidden" name="measurementId" value={type.measurementId} />
         <div className="form-row">
           <div className="field">
             <label className="label" htmlFor={`${id}-rule`}>Target responden</label>
@@ -124,7 +127,7 @@ export function TypeRow({ periodId, type }: { periodId: number; type: PeriodType
           </div>
         </div>
         <WindowFields opensAt={type.opensAt} closesAt={type.closesAt} idPrefix={id} />
-        <p className="section-hint">Kosongkan jadwal untuk mengikuti jadwal periode.</p>
+        <p className="section-hint">Kosongkan jadwal untuk mengikuti jadwal siklus.</p>
         <button type="submit" className="btn btn-small btn-inline" disabled={pending}>{pending ? "Menyimpan…" : "Simpan"}</button>
         <Result state={state} />
       </form>
@@ -132,8 +135,8 @@ export function TypeRow({ periodId, type }: { periodId: number; type: PeriodType
       {type.responses === 0 && (
         <form action={removeAction} style={{ marginTop: "0.5rem" }}>
           <input type="hidden" name="periodId" value={periodId} />
-          <input type="hidden" name="typeId" value={type.typeId} />
-          <button type="submit" className="btn-link" disabled={removing}>Lepas tipe ini dari periode</button>
+          <input type="hidden" name="measurementId" value={type.measurementId} />
+          <button type="submit" className="btn-link" disabled={removing}>Lepas jenis ini dari siklus</button>
           <Result state={removeState} />
         </form>
       )}
@@ -141,13 +144,13 @@ export function TypeRow({ periodId, type }: { periodId: number; type: PeriodType
   );
 }
 
-export function AddType({ periodId, available }: { periodId: number; available: { id: number; name: string }[] }) {
+export function AddMeasurement({ periodId, available }: { periodId: number; available: { id: number; code: string; name: string; instruments: number }[] }) {
   const [state, action, pending] = useActionState<ActionState, FormData>(addTypeAction, null);
-  if (available.length === 0) return <p className="section-hint" style={{ margin: 0 }}>Semua tipe penilai sudah dipakai di periode ini.</p>;
+  if (available.length === 0) return <p className="section-hint" style={{ margin: 0 }}>Semua jenis pengukuran sudah dijalankan siklus ini.</p>;
   return (
     <form action={action} className="copy-row">
       <input type="hidden" name="periodId" value={periodId} />
-      <select className="select" name="typeId" defaultValue={String(available[0]!.id)} aria-label="Tipe penilai">
+      <select className="select" name="measurementId" defaultValue={String(available[0]!.id)} aria-label="Jenis pengukuran">
         {available.map((t) => (
           <option key={t.id} value={t.id}>{t.name}</option>
         ))}
@@ -158,64 +161,60 @@ export function AddType({ periodId, available }: { periodId: number; available: 
   );
 }
 
-// Periode = jadwal: ia memilih pengukuran mana yang dijalankan untuk angkatan apa.
-export function NewPeriodForm({ measurements }: { measurements: { id: number; name: string; instruments: number }[] }) {
+// Siklus = jadwal milik satu angkatan. Jenis pengukuran yang dijalankannya dipilih setelah ini.
+export function NewPeriodForm() {
   const [state, action, pending] = useActionState<ActionState, FormData>(createPeriodAction, null);
   const [batch, setBatch] = useState("BA16");
-  const [slug, setSlug] = useState("");
+  const [cycle, setCycle] = useState<Cycle>("awal");
+  const [slug, setSlug] = useState("ba16-awal");
   const [touched, setTouched] = useState(false);
 
-  const ikut = (nextBatch: string, measurementName: string) => {
+  const ikut = (nextBatch: string, nextCycle: Cycle) => {
     if (touched) return;
-    const dasar = measurementName.toLowerCase().includes("leadership") ? "leadpro" : "pengukuran";
-    setSlug(`${nextBatch.toLowerCase().trim()}-${dasar}`);
+    setSlug(`${nextBatch.toLowerCase().trim()}-${nextCycle}`);
   };
-
-  if (measurements.length === 0) {
-    return (
-      <p className="section-hint" style={{ margin: 0 }}>
-        Belum ada pengukuran. Buat dulu di menu Pengukuran, baru periodenya bisa dijadwalkan.
-      </p>
-    );
-  }
 
   return (
     <form action={action}>
       <div className="form-row">
         <div className="field">
-          <label className="label" htmlFor="measurementId">Pengukuran yang dijalankan</label>
+          <label className="label" htmlFor="cycle">Siklus</label>
           <select
-            id="measurementId"
+            id="cycle"
             className="select"
-            name="measurementId"
-            defaultValue={String(measurements[0]!.id)}
-            onChange={(e) => ikut(batch, e.target.selectedOptions[0]?.textContent ?? "")}
+            name="cycle"
+            value={cycle}
+            onChange={(e) => {
+              const next = e.target.value as Cycle;
+              setCycle(next);
+              ikut(batch, next);
+            }}
           >
-            {measurements.map((m) => (
-              <option key={m.id} value={m.id}>{m.name} ({m.instruments} soal)</option>
+            {CYCLES.map((c) => (
+              <option key={c} value={c}>{CYCLE_LABEL[c]}</option>
             ))}
           </select>
         </div>
         <div className="field">
           <label className="label" htmlFor="batch">Angkatan</label>
           <input id="batch" className="input" name="batch" maxLength={20} value={batch}
-            onChange={(e) => { setBatch(e.target.value); ikut(e.target.value, measurements[0]!.name); }} />
+            onChange={(e) => { setBatch(e.target.value); ikut(e.target.value, cycle); }} />
         </div>
       </div>
 
       <div className="form-row">
         <div className="field">
-          <label className="label" htmlFor="periode-name">Nama periode</label>
-          <input id="periode-name" className="input" name="name" maxLength={120} placeholder="BA16 · Pengukuran Awardee" />
+          <label className="label" htmlFor="periode-name">Nama siklus <span className="section-hint">(boleh kosong)</span></label>
+          <input id="periode-name" className="input" name="name" maxLength={120} placeholder={`${batch} · ${CYCLE_LABEL[cycle]}`} />
         </div>
         <div className="field">
           <label className="label" htmlFor="periode-slug">Slug (dipakai di alamat form)</label>
           <input id="periode-slug" className="input" name="slug" maxLength={60} value={slug}
-            onChange={(e) => { setTouched(true); setSlug(e.target.value); }} placeholder="ba16-pengukuran" />
+            onChange={(e) => { setTouched(true); setSlug(e.target.value); }} placeholder="ba16-awal" />
         </div>
       </div>
 
-      <button type="submit" className="btn btn-small btn-inline" disabled={pending}>{pending ? "Membuat…" : "Buat periode"}</button>
+      <button type="submit" className="btn btn-small btn-inline" disabled={pending}>{pending ? "Membuat…" : "Buat siklus"}</button>
       <Result state={state} />
     </form>
   );

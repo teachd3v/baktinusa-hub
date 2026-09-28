@@ -61,9 +61,13 @@ export async function rawCsv(db: D1Database, scope: Scope, periodId: number): Pr
   const [{ results: instruments }, { results: responses }, { results: scores }, { results: feedback }] = await Promise.all([
     db
       .prepare(
-        `SELECT i.id, i.code FROM instruments i JOIN period_measurements pm ON pm.measurement_id = i.measurement_id
-         JOIN periods p ON p.id = pm.period_id
-         WHERE p.id = ? ORDER BY i.order_index`,
+        // Satu siklus menjalankan beberapa jenis, dan kode soal hanya unik DI DALAM jenisnya —
+        // tanpa awalan kode jenis, kolomnya jadi "Q1;Q1;Q1;Q1" dan tidak bisa dibaca siapa pun.
+        `SELECT i.id, m.code || '·' || i.code AS code
+         FROM instruments i
+         JOIN measurements m ON m.id = i.measurement_id
+         JOIN period_measurements pm ON pm.measurement_id = i.measurement_id
+         WHERE pm.period_id = ? ORDER BY m.code, i.order_index`,
       )
       .bind(periodId).all<{ id: number; code: string }>(),
     db

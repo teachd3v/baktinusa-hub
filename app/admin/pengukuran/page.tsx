@@ -8,7 +8,7 @@ import { NewMeasurementForm } from "./MeasurementForms";
 
 export const metadata: Metadata = { title: "Pengukuran" };
 
-const KIND_LABEL = { assessment: "Asesmen & 360°", leadpro: "Leadership Project" } as const;
+import { FILLED_BY_LABEL } from "@/lib/data/measurements";
 
 export default async function MeasurementsPage() {
   const admin = await requireUser("admin");
@@ -18,7 +18,7 @@ export default async function MeasurementsPage() {
     <>
       <div className="page-head">
         <h1>Pengukuran</h1>
-        <p>Pemilik kuesioner. Satu pengukuran dipakai ulang oleh periode-periode yang menjadwalkannya.</p>
+        <p>Jenis pengukuran: SA, PA, MA, dan seterusnya. Tiap jenis punya kodenya sendiri, kuesionernya sendiri, dan menyatakan siapa pengisinya — itu yang menentukan siapa bisa membuka formnya.</p>
       </div>
 
       <section className="card">
@@ -37,10 +37,11 @@ export default async function MeasurementsPage() {
             <thead>
               <tr>
                 <th scope="col">Pengukuran</th>
-                <th scope="col">Jenis</th>
+                <th scope="col">Kode</th>
+                <th scope="col">Diisi oleh</th>
                 <th scope="col" className="num">Sub pengukuran</th>
                 <th scope="col" className="num">Soal</th>
-                <th scope="col" className="num">Dipakai periode</th>
+                <th scope="col" className="num">Dipakai siklus</th>
                 <th scope="col" className="num">Jawaban</th>
               </tr>
             </thead>
@@ -51,7 +52,8 @@ export default async function MeasurementsPage() {
                     <Link href={`/admin/pengukuran/${m.slug}`} style={{ fontWeight: 700 }}>{m.name}</Link>
                     <div className="section-hint" style={{ margin: 0 }}><code style={{ fontSize: "0.72rem" }}>{m.slug}</code></div>
                   </td>
-                  <td>{KIND_LABEL[m.kind]}</td>
+                  <td><code style={{ fontSize: "0.78rem" }}>{m.code}</code></td>
+                  <td>{FILLED_BY_LABEL[m.filledBy]}</td>
                   <td className="num">{m.categories}</td>
                   <td className="num">{m.instruments}</td>
                   <td className="num">{m.periods}</td>

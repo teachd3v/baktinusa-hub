@@ -2,12 +2,12 @@ import { env } from "cloudflare:workers";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { requireUser } from "@/lib/auth";
-import { listPeriods } from "@/lib/data/periods";
+import { CYCLE_LABEL, listPeriods } from "@/lib/data/periods";
 import { formatWib } from "@/lib/format";
 import { listMeasurements } from "@/lib/data/measurements";
 import { NewPeriodForm } from "./PeriodForms";
 
-export const metadata: Metadata = { title: "Periode" };
+export const metadata: Metadata = { title: "Siklus" };
 
 const STATUS = {
   draft: { label: "draft", tone: "pill-muted" },
@@ -23,8 +23,8 @@ export default async function PeriodsPage() {
   return (
     <>
       <div className="page-head">
-        <h1>Periode penilaian</h1>
-        <p>Buka, tutup, dan jadwalkan tiap tipe penilai. Semua batas waktu tinggal di sini, bukan di dalam kode.</p>
+        <h1>Siklus penilaian</h1>
+        <p>Tiap angkatan punya Siklus Awal, Tengah, dan Akhir. Satu siklus menjalankan beberapa jenis pengukuran sekaligus, masing-masing dengan jadwalnya sendiri.</p>
       </div>
 
       <section className="card">
@@ -32,7 +32,7 @@ export default async function PeriodsPage() {
           <table className="table">
             <thead>
               <tr>
-                <th scope="col">Periode</th>
+                <th scope="col">Siklus</th>
                 <th scope="col">Angkatan</th>
                 <th scope="col">Status</th>
                 <th scope="col">Dibuka</th>
@@ -44,7 +44,7 @@ export default async function PeriodsPage() {
                 <tr key={p.id}>
                   <td>
                     <Link href={`/admin/periode/${p.slug}`} style={{ fontWeight: 700 }}>{p.name}</Link>
-                    <div className="section-hint" style={{ margin: 0 }}>{p.kind === "assessment" ? "Asesmen & 360°" : "Leadership Project"}</div>
+                    <div className="section-hint" style={{ margin: 0 }}>{CYCLE_LABEL[p.cycle]}</div>
                   </td>
                   <td>{p.batch}</td>
                   <td><span className={`pill ${STATUS[p.status].tone}`}>{STATUS[p.status].label}</span></td>
@@ -58,11 +58,12 @@ export default async function PeriodsPage() {
       </section>
 
       <section className="card">
-        <h2 className="section-title">Buat periode baru</h2>
+        <h2 className="section-title">Buat siklus baru</h2>
         <p className="section-hint">
-          Periode adalah jadwal: pilih pengukuran yang dijalankan, angkatannya, lalu atur tanggalnya. Periode baru selalu lahir sebagai draft.
+          Siklus adalah jadwal milik satu angkatan. Jenis pengukuran yang dijalankannya dipilih setelah ini. Siklus baru
+          selalu lahir sebagai draft.
         </p>
-        <NewPeriodForm measurements={measurements} />
+        <NewPeriodForm />
       </section>
     </>
   );

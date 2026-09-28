@@ -66,8 +66,10 @@ export function ipkOf(categories: CategoryScore[]): number | null {
 export async function listCategories(db: D1Database, periodId: number): Promise<Category[]> {
   const { results } = await db
     .prepare(
-      `SELECT c.id, c.name, c.weight, c.order_index FROM instrument_categories c
-       JOIN period_measurements pm ON pm.measurement_id = c.measurement_id WHERE pm.period_id = ? ORDER BY c.order_index`,
+      `SELECT c.id, m.code || '·' || c.name AS name, c.weight, c.order_index FROM instrument_categories c
+       JOIN period_measurements pm ON pm.measurement_id = c.measurement_id
+       JOIN measurements m ON m.id = c.measurement_id
+       WHERE pm.period_id = ? ORDER BY m.code, c.order_index`,
     )
     .bind(periodId)
     .all<{ id: number; name: string; weight: number; order_index: number }>();
@@ -200,7 +202,7 @@ export async function awardeeDetail(
       .all<{ type_code: string; code: string; text: string; category_id: number; average: number; responses: number }>(),
     db
       .prepare(
-        `SELECT fb.field, fb.body, rt.code AS type_code, rt.name AS type_name, rt.audience, r.relation
+        `SELECT fb.field, fb.body, rt.code AS type_code, rt.name AS type_name, rt.filled_by AS audience, r.relation
          FROM response_feedback fb
          JOIN responses r ON r.id = fb.response_id
          JOIN measurements rt ON rt.id = r.measurement_id

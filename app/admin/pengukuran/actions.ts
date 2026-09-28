@@ -15,6 +15,7 @@ import {
   renameMeasurement,
   updateFormText,
   updateInstrument,
+  isFilledBy,
 } from "@/lib/data/measurements";
 
 export type MeasurementState = { ok: boolean; message: string } | null;
@@ -25,13 +26,14 @@ const num = (form: FormData, name: string) => Number(form.get(name));
 
 export async function createMeasurementAction(_previous: MeasurementState, form: FormData): Promise<MeasurementState> {
   const admin = await requireUser("admin");
-  const kind = text(form, "kind");
-  if (kind !== "assessment" && kind !== "leadpro") return { ok: false, message: "Pilih jenis pengukuran." };
+  const filledBy = text(form, "filledBy");
+  if (!isFilledBy(filledBy)) return { ok: false, message: "Pilih siapa yang mengisi jenis pengukuran ini." };
 
   const result = await createMeasurement(env.DB, admin, {
+    code: text(form, "code"),
     slug: text(form, "slug"),
     name: text(form, "name"),
-    kind,
+    filledBy,
     copyFromId: num(form, "copyFromId") || null,
   });
   if (!result.ok) return result;
@@ -94,8 +96,7 @@ export async function deleteCategoryAction(_previous: MeasurementState, form: Fo
 
 const instrumentInput = (form: FormData) => ({
   code: text(form, "code"),
-  textPublic: text(form, "textPublic"),
-  textSelf: text(form, "textSelf") || null,
+  statement: text(form, "statement"),
   scaleMax: Number(form.get("scaleMax")) || 4,
 });
 
