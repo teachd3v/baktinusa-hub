@@ -24,18 +24,21 @@ export type PublicInstrument = {
 
 export type PublicPeriod = { id: number; slug: string; name: string; closesAt: string | null };
 
+// Jenis pengukuran yang sedang dibuka. Alamat form publik memakai slug-nya, karena satu siklus bisa
+// membuka beberapa jenis publik sekaligus (mis. PU dan LA di Siklus Tengah).
+export type PublicMeasurement = { id: number; slug: string; name: string };
+
 export type OpenForm = {
   awardee: PublicAwardee;
   period: PublicPeriod;
+  measurement: PublicMeasurement;
   config: FormConfig;
   instruments: PublicInstrument[];
-  // Kode tipe responden -> id, hanya tipe publik yang sedang dibuka di periode ini.
-  openTypes: Map<string, number>;
 };
 
 export type FormLookup =
   | { status: "not_found" }
-  | { status: "unavailable"; reason: "not_started" | "closed"; awardee: PublicAwardee; period: PublicPeriod; config: FormConfig }
+  | { status: "unavailable"; reason: "not_started" | "closed"; awardee: PublicAwardee; period: PublicPeriod; measurement: PublicMeasurement; config: FormConfig }
   | { status: "open"; form: OpenForm };
 
 // ---------- util ----------
@@ -46,26 +49,39 @@ export const normalizeReferral = (value: string) => decodeURIComponent(value).tr
 const before = (iso: string | null, now: number) => iso !== null && now < Date.parse(iso);
 const after = (iso: string | null, now: number) => iso !== null && now >= Date.parse(iso);
 
-type PeriodRow = {
-  id: number;
-  slug: string;
-  name: string;
+// Satu baris = satu jenis publik sebagaimana dijalankan satu siklus.
+type FormRow = {
+  period_id: number;
+  period_slug: string;
+  period_name: string;
   status: string;
-  opens_at: string | null;
-  closes_at: string | null;
+  p_opens: string | null;
+  p_closes: string | null;
   measurement_id: number;
+  measurement_slug: string;
+  measurement_name: string;
   form_config: string | null;
+  m_opens: string | null;
+  m_closes: string | null;
 };
 
-type TypeRow = { period_id: number; id: number; code: string; opens_at: string | null; closes_at: string | null };
-
-function periodState(period: PeriodRow, now: number): "open" | "not_started" | "closed" {
-  if (period.status === "closed" || period.status === "archived" || after(period.closes_at, now)) return "closed";
-  if (period.status !== "open" || before(period.opens_at, now)) return "not_started";
+function periodState(row: FormRow, now: number): "open" | "not_started" | "closed" {
+  if (row.status === "closed" || row.status === "archived" || after(row.p_closes, now)) return "closed";
+  if (row.status !== "open" || before(row.p_opens, now)) return "not_started";
   return "open";
 }
 
-const typeIsOpen = (t: TypeRow, now: number) => !before(t.opens_at, now) && !after(t.closes_at, now);
+// Jendela jenis selalu di dalam jendela siklusnya: yang paling cepat menutup yang berlaku.
+const windowOpen = (row: FormRow, now: number) => !before(row.m_opens, now) && !after(row.m_closes, now);
+
+const FORM_ROWS = `SELECT p.id AS period_id, p.slug AS period_slug, p.name AS period_name, p.status,
+      p.opens_at AS p_opens, p.closes_at AS p_closes,
+      m.id AS measurement_id, m.slug AS measurement_slug, m.name AS measurement_name, m.form_config,
+      pm.opens_at AS m_opens, pm.closes_at AS m_closes
+   FROM periods p
+   JOIN period_measurements pm ON pm.period_id = p.id
+   JOIN measurements m ON m.id = pm.measurement_id
+   WHERE m.filled_by = 'public' AND p.batch = ?`;
 
 // ---------- query ----------
 
@@ -82,66 +98,57 @@ export async function findAwardee(referral: string): Promise<(PublicAwardee & { 
   return { id: row.id, name: row.name, campus: row.campus, region: row.region, referralCode: row.referral_code, batch: row.batch, photoKey: row.photo_key };
 }
 
-async function publicTypes(periodIds: number[]): Promise<TypeRow[]> {
-  if (periodIds.length === 0) return [];
-  const { results } = await env.DB.prepare(
-    `SELECT prt.period_id, rt.id, rt.code, prt.opens_at, prt.closes_at
-     FROM period_respondent_types prt JOIN respondent_types rt ON rt.id = prt.respondent_type_id
-     WHERE rt.audience = 'external' AND prt.period_id IN (SELECT value FROM json_each(?))`,
-  ).bind(JSON.stringify(periodIds)).all<TypeRow>();
-  return results;
-}
-
-// Form publik yang sedang terbuka untuk awardee ini (bisa lebih dari satu periode sekaligus).
+// Form publik yang sedang terbuka untuk awardee ini — bisa lebih dari satu jenis sekaligus.
 export async function listOpenForms(referral: string) {
   const awardee = await findAwardee(referral);
   if (!awardee) return null;
-  const { results: periods } = await env.DB.prepare(
-    `SELECT p.id, p.slug, p.name, p.status, p.opens_at, p.closes_at, m.form_config
-     FROM periods p JOIN measurements m ON m.id = p.measurement_id WHERE p.batch = ? ORDER BY p.id`,
-  ).bind(awardee.batch).all<PeriodRow>();
+  const { results } = await env.DB.prepare(`${FORM_ROWS} ORDER BY p.id, m.code`).bind(awardee.batch).all<FormRow>();
   const now = Date.now();
-  const types = await publicTypes(periods.map((p) => p.id));
-  const forms = periods
-    .filter((p) => p.form_config && periodState(p, now) === "open" && types.some((t) => t.period_id === p.id && typeIsOpen(t, now)))
-    .map((p) => ({ slug: p.slug, name: p.name, title: (JSON.parse(p.form_config!) as FormConfig).title, closesAt: p.closes_at }));
+  const forms = results
+    .filter((r) => r.form_config && periodState(r, now) === "open" && windowOpen(r, now))
+    .map((r) => ({
+      slug: r.measurement_slug,
+      name: r.measurement_name,
+      title: (JSON.parse(r.form_config!) as FormConfig).title,
+      closesAt: r.m_closes ?? r.p_closes,
+    }));
   return { awardee, forms };
 }
 
+// slug di alamat menunjuk JENIS pengukuran, bukan siklus: siklusnya ditentukan dari angkatan awardee.
 export async function getPublicForm(referral: string, slug: string): Promise<FormLookup> {
   const awardee = await findAwardee(referral);
   if (!awardee) return { status: "not_found" };
-  const period = await env.DB.prepare(
-    `SELECT p.id, p.slug, p.name, p.status, p.opens_at, p.closes_at, p.measurement_id, m.form_config
-     FROM periods p JOIN measurements m ON m.id = p.measurement_id WHERE p.slug = ? AND p.batch = ?`,
-  ).bind(slug, awardee.batch).first<PeriodRow>();
-  if (!period?.form_config) return { status: "not_found" };
+  const row = await env.DB.prepare(`${FORM_ROWS} AND m.slug = ? ORDER BY p.id DESC`)
+    .bind(awardee.batch, slug)
+    .first<FormRow>();
+  if (!row?.form_config) return { status: "not_found" };
 
-  const config = JSON.parse(period.form_config) as FormConfig;
-  const publicPeriod: PublicPeriod = { id: period.id, slug: period.slug, name: period.name, closesAt: period.closes_at };
+  const config = JSON.parse(row.form_config) as FormConfig;
+  const publicPeriod: PublicPeriod = { id: row.period_id, slug: row.period_slug, name: row.period_name, closesAt: row.m_closes ?? row.p_closes };
+  const measurement: PublicMeasurement = { id: row.measurement_id, slug: row.measurement_slug, name: row.measurement_name };
   const publicAwardee: PublicAwardee = { id: awardee.id, name: awardee.name, campus: awardee.campus, region: awardee.region, referralCode: awardee.referralCode };
 
   const now = Date.now();
-  const state = periodState(period, now);
-  const types = (await publicTypes([period.id])).filter((t) => typeIsOpen(t, now));
-  if (state !== "open" || types.length === 0) {
-    return { status: "unavailable", reason: state === "open" ? "closed" : state, awardee: publicAwardee, period: publicPeriod, config };
+  const state = periodState(row, now);
+  if (state !== "open" || !windowOpen(row, now)) {
+    return { status: "unavailable", reason: state === "open" ? "closed" : state, awardee: publicAwardee, period: publicPeriod, measurement, config };
   }
 
   const { results } = await env.DB.prepare(
-    `SELECT i.id, i.code, i.text_public, i.scale_max, c.name AS category
+    `SELECT i.id, i.code, i.statement, i.scale_max, c.name AS category
      FROM instruments i JOIN instrument_categories c ON c.id = i.category_id
      WHERE i.measurement_id = ? ORDER BY c.order_index, i.order_index`,
-  ).bind(period.measurement_id).all<{ id: number; code: string; text_public: string; scale_max: number; category: string }>();
+  ).bind(row.measurement_id).all<{ id: number; code: string; statement: string; scale_max: number; category: string }>();
 
   return {
     status: "open",
     form: {
       awardee: publicAwardee,
       period: publicPeriod,
+      measurement,
       config,
-      instruments: results.map((r) => ({ id: r.id, code: r.code, text: r.text_public, category: r.category, scaleMax: r.scale_max })),
-      openTypes: new Map(types.map((t) => [t.code, t.id])),
+      instruments: results.map((r) => ({ id: r.id, code: r.code, text: r.statement, category: r.category, scaleMax: r.scale_max })),
     },
   };
 }
@@ -159,7 +166,6 @@ export type Submission = {
 };
 
 export type ValidSubmission = {
-  respondentTypeId: number;
   name: string;
   city: string;
   relation: string;
@@ -177,9 +183,10 @@ export function validateSubmission(form: OpenForm, input: Partial<Submission>): 
   if (!city) return { ok: false, message: `${form.config.identity.city} wajib diisi.` };
   if (name.length > 120 || city.length > 120) return { ok: false, message: "Nama dan kota maksimal 120 karakter." };
 
+  // Hubungan sekarang hanya dicatat, tidak lagi memilih tipe responden: jenisnya sudah ditentukan oleh
+  // form yang dibuka. Itu yang membuat lima tipe Leadership Project bisa lebur jadi satu LA.
   const option = Number.isInteger(input.relationIndex) ? form.config.relation.options[input.relationIndex as number] : undefined;
-  const respondentTypeId = option ? form.openTypes.get(option.type) : undefined;
-  if (!option || respondentTypeId === undefined) return { ok: false, message: "Pilih hubungan Anda dengan awardee." };
+  if (!option) return { ok: false, message: "Pilih hubungan Anda dengan awardee." };
   let relation = option.label;
   if (option.detail) {
     const detail = text(input.relationDetail, 200);
@@ -199,7 +206,7 @@ export function validateSubmission(form: OpenForm, input: Partial<Submission>): 
   const feedback = validateFeedback(form.config.feedback, input.feedback);
   if (!feedback.ok) return feedback;
 
-  return { ok: true, value: { respondentTypeId, name, city, relation, knownDuration, scores: scores.value, feedback: feedback.value } };
+  return { ok: true, value: { name, city, relation, knownDuration, scores: scores.value, feedback: feedback.value } };
 }
 
 // ---------- simpan ----------
@@ -208,10 +215,10 @@ export async function saveResponse(form: OpenForm, value: ValidSubmission, finge
   const publicId = crypto.randomUUID();
   const statements = [
     env.DB.prepare(
-      `INSERT INTO responses (public_id, period_id, awardee_id, respondent_type_id, respondent_name, respondent_city,
+      `INSERT INTO responses (public_id, period_id, awardee_id, measurement_id, respondent_name, respondent_city,
                               relation, known_duration, submitted_at, source, fingerprint)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'app', ?)`,
-    ).bind(publicId, form.period.id, form.awardee.id, value.respondentTypeId, value.name, value.city, value.relation, value.knownDuration, new Date().toISOString(), fingerprint),
+    ).bind(publicId, form.period.id, form.awardee.id, form.measurement.id, value.name, value.city, value.relation, value.knownDuration, new Date().toISOString(), fingerprint),
     // Skor & saran ditulis lewat json_each supaya tetap satu parameter — D1 membatasi 100 parameter per query.
     env.DB.prepare(
       `INSERT INTO response_scores (response_id, instrument_id, score)

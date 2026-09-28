@@ -53,7 +53,7 @@ export async function listResponses(db: D1Database, scope: Scope, periodId?: num
       `SELECT r.id, r.awardee_id, r.period_id, rt.code AS type_code
        FROM responses r
        JOIN awardees a ON a.id = r.awardee_id
-       JOIN respondent_types rt ON rt.id = r.respondent_type_id
+       JOIN measurements rt ON rt.id = r.measurement_id
        WHERE ${f.sql} ${periodId === undefined ? "" : "AND r.period_id = ?"}
        ORDER BY r.id`,
     )
@@ -76,20 +76,20 @@ export async function progressForScope(db: D1Database, scope: Scope, periodId: n
     db
       .prepare(
         `SELECT rt.id, rt.code, rt.name, prt.target_rule, prt.target_min
-         FROM period_respondent_types prt JOIN respondent_types rt ON rt.id = prt.respondent_type_id
+         FROM period_measurements prt JOIN measurements rt ON rt.id = prt.measurement_id
          WHERE prt.period_id = ? ORDER BY rt.id`,
       )
       .bind(periodId)
       .all<{ id: number; code: string; name: string; target_rule: string; target_min: number | null }>(),
     db
       .prepare(
-        `SELECT r.awardee_id, r.respondent_type_id, COUNT(*) AS n
+        `SELECT r.awardee_id, r.measurement_id, COUNT(*) AS n
          FROM responses r JOIN awardees a ON a.id = r.awardee_id
          WHERE r.period_id = ? AND ${f.sql}
-         GROUP BY r.awardee_id, r.respondent_type_id`,
+         GROUP BY r.awardee_id, r.measurement_id`,
       )
       .bind(periodId, ...f.params)
-      .all<{ awardee_id: number; respondent_type_id: number; n: number }>(),
+      .all<{ awardee_id: number; measurement_id: number; n: number }>(),
     // Target Peer = awardee lain se-wilayah; butuh ukuran wilayah penuh, bukan hanya yang ada di lingkup.
     db
       .prepare("SELECT region_id, COUNT(*) AS n FROM awardees GROUP BY region_id")
@@ -97,7 +97,7 @@ export async function progressForScope(db: D1Database, scope: Scope, periodId: n
   ]);
 
   const sizeOf = new Map(regionSizes.map((r) => [r.region_id, r.n]));
-  const countOf = new Map(counts.map((c) => [`${c.awardee_id}:${c.respondent_type_id}`, c.n]));
+  const countOf = new Map(counts.map((c) => [`${c.awardee_id}:${c.measurement_id}`, c.n]));
 
   return awardees.map((a) => ({
     ...a,

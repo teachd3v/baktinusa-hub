@@ -61,7 +61,8 @@ export async function rawCsv(db: D1Database, scope: Scope, periodId: number): Pr
   const [{ results: instruments }, { results: responses }, { results: scores }, { results: feedback }] = await Promise.all([
     db
       .prepare(
-        `SELECT i.id, i.code FROM instruments i JOIN periods p ON p.measurement_id = i.measurement_id
+        `SELECT i.id, i.code FROM instruments i JOIN period_measurements pm ON pm.measurement_id = i.measurement_id
+         JOIN periods p ON p.id = pm.period_id
          WHERE p.id = ? ORDER BY i.order_index`,
       )
       .bind(periodId).all<{ id: number; code: string }>(),
@@ -72,7 +73,7 @@ export async function rawCsv(db: D1Database, scope: Scope, periodId: number): Pr
          FROM responses r
          JOIN awardees a ON a.id = r.awardee_id
          JOIN regions g ON g.id = a.region_id
-         JOIN respondent_types rt ON rt.id = r.respondent_type_id
+         JOIN measurements rt ON rt.id = r.measurement_id
          WHERE r.period_id = ? AND ${f.sql}
          ORDER BY a.name, rt.id, r.id`,
       )

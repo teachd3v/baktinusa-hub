@@ -67,7 +67,7 @@ export async function listCategories(db: D1Database, periodId: number): Promise<
   const { results } = await db
     .prepare(
       `SELECT c.id, c.name, c.weight, c.order_index FROM instrument_categories c
-       JOIN periods p ON p.measurement_id = c.measurement_id WHERE p.id = ? ORDER BY c.order_index`,
+       JOIN period_measurements pm ON pm.measurement_id = c.measurement_id WHERE pm.period_id = ? ORDER BY c.order_index`,
     )
     .bind(periodId)
     .all<{ id: number; name: string; weight: number; order_index: number }>();
@@ -76,7 +76,7 @@ export async function listCategories(db: D1Database, periodId: number): Promise<
 
 type AggRow = { awardee_id: number; type_id: number; category_id: number; average: number; responses: number };
 
-const AGGREGATE = `SELECT r.awardee_id, r.respondent_type_id AS type_id, i.category_id,
+const AGGREGATE = `SELECT r.awardee_id, r.measurement_id AS type_id, i.category_id,
     AVG(s.score) AS average, COUNT(DISTINCT r.id) AS responses
   FROM response_scores s
   JOIN responses r ON r.id = s.response_id
@@ -111,8 +111,8 @@ function buildTypes(
 async function typesOfPeriod(db: D1Database, periodId: number) {
   const { results } = await db
     .prepare(
-      `SELECT rt.id, rt.code, rt.name, rt.audience FROM period_respondent_types prt
-       JOIN respondent_types rt ON rt.id = prt.respondent_type_id
+      `SELECT rt.id, rt.code, rt.name, rt.filled_by AS audience FROM period_measurements prt
+       JOIN measurements rt ON rt.id = prt.measurement_id
        WHERE prt.period_id = ? ORDER BY rt.id`,
     )
     .bind(periodId)
@@ -127,7 +127,7 @@ export async function resultsForScope(db: D1Database, scope: Scope, periodId: nu
     listCategories(db, periodId),
     typesOfPeriod(db, periodId),
     db
-      .prepare(`${AGGREGATE} AND ${f.sql} GROUP BY r.awardee_id, r.respondent_type_id, i.category_id`)
+      .prepare(`${AGGREGATE} AND ${f.sql} GROUP BY r.awardee_id, r.measurement_id, i.category_id`)
       .bind(periodId, ...f.params)
       .all<AggRow>(),
     db
@@ -181,17 +181,17 @@ export async function awardeeDetail(
     listCategories(db, periodId),
     typesOfPeriod(db, periodId),
     db
-      .prepare(`${AGGREGATE} AND a.id = ? GROUP BY r.awardee_id, r.respondent_type_id, i.category_id`)
+      .prepare(`${AGGREGATE} AND a.id = ? GROUP BY r.awardee_id, r.measurement_id, i.category_id`)
       .bind(periodId, awardee.id)
       .all<AggRow>(),
     db
       .prepare(
-        `SELECT rt.code AS type_code, i.code, i.text_public AS text, i.category_id,
+        `SELECT rt.code AS type_code, i.code, i.statement AS text, i.category_id,
             AVG(s.score) AS average, COUNT(*) AS responses
          FROM response_scores s
          JOIN responses r ON r.id = s.response_id
          JOIN instruments i ON i.id = s.instrument_id
-         JOIN respondent_types rt ON rt.id = r.respondent_type_id
+         JOIN measurements rt ON rt.id = r.measurement_id
          WHERE r.period_id = ? AND r.awardee_id = ?
          GROUP BY rt.code, i.id
          ORDER BY i.order_index`,
@@ -203,7 +203,7 @@ export async function awardeeDetail(
         `SELECT fb.field, fb.body, rt.code AS type_code, rt.name AS type_name, rt.audience, r.relation
          FROM response_feedback fb
          JOIN responses r ON r.id = fb.response_id
-         JOIN respondent_types rt ON rt.id = r.respondent_type_id
+         JOIN measurements rt ON rt.id = r.measurement_id
          WHERE r.period_id = ? AND r.awardee_id = ?
          ORDER BY rt.id, r.id`,
       )

@@ -36,12 +36,12 @@ export async function listResponsesForAdmin(db: D1Database, actor: SessionUser, 
           (SELECT COUNT(*) FROM response_scores s WHERE s.response_id = r.id) AS scores,
           (SELECT MIN(x.id) FROM responses x
              WHERE x.period_id = r.period_id AND x.awardee_id = r.awardee_id
-               AND x.respondent_type_id = r.respondent_type_id
+               AND x.measurement_id = r.measurement_id
                AND x.fingerprint IS NOT NULL AND x.fingerprint = r.fingerprint) AS first_same
        FROM responses r
        JOIN awardees a ON a.id = r.awardee_id
        JOIN regions g ON g.id = a.region_id
-       JOIN respondent_types rt ON rt.id = r.respondent_type_id
+       JOIN measurements rt ON rt.id = r.measurement_id
        WHERE r.period_id = ?
        ORDER BY r.id DESC LIMIT ?`,
     )
@@ -69,7 +69,7 @@ export async function deleteResponse(db: D1Database, actor: SessionUser, respons
     .prepare(
       `SELECT r.id, a.name AS awardee, rt.name AS tipe, r.respondent_name, r.submitted_at, r.source,
           (SELECT COUNT(*) FROM response_scores s WHERE s.response_id = r.id) AS scores
-       FROM responses r JOIN awardees a ON a.id = r.awardee_id JOIN respondent_types rt ON rt.id = r.respondent_type_id
+       FROM responses r JOIN awardees a ON a.id = r.awardee_id JOIN measurements rt ON rt.id = r.measurement_id
        WHERE r.id = ?`,
     )
     .bind(responseId)

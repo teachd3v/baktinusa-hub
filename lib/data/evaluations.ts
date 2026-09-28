@@ -3,15 +3,17 @@ import { ScopeError, awardeeFilter, scopeFor, type Role, type SessionUser } from
 import { receiptCode, validateFeedback, validateScores } from "./validation.ts";
 
 // Penilaian berakun: asesmen mandiri (Awardee menilai diri), Peer (Awardee menilai rekan se-wilayah),
-// dan Manwil (Manajer Wilayah menilai awardee binaannya). Admin tidak mengisi penilaian.
+// Manwil (Manajer Wilayah menilai awardee binaannya), dan Admin (mis. Uji Akhir).
+//
+// Jenisnya tidak lagi ditebak dari kode. Dulu ada peta kode di berkas ini, jadi jenis pengukuran buatan
+// Admin tidak akan bisa dibuka siapa pun. Sekarang rutenya dibaca dari measurements.filled_by.
 
-export type EvalKind = "self" | "peer" | "manwil";
+export type EvalKind = "self" | "peer" | "manwil" | "admin";
 
-const KIND_OF_TYPE: Record<string, EvalKind> = { self_initial: "self", self_mid: "self", peer: "peer", manwil: "manwil" };
-const ROLE_OF_KIND: Record<EvalKind, Role> = { self: "awardee", peer: "awardee", manwil: "manwil" };
-const TYPES_OF_KIND: Record<EvalKind, string[]> = { self: ["self_initial", "self_mid"], peer: ["peer"], manwil: ["manwil"] };
+const ROLE_OF_KIND: Record<EvalKind, Role> = { self: "awardee", peer: "awardee", manwil: "manwil", admin: "admin" };
 
-export const kindOfType = (typeCode: string): EvalKind | null => KIND_OF_TYPE[typeCode] ?? null;
+// 'public' punya jalurnya sendiri lewat tautan referal (lib/survey.ts), bukan lewat akun.
+const isEvalKind = (v: string): v is EvalKind => v in ROLE_OF_KIND;
 
 export type EvalTarget = { id: number; name: string; campus: string | null; referralCode: string; region: string };
 type TargetRow = { id: number; name: string; campus: string | null; referral_code: string; region: string; batch: string; region_id: number };
@@ -29,9 +31,9 @@ type OpenType = {
   period_name: string;
   measurement_id: number;
   form_config: string | null;
-  type_id: number;
-  type_code: string;
-  type_name: string;
+  code: string;
+  name: string;
+  filled_by: EvalKind;
   p_opens: string | null;
   p_closes: string | null;
   t_opens: string | null;
@@ -44,19 +46,20 @@ const inWindow = (opens: string | null, closes: string | null, now: number) =>
 const earliest = (...dates: (string | null)[]) =>
   dates.filter((d): d is string => d !== null).sort((a, b) => Date.parse(a) - Date.parse(b))[0] ?? null;
 
-async function openTypes(db: D1Database, codes: string[], batch: string): Promise<OpenType[]> {
+// Jenis pengukuran yang sedang terbuka untuk satu angkatan, disaring oleh siapa pengisinya.
+async function openTypes(db: D1Database, filledBy: EvalKind, batch: string): Promise<OpenType[]> {
   const { results } = await db
     .prepare(
-      `SELECT p.id AS period_id, p.measurement_id, p.slug, p.name AS period_name, m.form_config, p.opens_at AS p_opens, p.closes_at AS p_closes,
-              rt.id AS type_id, rt.code AS type_code, rt.name AS type_name, prt.opens_at AS t_opens, prt.closes_at AS t_closes
+      `SELECT p.id AS period_id, p.slug, p.name AS period_name, p.opens_at AS p_opens, p.closes_at AS p_closes,
+              m.id AS measurement_id, m.code, m.name, m.filled_by, m.form_config,
+              pm.opens_at AS t_opens, pm.closes_at AS t_closes
        FROM periods p
-       JOIN measurements m ON m.id = p.measurement_id
-       JOIN period_respondent_types prt ON prt.period_id = p.id
-       JOIN respondent_types rt ON rt.id = prt.respondent_type_id
-       WHERE p.status = 'open' AND p.batch = ? AND rt.code IN (SELECT value FROM json_each(?))
-       ORDER BY p.id, rt.id`,
+       JOIN period_measurements pm ON pm.period_id = p.id
+       JOIN measurements m ON m.id = pm.measurement_id
+       WHERE p.status = 'open' AND p.batch = ? AND m.filled_by = ?
+       ORDER BY p.id, m.code`,
     )
-    .bind(batch, JSON.stringify(codes))
+    .bind(batch, filledBy)
     .all<OpenType>();
   const now = Date.now();
   return results.filter((t) => inWindow(t.p_opens, t.p_closes, now) && inWindow(t.t_opens, t.t_closes, now));
@@ -85,7 +88,8 @@ export async function listPeerTargets(db: D1Database, user: SessionUser): Promis
   return (await peerRows(db, user)).map(toTarget);
 }
 
-async function manwilRows(db: D1Database, user: SessionUser): Promise<TargetRow[]> {
+// Manwil terbatas wilayahnya, Admin melihat semua — keduanya lewat lingkup yang sama.
+async function scopedRows(db: D1Database, user: SessionUser): Promise<TargetRow[]> {
   const f = awardeeFilter(scopeFor(user));
   const { results } = await db.prepare(`${SELECT_TARGET} WHERE ${f.sql} ORDER BY a.name`).bind(...f.params).all<TargetRow>();
   return results;
@@ -93,10 +97,10 @@ async function manwilRows(db: D1Database, user: SessionUser): Promise<TargetRow[
 
 async function submittedKeys(db: D1Database, userId: number): Promise<Set<string>> {
   const { results } = await db
-    .prepare("SELECT period_id, respondent_type_id, awardee_id FROM responses WHERE submitted_by = ?")
+    .prepare("SELECT period_id, measurement_id, awardee_id FROM responses WHERE submitted_by = ?")
     .bind(userId)
-    .all<{ period_id: number; respondent_type_id: number; awardee_id: number }>();
-  return new Set(results.map((r) => `${r.period_id}:${r.respondent_type_id}:${r.awardee_id}`));
+    .all<{ period_id: number; measurement_id: number; awardee_id: number }>();
+  return new Set(results.map((r) => `${r.period_id}:${r.measurement_id}:${r.awardee_id}`));
 }
 
 // ---------- daftar tugas ----------
@@ -115,29 +119,28 @@ export async function listTasks(db: D1Database, user: SessionUser): Promise<Eval
   if (user.role === "awardee") {
     const me = await ownAwardee(db, user);
     if (!me) return [];
-    const [selfTypes, peerTypes] = await Promise.all([openTypes(db, TYPES_OF_KIND.self, me.batch), openTypes(db, TYPES_OF_KIND.peer, me.batch)]);
+    const [selfTypes, peerTypes] = await Promise.all([openTypes(db, "self", me.batch), openTypes(db, "peer", me.batch)]);
     const mates = peerTypes.length ? await peerRows(db, user) : [];
     pairs = [
       ...selfTypes.map((type) => ({ type, target: me })),
       ...peerTypes.flatMap((type) => mates.map((target) => ({ type, target }))),
     ];
-  } else if (user.role === "manwil") {
-    const rows = await manwilRows(db, user);
+  } else {
+    // Manwil menilai binaannya, Admin menilai semua — keduanya memakai lingkupnya masing-masing.
+    const rows = await scopedRows(db, user);
     for (const batch of new Set(rows.map((r) => r.batch))) {
-      const types = await openTypes(db, TYPES_OF_KIND.manwil, batch);
+      const types = await openTypes(db, user.role === "admin" ? "admin" : "manwil", batch);
       pairs.push(...types.flatMap((type) => rows.filter((r) => r.batch === batch).map((target) => ({ type, target }))));
     }
-  } else {
-    return [];
   }
 
   const done = await submittedKeys(db, user.id);
   return pairs.map(({ type, target }) => ({
-    kind: KIND_OF_TYPE[type.type_code]!,
+    kind: type.filled_by,
     period: { slug: type.slug, name: type.period_name, closesAt: earliest(type.p_closes, type.t_closes) },
-    type: { code: type.type_code, name: type.type_name },
+    type: { code: type.code, name: type.name },
     target: toTarget(target),
-    submitted: done.has(`${type.period_id}:${type.type_id}:${target.id}`),
+    submitted: done.has(`${type.period_id}:${type.measurement_id}:${target.id}`),
   }));
 }
 
@@ -156,7 +159,7 @@ export type InternalForm = {
 
 export type ResolveFailure = "not_found" | "forbidden" | "closed" | "submitted";
 
-const TITLES: Record<EvalKind, string> = { self: "Asesmen Mandiri", peer: "Penilaian Rekan Se-wilayah", manwil: "Penilaian Manajer Wilayah" };
+
 
 export async function resolveInternalForm(
   db: D1Database,
@@ -165,8 +168,13 @@ export async function resolveInternalForm(
   typeCode: string,
   targetReferral: string,
 ): Promise<{ ok: true; form: InternalForm } | { ok: false; reason: ResolveFailure }> {
-  const kind = kindOfType(typeCode);
-  if (!kind) return { ok: false, reason: "not_found" };
+  // Rutenya datang dari basis data: jenis itu sendiri yang menyatakan siapa pengisinya.
+  const jenis = await db
+    .prepare("SELECT filled_by FROM measurements WHERE code = ?")
+    .bind(typeCode.trim().toUpperCase())
+    .first<{ filled_by: string }>();
+  if (!jenis || !isEvalKind(jenis.filled_by)) return { ok: false, reason: "not_found" };
+  const kind = jenis.filled_by;
   if (user.role !== ROLE_OF_KIND[kind]) return { ok: false, reason: "forbidden" };
 
   // Sasaran harus sesuai jenis penilaian dan lingkup pengisinya.
@@ -174,16 +182,16 @@ export async function resolveInternalForm(
   const candidates =
     kind === "self" ? [await ownAwardee(db, user)].filter((r): r is TargetRow => r !== null)
     : kind === "peer" ? await peerRows(db, user)
-    : await manwilRows(db, user);
+    : await scopedRows(db, user);
   const target = candidates.find((r) => r.referral_code === referral);
   if (!target) return { ok: false, reason: "forbidden" };
 
-  const open = (await openTypes(db, [typeCode], target.batch)).find((t) => t.slug === periodSlug);
+  const open = (await openTypes(db, kind, target.batch)).find((t) => t.slug === periodSlug && t.code === typeCode.trim().toUpperCase());
   if (!open) return { ok: false, reason: "closed" };
 
   const already = await db
-    .prepare("SELECT 1 AS x FROM responses WHERE period_id = ? AND respondent_type_id = ? AND awardee_id = ? AND submitted_by = ?")
-    .bind(open.period_id, open.type_id, target.id, user.id)
+    .prepare("SELECT 1 AS x FROM responses WHERE period_id = ? AND measurement_id = ? AND awardee_id = ? AND submitted_by = ?")
+    .bind(open.period_id, open.measurement_id, target.id, user.id)
     .first<{ x: number }>();
   if (already) return { ok: false, reason: "submitted" };
 
@@ -191,7 +199,7 @@ export async function resolveInternalForm(
   if (!config) return { ok: false, reason: "not_found" };
   const { results } = await db
     .prepare(
-      `SELECT i.id, i.code, ${kind === "self" ? "COALESCE(i.text_self, i.text_public)" : "i.text_public"} AS text, i.scale_max, c.name AS category
+      `SELECT i.id, i.code, i.statement AS text, i.scale_max, c.name AS category
        FROM instruments i JOIN instrument_categories c ON c.id = i.category_id
        WHERE i.measurement_id = ? ORDER BY c.order_index, i.order_index`,
     )
@@ -202,9 +210,10 @@ export async function resolveInternalForm(
     ok: true,
     form: {
       kind,
-      title: kind === "self" ? `${config.self?.title ?? TITLES.self} · ${open.type_name}` : TITLES[kind],
+      // Judulnya kini datang dari nama jenisnya sendiri, bukan daftar judul yang ditulis tangan.
+      title: kind === "self" ? config.self?.title ?? open.name : open.name,
       period: { id: open.period_id, slug: open.slug, name: open.period_name, closesAt: earliest(open.p_closes, open.t_closes) },
-      type: { id: open.type_id, code: open.type_code, name: open.type_name },
+      type: { id: open.measurement_id, code: open.code, name: open.name },
       target: toTarget(target),
       instruments: results.map((r) => ({ id: r.id, code: r.code, text: r.text, category: r.category, scaleMax: r.scale_max })),
       feedback: kind === "self" ? config.self?.feedback ?? config.feedback : config.feedback,
@@ -230,7 +239,7 @@ export async function saveInternalResponse(
   const statements = [
     db
       .prepare(
-        `INSERT INTO responses (public_id, period_id, awardee_id, respondent_type_id, respondent_name, relation, submitted_at, source, submitted_by)
+        `INSERT INTO responses (public_id, period_id, awardee_id, measurement_id, respondent_name, relation, submitted_at, source, submitted_by)
          VALUES (?, ?, ?, ?, ?, ?, ?, 'app', ?)`,
       )
       .bind(publicId, form.period.id, form.target.id, form.type.id, user.name, form.type.name, new Date().toISOString(), user.id),

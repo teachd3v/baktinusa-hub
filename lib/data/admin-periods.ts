@@ -1,22 +1,28 @@
-// Konsol periode: membuka, menutup, dan menjadwalkan tiap tipe penilai — semuanya data, bukan kode.
+// Konsol siklus: membuka, menutup, dan menjadwalkan tiap jenis pengukuran — semuanya data, bukan kode.
 // Inilah yang menggantikan deadline yang dulu ditulis tangan di enam berkas.
+//
+// Satu siklus (BA16 Awal, BA16 Tengah, …) menjalankan beberapa jenis pengukuran sekaligus. Tiap jenis
+// di dalamnya punya jendela waktunya sendiri, yang selalu dibatasi jendela siklusnya.
 
 import { writeAudit } from "./audit.ts";
-import type { PeriodItem } from "./periods.ts";
+import { CYCLE_LABEL, isCycle, type Cycle, type PeriodItem } from "./periods.ts";
 import { ScopeError, type SessionUser } from "./scope.ts";
+import type { FilledBy } from "./measurements.ts";
 
 function assertAdmin(actor: SessionUser) {
-  if (actor.role !== "admin") throw new ScopeError("Hanya Admin yang boleh mengelola periode");
+  if (actor.role !== "admin") throw new ScopeError("Hanya Admin yang boleh mengelola siklus");
 }
 
 export type Fail = { ok: false; message: string };
 export type Ok = { ok: true };
 
-export type PeriodTypeConfig = {
-  typeId: number;
+// Satu jenis pengukuran sebagaimana dijalankan oleh sebuah siklus.
+export type PeriodMeasurementConfig = {
+  measurementId: number;
   code: string;
   name: string;
-  audience: string;
+  filledBy: FilledBy;
+  instruments: number;
   targetRule: "none" | "fixed" | "region_peers";
   targetMin: number | null;
   opensAt: string | null;
@@ -25,13 +31,10 @@ export type PeriodTypeConfig = {
 };
 
 export type PeriodDetail = PeriodItem & {
-  measurementId: number | null;
-  measurementName: string | null;
-  measurementSlug: string | null;
-  instruments: number;
+  instruments: number; // seluruh soal dari semua jenis yang dijalankan siklus ini
   responses: number;
-  types: PeriodTypeConfig[];
-  available: { id: number; code: string; name: string; audience: string }[];
+  measurements: PeriodMeasurementConfig[];
+  available: { id: number; code: string; name: string; filledBy: FilledBy; instruments: number }[];
 };
 
 const STATUSES = ["draft", "open", "closed", "archived"] as const;
@@ -41,35 +44,35 @@ export const isStatus = (v: unknown): v is PeriodStatus => STATUSES.includes(v a
 export async function getPeriodDetail(db: D1Database, actor: SessionUser, slug: string): Promise<PeriodDetail | null> {
   assertAdmin(actor);
   const period = await db
-    .prepare(
-      `SELECT p.id, p.slug, p.name, p.batch, p.kind, p.status, p.opens_at, p.closes_at,
-          p.measurement_id, m.name AS measurement_name, m.slug AS measurement_slug
-       FROM periods p LEFT JOIN measurements m ON m.id = p.measurement_id WHERE p.slug = ?`,
-    )
+    .prepare("SELECT id, slug, name, batch, cycle, status, opens_at, closes_at FROM periods WHERE slug = ?")
     .bind(slug.trim())
-    .first<{ id: number; slug: string; name: string; batch: string; kind: PeriodItem["kind"]; status: PeriodStatus; opens_at: string | null; closes_at: string | null; measurement_id: number | null; measurement_name: string | null; measurement_slug: string | null }>();
+    .first<{ id: number; slug: string; name: string; batch: string; cycle: Cycle; status: PeriodStatus; opens_at: string | null; closes_at: string | null }>();
   if (!period) return null;
 
-  const [{ results: types }, { results: available }, counts] = await Promise.all([
+  const [{ results: measurements }, { results: available }, counts] = await Promise.all([
     db
       .prepare(
-        `SELECT rt.id, rt.code, rt.name, rt.audience, prt.target_rule, prt.target_min, prt.opens_at, prt.closes_at,
-            (SELECT COUNT(*) FROM responses r WHERE r.period_id = prt.period_id AND r.respondent_type_id = rt.id) AS responses
-         FROM period_respondent_types prt JOIN respondent_types rt ON rt.id = prt.respondent_type_id
-         WHERE prt.period_id = ? ORDER BY rt.id`,
+        `SELECT m.id, m.code, m.name, m.filled_by, pm.target_rule, pm.target_min, pm.opens_at, pm.closes_at,
+            (SELECT COUNT(*) FROM instruments i WHERE i.measurement_id = m.id) AS instruments,
+            (SELECT COUNT(*) FROM responses r WHERE r.period_id = pm.period_id AND r.measurement_id = m.id) AS responses
+         FROM period_measurements pm JOIN measurements m ON m.id = pm.measurement_id
+         WHERE pm.period_id = ? ORDER BY m.code`,
       )
       .bind(period.id)
-      .all<{ id: number; code: string; name: string; audience: string; target_rule: PeriodTypeConfig["targetRule"]; target_min: number | null; opens_at: string | null; closes_at: string | null; responses: number }>(),
+      .all<{ id: number; code: string; name: string; filled_by: FilledBy; target_rule: PeriodMeasurementConfig["targetRule"]; target_min: number | null; opens_at: string | null; closes_at: string | null; instruments: number; responses: number }>(),
     db
       .prepare(
-        `SELECT id, code, name, audience FROM respondent_types
-         WHERE id NOT IN (SELECT respondent_type_id FROM period_respondent_types WHERE period_id = ?) ORDER BY id`,
+        `SELECT m.id, m.code, m.name, m.filled_by,
+            (SELECT COUNT(*) FROM instruments i WHERE i.measurement_id = m.id) AS instruments
+         FROM measurements m
+         WHERE m.id NOT IN (SELECT measurement_id FROM period_measurements WHERE period_id = ?) ORDER BY m.code`,
       )
       .bind(period.id)
-      .all<{ id: number; code: string; name: string; audience: string }>(),
+      .all<{ id: number; code: string; name: string; filled_by: FilledBy; instruments: number }>(),
     db
       .prepare(
-        `SELECT (SELECT COUNT(*) FROM instruments i JOIN periods p ON p.measurement_id = i.measurement_id WHERE p.id = ?1) AS instruments,
+        `SELECT (SELECT COUNT(*) FROM instruments i JOIN period_measurements pm ON pm.measurement_id = i.measurement_id
+                  WHERE pm.period_id = ?1) AS instruments,
                 (SELECT COUNT(*) FROM responses WHERE period_id = ?1) AS responses`,
       )
       .bind(period.id)
@@ -81,33 +84,31 @@ export async function getPeriodDetail(db: D1Database, actor: SessionUser, slug: 
     slug: period.slug,
     name: period.name,
     batch: period.batch,
-    kind: period.kind,
+    cycle: period.cycle,
     status: period.status,
     opensAt: period.opens_at,
     closesAt: period.closes_at,
-    measurementId: period.measurement_id,
-    measurementName: period.measurement_name,
-    measurementSlug: period.measurement_slug,
     instruments: counts?.instruments ?? 0,
     responses: counts?.responses ?? 0,
-    types: types.map((t) => ({
-      typeId: t.id,
-      code: t.code,
-      name: t.name,
-      audience: t.audience,
-      targetRule: t.target_rule,
-      targetMin: t.target_min,
-      opensAt: t.opens_at,
-      closesAt: t.closes_at,
-      responses: t.responses,
+    measurements: measurements.map((m) => ({
+      measurementId: m.id,
+      code: m.code,
+      name: m.name,
+      filledBy: m.filled_by,
+      instruments: m.instruments,
+      targetRule: m.target_rule,
+      targetMin: m.target_min,
+      opensAt: m.opens_at,
+      closesAt: m.closes_at,
+      responses: m.responses,
     })),
-    available,
+    available: available.map((m) => ({ id: m.id, code: m.code, name: m.name, filledBy: m.filled_by, instruments: m.instruments })),
   };
 }
 
 const orderOk = (opens: string | null, closes: string | null) => !(opens && closes && opens >= closes);
 
-// ---------- jadwal periode ----------
+// ---------- jadwal siklus ----------
 
 export async function updatePeriod(
   db: D1Database,
@@ -117,24 +118,24 @@ export async function updatePeriod(
 ): Promise<Ok | Fail> {
   assertAdmin(actor);
   const name = input.name.trim();
-  if (!name || name.length > 120) return { ok: false, message: "Nama periode wajib diisi (maksimal 120 karakter)." };
+  if (!name || name.length > 120) return { ok: false, message: "Nama siklus wajib diisi (maksimal 120 karakter)." };
   if (!orderOk(input.opensAt, input.closesAt)) return { ok: false, message: "Waktu tutup harus setelah waktu buka." };
 
   const before = await db
     .prepare("SELECT name, opens_at, closes_at FROM periods WHERE id = ?")
     .bind(periodId)
     .first<{ name: string; opens_at: string | null; closes_at: string | null }>();
-  if (!before) return { ok: false, message: "Periode tidak ditemukan." };
+  if (!before) return { ok: false, message: "Siklus tidak ditemukan." };
 
   await db
     .prepare("UPDATE periods SET name = ?, opens_at = ?, closes_at = ? WHERE id = ?")
     .bind(name, input.opensAt, input.closesAt, periodId)
     .run();
   await writeAudit(db, actor, {
-    action: "periode.ubah",
+    action: "siklus.ubah",
     entity: "period",
     entityId: periodId,
-    summary: `Jadwal & nama periode "${name}" diperbarui`,
+    summary: `Jadwal & nama siklus "${name}" diperbarui`,
     detail: { before, after: { name, opens_at: input.opensAt, closes_at: input.closesAt } },
   });
   return { ok: true };
@@ -150,43 +151,44 @@ export async function setPeriodStatus(
   const row = await db
     .prepare(
       `SELECT p.name, p.status,
-          (SELECT COUNT(*) FROM instruments WHERE measurement_id = p.measurement_id) AS instruments,
-          (SELECT COUNT(*) FROM period_respondent_types WHERE period_id = p.id) AS types,
+          (SELECT COUNT(*) FROM period_measurements pm WHERE pm.period_id = p.id) AS measurements,
+          (SELECT COUNT(*) FROM instruments i JOIN period_measurements pm ON pm.measurement_id = i.measurement_id
+             WHERE pm.period_id = p.id) AS instruments,
           (SELECT COUNT(*) FROM responses WHERE period_id = p.id) AS responses
        FROM periods p WHERE p.id = ?`,
     )
     .bind(periodId)
-    .first<{ name: string; status: PeriodStatus; instruments: number; types: number; responses: number }>();
-  if (!row) return { ok: false, message: "Periode tidak ditemukan." };
+    .first<{ name: string; status: PeriodStatus; measurements: number; instruments: number; responses: number }>();
+  if (!row) return { ok: false, message: "Siklus tidak ditemukan." };
   if (row.status === status) return { ok: true };
 
-  // Periode kosong yang dibuka akan menampilkan form tanpa pertanyaan kepada responden.
-  if (status === "open" && row.instruments === 0) return { ok: false, message: "Periode belum punya pertanyaan, jadi belum bisa dibuka." };
-  if (status === "open" && row.types === 0) return { ok: false, message: "Tentukan dulu tipe penilai untuk periode ini." };
-  // Draft menyembunyikan periode dari dashboard; jawaban yang sudah masuk akan ikut hilang dari pandangan.
+  // Siklus kosong yang dibuka akan menampilkan form tanpa pertanyaan kepada responden.
+  if (status === "open" && row.measurements === 0) return { ok: false, message: "Tentukan dulu jenis pengukuran yang dijalankan siklus ini." };
+  if (status === "open" && row.instruments === 0) return { ok: false, message: "Jenis pengukuran yang dipilih belum punya satu pun soal, jadi belum bisa dibuka." };
+  // Draft menyembunyikan siklus dari dashboard; jawaban yang sudah masuk akan ikut hilang dari pandangan.
   if (status === "draft" && row.responses > 0) {
-    return { ok: false, message: "Periode ini sudah menerima jawaban, jadi tidak bisa dikembalikan ke draft. Tutup saja." };
+    return { ok: false, message: "Siklus ini sudah menerima jawaban, jadi tidak bisa dikembalikan ke draft. Tutup saja." };
   }
 
   await db.prepare("UPDATE periods SET status = ? WHERE id = ?").bind(status, periodId).run();
   await writeAudit(db, actor, {
-    action: "periode.status",
+    action: "siklus.status",
     entity: "period",
     entityId: periodId,
-    summary: `Periode "${row.name}": ${row.status} → ${status}`,
+    summary: `Siklus "${row.name}": ${row.status} → ${status}`,
     detail: { before: row.status, after: status, responses: row.responses },
   });
   return { ok: true };
 }
 
-// ---------- tipe penilai dalam periode ----------
+// ---------- jenis pengukuran di dalam siklus ----------
 
-export async function updateTypeConfig(
+export async function updateMeasurementConfig(
   db: D1Database,
   actor: SessionUser,
   periodId: number,
-  typeId: number,
-  input: { targetRule: PeriodTypeConfig["targetRule"]; targetMin: number | null; opensAt: string | null; closesAt: string | null },
+  measurementId: number,
+  input: { targetRule: PeriodMeasurementConfig["targetRule"]; targetMin: number | null; opensAt: string | null; closesAt: string | null },
 ): Promise<Ok | Fail> {
   assertAdmin(actor);
   if (!orderOk(input.opensAt, input.closesAt)) return { ok: false, message: "Waktu tutup harus setelah waktu buka." };
@@ -198,120 +200,137 @@ export async function updateTypeConfig(
 
   const before = await db
     .prepare(
-      `SELECT rt.name, prt.target_rule, prt.target_min, prt.opens_at, prt.closes_at
-       FROM period_respondent_types prt JOIN respondent_types rt ON rt.id = prt.respondent_type_id
-       WHERE prt.period_id = ? AND prt.respondent_type_id = ?`,
+      `SELECT m.name, pm.target_rule, pm.target_min, pm.opens_at, pm.closes_at
+       FROM period_measurements pm JOIN measurements m ON m.id = pm.measurement_id
+       WHERE pm.period_id = ? AND pm.measurement_id = ?`,
     )
-    .bind(periodId, typeId)
+    .bind(periodId, measurementId)
     .first<{ name: string; target_rule: string; target_min: number | null; opens_at: string | null; closes_at: string | null }>();
-  if (!before) return { ok: false, message: "Tipe penilai ini tidak ada di periode tersebut." };
+  if (!before) return { ok: false, message: "Jenis pengukuran itu tidak dijalankan oleh siklus ini." };
 
   await db
     .prepare(
-      `UPDATE period_respondent_types SET target_rule = ?, target_min = ?, opens_at = ?, closes_at = ?
-       WHERE period_id = ? AND respondent_type_id = ?`,
+      `UPDATE period_measurements SET target_rule = ?, target_min = ?, opens_at = ?, closes_at = ?
+       WHERE period_id = ? AND measurement_id = ?`,
     )
-    .bind(input.targetRule, targetMin, input.opensAt, input.closesAt, periodId, typeId)
+    .bind(input.targetRule, targetMin, input.opensAt, input.closesAt, periodId, measurementId)
     .run();
   await writeAudit(db, actor, {
-    action: "tipe.jadwal",
-    entity: "period_respondent_type",
-    entityId: typeId,
+    action: "siklus.jenis-jadwal",
+    entity: "period_measurement",
+    entityId: measurementId,
     summary: `${before.name}: jadwal & target diperbarui`,
     detail: { periodId, before, after: { ...input, target_min: targetMin } },
   });
   return { ok: true };
 }
 
-export async function addTypeToPeriod(db: D1Database, actor: SessionUser, periodId: number, typeId: number): Promise<Ok | Fail> {
+export async function addMeasurementToPeriod(
+  db: D1Database,
+  actor: SessionUser,
+  periodId: number,
+  measurementId: number,
+): Promise<Ok | Fail> {
   assertAdmin(actor);
-  const type = await db.prepare("SELECT name FROM respondent_types WHERE id = ?").bind(typeId).first<{ name: string }>();
-  if (!type) return { ok: false, message: "Tipe penilai tidak dikenal." };
+  const measurement = await db
+    .prepare("SELECT code, name FROM measurements WHERE id = ?")
+    .bind(measurementId)
+    .first<{ code: string; name: string }>();
+  if (!measurement) return { ok: false, message: "Jenis pengukuran tidak dikenal." };
+
   const exists = await db
-    .prepare("SELECT 1 AS ada FROM period_respondent_types WHERE period_id = ? AND respondent_type_id = ?")
-    .bind(periodId, typeId)
+    .prepare("SELECT 1 AS ada FROM period_measurements WHERE period_id = ? AND measurement_id = ?")
+    .bind(periodId, measurementId)
     .first<{ ada: number }>();
-  if (exists) return { ok: false, message: "Tipe penilai itu sudah ada di periode ini." };
+  if (exists) return { ok: false, message: "Jenis itu sudah dijalankan siklus ini." };
 
   await db
-    .prepare("INSERT INTO period_respondent_types (period_id, respondent_type_id, target_rule) VALUES (?, ?, 'none')")
-    .bind(periodId, typeId)
+    .prepare("INSERT INTO period_measurements (period_id, measurement_id, target_rule) VALUES (?, ?, 'none')")
+    .bind(periodId, measurementId)
     .run();
   await writeAudit(db, actor, {
-    action: "tipe.tambah",
-    entity: "period_respondent_type",
-    entityId: typeId,
-    summary: `Tipe penilai "${type.name}" ditambahkan ke periode`,
+    action: "siklus.jenis-tambah",
+    entity: "period_measurement",
+    entityId: measurementId,
+    summary: `Jenis "${measurement.name}" (${measurement.code}) ditambahkan ke siklus`,
     detail: { periodId },
   });
   return { ok: true };
 }
 
-export async function removeTypeFromPeriod(db: D1Database, actor: SessionUser, periodId: number, typeId: number): Promise<Ok | Fail> {
+export async function removeMeasurementFromPeriod(
+  db: D1Database,
+  actor: SessionUser,
+  periodId: number,
+  measurementId: number,
+): Promise<Ok | Fail> {
   assertAdmin(actor);
   const row = await db
     .prepare(
-      `SELECT rt.name, (SELECT COUNT(*) FROM responses r WHERE r.period_id = ? AND r.respondent_type_id = rt.id) AS responses
-       FROM respondent_types rt WHERE rt.id = ?`,
+      `SELECT m.name, (SELECT COUNT(*) FROM responses r WHERE r.period_id = ? AND r.measurement_id = m.id) AS responses
+       FROM measurements m WHERE m.id = ?`,
     )
-    .bind(periodId, typeId)
+    .bind(periodId, measurementId)
     .first<{ name: string; responses: number }>();
-  if (!row) return { ok: false, message: "Tipe penilai tidak dikenal." };
-  // Menghapusnya akan memutus respons yang sudah masuk dari tipe itu.
+  if (!row) return { ok: false, message: "Jenis pengukuran tidak dikenal." };
+  // Melepasnya akan memutus jawaban yang sudah masuk lewat jenis itu.
   if (row.responses > 0) return { ok: false, message: `"${row.name}" sudah punya ${row.responses} jawaban, jadi tidak bisa dilepas.` };
 
   await db
-    .prepare("DELETE FROM period_respondent_types WHERE period_id = ? AND respondent_type_id = ?")
-    .bind(periodId, typeId)
+    .prepare("DELETE FROM period_measurements WHERE period_id = ? AND measurement_id = ?")
+    .bind(periodId, measurementId)
     .run();
   await writeAudit(db, actor, {
-    action: "tipe.hapus",
-    entity: "period_respondent_type",
-    entityId: typeId,
-    summary: `Tipe penilai "${row.name}" dilepas dari periode`,
+    action: "siklus.jenis-hapus",
+    entity: "period_measurement",
+    entityId: measurementId,
+    summary: `Jenis "${row.name}" dilepas dari siklus`,
     detail: { periodId },
   });
   return { ok: true };
 }
 
-// ---------- membuat periode ----------
+// ---------- membuat siklus ----------
 
-export type NewPeriod = { slug: string; name: string; batch: string; measurementId: number };
+export type NewPeriod = { batch: string; cycle: Cycle; slug?: string; name?: string };
 
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
-// Periode adalah jadwal: ia menunjuk pengukuran mana yang dijalankan untuk angkatan apa. Kuesionernya
-// tidak disalin ke sini — itu milik pengukuran, dan dipakai ulang oleh tiap periode yang memakainya.
+// Siklus adalah jadwal milik satu angkatan. Jenis pengukuran yang dijalankannya ditentukan setelah ini,
+// dan kuesionernya tidak disalin ke sini — itu milik jenisnya, dipakai ulang oleh tiap siklus.
 export async function createPeriod(db: D1Database, actor: SessionUser, input: NewPeriod): Promise<({ id: number } & Ok) | Fail> {
   assertAdmin(actor);
-  const slug = input.slug.trim().toLowerCase();
-  const name = input.name.trim();
   const batch = input.batch.trim().toUpperCase();
-  if (!SLUG_PATTERN.test(slug) || slug.length > 60) {
-    return { ok: false, message: "Slug hanya boleh huruf kecil, angka, dan tanda hubung — misalnya ba16-pengukuran." };
-  }
-  if (!name || name.length > 120) return { ok: false, message: "Nama periode wajib diisi (maksimal 120 karakter)." };
   if (!batch || batch.length > 20) return { ok: false, message: "Angkatan wajib diisi, misalnya BA16." };
+  if (!isCycle(input.cycle)) return { ok: false, message: "Pilih siklusnya: Awal, Tengah, atau Akhir." };
 
-  const measurement = await db
-    .prepare("SELECT name, kind FROM measurements WHERE id = ?")
-    .bind(input.measurementId)
-    .first<{ name: string; kind: string }>();
-  if (!measurement) return { ok: false, message: "Pilih pengukuran yang akan dijadwalkan." };
+  // Nama dan slug boleh dikosongkan — bentuk bakunya sudah cukup untuk hampir semua kasus.
+  const name = (input.name ?? "").trim() || `${batch} · ${CYCLE_LABEL[input.cycle]}`;
+  const slug = ((input.slug ?? "").trim() || `${batch}-${input.cycle}`).toLowerCase();
+  if (!SLUG_PATTERN.test(slug) || slug.length > 60) {
+    return { ok: false, message: "Slug hanya boleh huruf kecil, angka, dan tanda hubung — misalnya ba16-tengah." };
+  }
+  if (name.length > 120) return { ok: false, message: "Nama siklus maksimal 120 karakter." };
+
+  const kembar = await db
+    .prepare("SELECT 1 AS ada FROM periods WHERE batch = ? AND cycle = ?")
+    .bind(batch, input.cycle)
+    .first<{ ada: number }>();
+  if (kembar) return { ok: false, message: `${batch} sudah punya ${CYCLE_LABEL[input.cycle]}.` };
 
   const taken = await db.prepare("SELECT 1 AS ada FROM periods WHERE slug = ?").bind(slug).first<{ ada: number }>();
-  if (taken) return { ok: false, message: `Slug "${slug}" sudah dipakai periode lain.` };
+  if (taken) return { ok: false, message: `Slug "${slug}" sudah dipakai siklus lain.` };
 
   const created = await db
-    .prepare("INSERT INTO periods (slug, name, batch, kind, status, measurement_id) VALUES (?, ?, ?, ?, 'draft', ?) RETURNING id")
-    .bind(slug, name, batch, measurement.kind, input.measurementId)
+    .prepare("INSERT INTO periods (slug, name, batch, cycle, status) VALUES (?, ?, ?, ?, 'draft') RETURNING id")
+    .bind(slug, name, batch, input.cycle)
     .first<{ id: number }>();
 
   await writeAudit(db, actor, {
-    action: "periode.buat",
+    action: "siklus.buat",
     entity: "period",
     entityId: created!.id,
-    summary: `Periode "${name}" (${batch}) dibuat memakai pengukuran "${measurement.name}"`,
+    summary: `${CYCLE_LABEL[input.cycle]} untuk ${batch} dibuat`,
   });
   return { ok: true, id: created!.id };
 }

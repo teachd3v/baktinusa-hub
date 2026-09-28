@@ -18,8 +18,8 @@ export async function openDuePeriods(db: D1Database, now: string): Promise<Perio
        WHERE p.status = 'draft'
          AND p.opens_at IS NOT NULL AND p.opens_at <= ?1
          AND (p.closes_at IS NULL OR p.closes_at > ?1)
-         AND (SELECT COUNT(*) FROM instruments WHERE measurement_id = p.measurement_id) > 0
-         AND (SELECT COUNT(*) FROM period_respondent_types WHERE period_id = p.id) > 0
+         AND (SELECT COUNT(*) FROM instruments i JOIN period_measurements pm ON pm.measurement_id = i.measurement_id
+               WHERE pm.period_id = p.id) > 0
        ORDER BY p.id`,
     )
     .bind(now)
@@ -90,15 +90,15 @@ export async function shortfalls(db: D1Database, periodId: number): Promise<Awar
     db
       .prepare(
         `SELECT rt.id, rt.code, rt.name, prt.target_rule, prt.target_min
-         FROM period_respondent_types prt JOIN respondent_types rt ON rt.id = prt.respondent_type_id
+         FROM period_measurements prt JOIN measurements rt ON rt.id = prt.measurement_id
          WHERE prt.period_id = ? ORDER BY rt.id`,
       )
       .bind(periodId)
       .all<{ id: number; code: string; name: string; target_rule: string; target_min: number | null }>(),
     db
-      .prepare("SELECT awardee_id, respondent_type_id, COUNT(*) AS n FROM responses WHERE period_id = ? GROUP BY awardee_id, respondent_type_id")
+      .prepare("SELECT awardee_id, measurement_id, COUNT(*) AS n FROM responses WHERE period_id = ? GROUP BY awardee_id, measurement_id")
       .bind(periodId)
-      .all<{ awardee_id: number; respondent_type_id: number; n: number }>(),
+      .all<{ awardee_id: number; measurement_id: number; n: number }>(),
     db
       .prepare("SELECT region_id, COUNT(*) AS n FROM awardees WHERE batch = (SELECT batch FROM periods WHERE id = ?) GROUP BY region_id")
       .bind(periodId)
@@ -106,7 +106,7 @@ export async function shortfalls(db: D1Database, periodId: number): Promise<Awar
   ]);
 
   const sizeOf = new Map(regionSizes.map((r) => [r.region_id, r.n]));
-  const countOf = new Map(counts.map((c) => [`${c.awardee_id}:${c.respondent_type_id}`, c.n]));
+  const countOf = new Map(counts.map((c) => [`${c.awardee_id}:${c.measurement_id}`, c.n]));
 
   return awardees
     .map((a) => ({
@@ -139,8 +139,7 @@ const BACKUP_TABLES = [
   "periods",
   "instrument_categories",
   "instruments",
-  "respondent_types",
-  "period_respondent_types",
+  "period_measurements",
   "responses",
   "response_scores",
   "response_feedback",
