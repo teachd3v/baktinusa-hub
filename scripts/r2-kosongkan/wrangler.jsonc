@@ -1,0 +1,15 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "baktinusa-hub-r2-kosongkan",
+  // Sama seperti config utama: account_id dikunci karena CLOUDFLARE_ACCOUNT_ID di environment
+  // user menunjuk ke akun lain.
+  "account_id": "6dea7431212db790894cca82864822c0",
+  "compatibility_date": "2026-09-18",
+  "main": "worker.js",
+  "r2_buckets": [
+    {
+      "binding": "FILES",
+      "bucket_name": "baktinusa-hub-files"
+    }
+  ]
+}
