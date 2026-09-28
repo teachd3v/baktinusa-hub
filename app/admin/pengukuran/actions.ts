@@ -5,13 +5,10 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import {
-  addCategory,
   addInstrument,
   createMeasurement,
-  deleteCategory,
   deleteInstrument,
   deleteMeasurement,
-  renameCategory,
   renameMeasurement,
   updateFormText,
   updateInstrument,
@@ -70,29 +67,7 @@ export async function saveFormTextAction(_previous: MeasurementState, form: Form
 
 // ---------- sub pengukuran & soal ----------
 
-export async function addCategoryAction(_previous: MeasurementState, form: FormData): Promise<MeasurementState> {
-  const admin = await requireUser("admin");
-  const result = await addCategory(env.DB, admin, num(form, "measurementId"), text(form, "name"));
-  if (!result.ok) return result;
-  refresh();
-  return { ok: true, message: "Sub pengukuran ditambahkan." };
-}
-
-export async function renameCategoryAction(_previous: MeasurementState, form: FormData): Promise<MeasurementState> {
-  const admin = await requireUser("admin");
-  const result = await renameCategory(env.DB, admin, num(form, "measurementId"), num(form, "categoryId"), text(form, "name"));
-  if (!result.ok) return result;
-  refresh();
-  return { ok: true, message: "Nama sub pengukuran tersimpan." };
-}
-
-export async function deleteCategoryAction(_previous: MeasurementState, form: FormData): Promise<MeasurementState> {
-  const admin = await requireUser("admin");
-  const result = await deleteCategory(env.DB, admin, num(form, "measurementId"), num(form, "categoryId"));
-  if (!result.ok) return result;
-  refresh();
-  return { ok: true, message: "Sub pengukuran dihapus." };
-}
+// ---------- soal ----------
 
 const instrumentInput = (form: FormData) => ({
   code: text(form, "code"),
@@ -102,7 +77,7 @@ const instrumentInput = (form: FormData) => ({
 
 export async function addInstrumentAction(_previous: MeasurementState, form: FormData): Promise<MeasurementState> {
   const admin = await requireUser("admin");
-  const result = await addInstrument(env.DB, admin, num(form, "measurementId"), num(form, "categoryId"), instrumentInput(form));
+  const result = await addInstrument(env.DB, admin, num(form, "measurementId"), instrumentInput(form));
   if (!result.ok) return result;
   refresh();
   return { ok: true, message: "Soal ditambahkan." };

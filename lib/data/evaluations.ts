@@ -199,9 +199,11 @@ export async function resolveInternalForm(
   if (!config) return { ok: false, reason: "not_found" };
   const { results } = await db
     .prepare(
-      `SELECT i.id, i.code, i.statement AS text, i.scale_max, c.name AS category
-       FROM instruments i JOIN instrument_categories c ON c.id = i.category_id
-       WHERE i.measurement_id = ? ORDER BY c.order_index, i.order_index`,
+      // Sejak sub pengukuran dibuang, form tidak lagi terbagi per kategori: nama jenisnya yang jadi
+      // judul satu-satunya bagian, sehingga SurveyForm tetap bekerja apa adanya.
+      `SELECT i.id, i.code, i.statement AS text, i.scale_max, m.name AS category
+       FROM instruments i JOIN measurements m ON m.id = i.measurement_id
+       WHERE i.measurement_id = ? ORDER BY i.order_index`,
     )
     .bind(open.measurement_id)
     .all<{ id: number; code: string; text: string; scale_max: number; category: string }>();

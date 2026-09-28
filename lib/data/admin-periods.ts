@@ -5,7 +5,7 @@
 // di dalamnya punya jendela waktunya sendiri, yang selalu dibatasi jendela siklusnya.
 
 import { writeAudit } from "./audit.ts";
-import { CYCLE_LABEL, isCycle, type Cycle, type PeriodItem } from "./periods.ts";
+import { CYCLES, CYCLE_LABEL, isCycle, type Cycle, type PeriodItem } from "./periods.ts";
 import { ScopeError, type SessionUser } from "./scope.ts";
 import type { FilledBy } from "./measurements.ts";
 
@@ -333,4 +333,67 @@ export async function createPeriod(db: D1Database, actor: SessionUser, input: Ne
     summary: `${CYCLE_LABEL[input.cycle]} untuk ${batch} dibuat`,
   });
   return { ok: true, id: created!.id };
+}
+
+// ---------- peta jenis × siklus ----------
+
+export type MatrixCell = {
+  cycle: Cycle;
+  periodId: number | null; // null = siklus itu belum dibuat untuk angkatan ini
+  on: boolean;
+  responses: number;
+};
+
+export type MatrixRow = { measurementId: number; code: string; name: string; filledBy: FilledBy; instruments: number; cells: MatrixCell[] };
+
+export type CycleMatrix = {
+  batch: string;
+  periods: { cycle: Cycle; id: number; slug: string; status: PeriodStatus }[];
+  rows: MatrixRow[];
+};
+
+// Satu tabel per angkatan: baris = jenis pengukuran, kolom = Awal/Tengah/Akhir. Inilah bentuk yang
+// paling cepat menjawab "Siklus Tengah isinya apa saja" — daftar siklus saja tidak menjawab itu.
+export async function cycleMatrix(db: D1Database, actor: SessionUser): Promise<CycleMatrix[]> {
+  assertAdmin(actor);
+  const [{ results: periods }, { results: measurements }, { results: pairs }] = await Promise.all([
+    db
+      .prepare("SELECT id, slug, batch, cycle, status FROM periods ORDER BY batch DESC")
+      .all<{ id: number; slug: string; batch: string; cycle: Cycle; status: PeriodStatus }>(),
+    db
+      .prepare(
+        `SELECT m.id, m.code, m.name, m.filled_by,
+            (SELECT COUNT(*) FROM instruments i WHERE i.measurement_id = m.id) AS instruments
+         FROM measurements m ORDER BY m.code`,
+      )
+      .all<{ id: number; code: string; name: string; filled_by: FilledBy; instruments: number }>(),
+    db
+      .prepare(
+        `SELECT pm.period_id, pm.measurement_id,
+            (SELECT COUNT(*) FROM responses r WHERE r.period_id = pm.period_id AND r.measurement_id = pm.measurement_id) AS responses
+         FROM period_measurements pm`,
+      )
+      .all<{ period_id: number; measurement_id: number; responses: number }>(),
+  ]);
+
+  const batches = [...new Set(periods.map((p) => p.batch))];
+  return batches.map((batch) => {
+    const mine = periods.filter((p) => p.batch === batch);
+    return {
+      batch,
+      periods: mine.map((p) => ({ cycle: p.cycle, id: p.id, slug: p.slug, status: p.status })),
+      rows: measurements.map((m) => ({
+        measurementId: m.id,
+        code: m.code,
+        name: m.name,
+        filledBy: m.filled_by,
+        instruments: m.instruments,
+        cells: CYCLES.map((cycle) => {
+          const period = mine.find((p) => p.cycle === cycle) ?? null;
+          const pair = period ? pairs.find((x) => x.period_id === period.id && x.measurement_id === m.id) : undefined;
+          return { cycle, periodId: period?.id ?? null, on: Boolean(pair), responses: pair?.responses ?? 0 };
+        }),
+      })),
+    };
+  });
 }

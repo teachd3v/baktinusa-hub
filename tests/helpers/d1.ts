@@ -73,18 +73,16 @@ export async function seedFixture(db: D1Database) {
       (3, 1, 2, 1, 'app'),
       (4, 1, 3, 1, 'app'),
       (5, 1, 4, 1, 'app');
-    INSERT INTO instrument_categories (id, measurement_id, name, order_index) VALUES
-      (1, 1, 'Kategori Uji', 1), (2, 2, 'Kategori Uji', 1), (3, 3, 'Kategori Uji', 1), (4, 4, 'Kategori Uji', 1);
     -- Soal 1 & 2 milik PU: itu yang dinilai response_scores di berkas-berkas uji.
-    INSERT INTO instruments (id, measurement_id, category_id, code, statement, order_index) VALUES
-      (1, 1, 1, 'Q1', 'Yang bersangkutan jujur', 1),
-      (2, 1, 1, 'Q2', 'Yang bersangkutan disiplin', 2),
-      (3, 2, 2, 'Q1', 'Saya jujur', 1),
-      (4, 2, 2, 'Q2', 'Saya disiplin', 2),
-      (5, 3, 3, 'Q1', 'Yang bersangkutan jujur', 1),
-      (6, 3, 3, 'Q2', 'Yang bersangkutan disiplin', 2),
-      (7, 4, 4, 'Q1', 'Yang bersangkutan jujur', 1),
-      (8, 4, 4, 'Q2', 'Yang bersangkutan disiplin', 2);
+    INSERT INTO instruments (id, measurement_id, code, statement, order_index) VALUES
+      (1, 1, 'Q1', 'Yang bersangkutan jujur', 1),
+      (2, 1, 'Q2', 'Yang bersangkutan disiplin', 2),
+      (3, 2, 'Q1', 'Saya jujur', 1),
+      (4, 2, 'Q2', 'Saya disiplin', 2),
+      (5, 3, 'Q1', 'Yang bersangkutan jujur', 1),
+      (6, 3, 'Q2', 'Yang bersangkutan disiplin', 2),
+      (7, 4, 'Q1', 'Yang bersangkutan jujur', 1),
+      (8, 4, 'Q2', 'Yang bersangkutan disiplin', 2);
     UPDATE measurements SET form_config = '{"title":"Uji","identity":{"name":"Nama","city":"Kota"},"relation":{"question":"Hubungan","options":[{"label":"Teman","type":"external"}]},"feedback":[{"field":"saran_diri","label":"Saran","question":"Saran untuk yang bersangkutan","required":false}],"scale":[{"value":0,"label":"Tidak","emoji":"👎"},{"value":4,"label":"Sangat","emoji":"🌟"}],"self":{"title":"Asesmen Mandiri","feedback":[{"field":"saran_diri","label":"Refleksi","question":"Apa yang ingin Anda kembangkan?","required":true}]}}';
     INSERT INTO users (id, email, name, role, region_id, awardee_id, status) VALUES
       (1, 'admin@contoh.id', 'Admin', 'admin', NULL, NULL, 'active'),

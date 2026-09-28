@@ -2,9 +2,11 @@ import { env } from "cloudflare:workers";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { requireUser } from "@/lib/auth";
+import { cycleMatrix } from "@/lib/data/admin-periods";
 import { CYCLE_LABEL, listPeriods } from "@/lib/data/periods";
 import { formatWib } from "@/lib/format";
 import { listMeasurements } from "@/lib/data/measurements";
+import { CycleMatrix } from "./CycleMatrix";
 import { NewPeriodForm } from "./PeriodForms";
 
 export const metadata: Metadata = { title: "Siklus" };
@@ -18,7 +20,7 @@ const STATUS = {
 
 export default async function PeriodsPage() {
   const admin = await requireUser("admin");
-  const [periods, measurements] = await Promise.all([listPeriods(env.DB), listMeasurements(env.DB, admin)]);
+  const [periods, matrix] = await Promise.all([listPeriods(env.DB), cycleMatrix(env.DB, admin)]);
 
   return (
     <>
@@ -56,6 +58,16 @@ export default async function PeriodsPage() {
           </table>
         </div>
       </section>
+
+      {matrix.map((m) => (
+        <section className="card" key={m.batch}>
+          <div className="card-head">
+            <h2 className="section-title">Peta {m.batch}</h2>
+            <span className="section-hint" style={{ margin: 0 }}>Klik selnya untuk memasang atau melepas.</span>
+          </div>
+          <CycleMatrix matrix={m} />
+        </section>
+      ))}
 
       <section className="card">
         <h2 className="section-title">Buat siklus baru</h2>

@@ -4,7 +4,7 @@ import { useActionState, useState } from "react";
 import type { InstrumentListRow } from "@/lib/data/measurements";
 import { addInstrumentAction, deleteInstrumentAction, updateInstrumentAction, type MeasurementState } from "../pengukuran/actions";
 
-type CategoryOption = { id: number; name: string; measurementId: number; measurementName: string };
+type MeasurementOption = { id: number; code: string; name: string };
 
 function Result({ state }: { state: MeasurementState }) {
   if (!state) return null;
@@ -42,24 +42,22 @@ function Fields({ instrument, locked }: { instrument?: InstrumentListRow; locked
   );
 }
 
-// Menambah soal berarti memilih sub pengukuran tujuannya — pengukurannya ikut dari sana.
-export function NewInstrumentForm({ options }: { options: CategoryOption[] }) {
+// Menambah soal berarti memilih jenis pengukuran tujuannya.
+export function NewInstrumentForm({ measurements }: { measurements: MeasurementOption[] }) {
   const [state, action, pending] = useActionState<MeasurementState, FormData>(addInstrumentAction, null);
-  const [categoryId, setCategoryId] = useState(String(options[0]?.id ?? ""));
-  const picked = options.find((o) => String(o.id) === categoryId);
+  const [measurementId, setMeasurementId] = useState(String(measurements[0]?.id ?? ""));
 
-  if (options.length === 0) {
-    return <p className="section-hint" style={{ margin: 0 }}>Belum ada sub pengukuran. Buat dulu di menu Pengukuran.</p>;
+  if (measurements.length === 0) {
+    return <p className="section-hint" style={{ margin: 0 }}>Belum ada jenis pengukuran. Buat dulu di menu Pengukuran.</p>;
   }
 
   return (
     <form action={action}>
-      <input type="hidden" name="measurementId" value={picked?.measurementId ?? ""} />
       <div className="field">
-        <label className="label" htmlFor="categoryId">Masuk ke sub pengukuran</label>
-        <select id="categoryId" className="select" name="categoryId" value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
-          {options.map((o) => (
-            <option key={o.id} value={o.id}>{o.measurementName} — {o.name}</option>
+        <label className="label" htmlFor="measurementId">Masuk ke jenis pengukuran</label>
+        <select id="measurementId" className="select" name="measurementId" value={measurementId} onChange={(e) => setMeasurementId(e.target.value)}>
+          {measurements.map((m) => (
+            <option key={m.id} value={m.id}>{m.code} · {m.name}</option>
           ))}
         </select>
       </div>
@@ -83,10 +81,7 @@ export function InstrumentRowForm({ instrument }: { instrument: InstrumentListRo
         <td>
           {instrument.statement}
         </td>
-        <td>
-          {instrument.categoryName}
-          <div className="section-hint" style={{ margin: 0 }}>{instrument.measurementName}</div>
-        </td>
+        <td>{instrument.measurementName}</td>
         <td className="num">{instrument.scaleMax}</td>
         <td className="num">
           {instrument.answers > 0 ? <span className="pill pill-info">{instrument.answers}</span> : <span className="section-hint">0</span>}

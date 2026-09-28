@@ -1,5 +1,5 @@
-// Jenis pengukuran: SA, PA, MA, PU, LA, UA. Tiap jenis punya kode, kuesionernya sendiri (sub pengukuran
-// + soal), dan menyatakan siapa pengisinya — itu yang menentukan rutenya di aplikasi.
+// Jenis pengukuran: SA, PA, MA, PU, LA, UA. Tiap jenis punya kode, daftar soalnya sendiri, dan
+// menyatakan siapa pengisinya — itu yang menentukan rutenya di aplikasi.
 //
 // Sebuah jenis dijalankan berulang oleh siklus-siklus yang menjadwalkannya: BA16 Awal, BA16 Tengah,
 // dan seterusnya (lihat period_measurements).
@@ -51,13 +51,15 @@ export const PRESET_MEASUREMENTS = [
 
 export type PresetMeasurement = (typeof PRESET_MEASUREMENTS)[number];
 
+export type FormText = { title: string; subtitle: string | null };
+
 export type MeasurementRow = {
   id: number;
   code: string;
   slug: string;
   name: string;
   filledBy: FilledBy;
-  categories: number;
+  formText: FormText;
   instruments: number;
   periods: number;
   responses: number;
@@ -72,26 +74,30 @@ export type InstrumentRow = {
   answers: number;
 };
 
-export type CategoryRow = { id: number; name: string; weight: number; orderIndex: number; instruments: InstrumentRow[] };
-
 export type MeasurementDetail = MeasurementRow & {
   locked: boolean;
-  categoriesList: CategoryRow[];
+  instrumentsList: InstrumentRow[];
   usedBy: { slug: string; name: string; batch: string; cycle: string; status: string; responses: number }[];
 };
 
 // responses sekarang menyimpan measurement_id sendiri, jadi hitungannya tidak perlu lewat periode lagi.
-const COUNTS = `(SELECT COUNT(*) FROM instrument_categories c WHERE c.measurement_id = m.id) AS categories,
-  (SELECT COUNT(*) FROM instruments i WHERE i.measurement_id = m.id) AS instruments,
+const COUNTS = `(SELECT COUNT(*) FROM instruments i WHERE i.measurement_id = m.id) AS instruments,
   (SELECT COUNT(*) FROM period_measurements pm WHERE pm.measurement_id = m.id) AS periods,
   (SELECT COUNT(*) FROM responses r WHERE r.measurement_id = m.id) AS responses`;
 
 export async function listMeasurements(db: D1Database, actor: SessionUser): Promise<MeasurementRow[]> {
   assertAdmin(actor);
+  // form_config ikut terbaca di sini supaya modal per baris di halaman Pengukuran tidak perlu
+  // satu query sendiri untuk tiap jenis.
   const { results } = await db
-    .prepare(`SELECT m.id, m.code, m.slug, m.name, m.filled_by AS filledBy, ${COUNTS} FROM measurements m ORDER BY m.code`)
-    .all<MeasurementRow>();
-  return results;
+    .prepare(`SELECT m.id, m.code, m.slug, m.name, m.filled_by AS filledBy, m.form_config, ${COUNTS} FROM measurements m ORDER BY m.code`)
+    .all<Omit<MeasurementRow, "formText"> & { form_config: string | null }>();
+  return results.map(({ form_config, ...row }) => ({ ...row, formText: parseFormText(form_config) }));
+}
+
+function parseFormText(raw: string | null): FormText {
+  const config = raw ? (JSON.parse(raw) as { title?: string; subtitle?: string }) : {};
+  return { title: config.title ?? "", subtitle: config.subtitle ?? null };
 }
 
 export async function getMeasurement(db: D1Database, actor: SessionUser, slug: string): Promise<MeasurementDetail | null> {
@@ -102,16 +108,15 @@ export async function getMeasurement(db: D1Database, actor: SessionUser, slug: s
     .first<MeasurementRow>();
   if (!row) return null;
 
-  const [{ results: categories }, { results: instruments }, { results: usedBy }] = await Promise.all([
-    db.prepare("SELECT id, name, weight, order_index FROM instrument_categories WHERE measurement_id = ? ORDER BY order_index").bind(row.id).all<{ id: number; name: string; weight: number; order_index: number }>(),
+  const [{ results: instruments }, { results: usedBy }] = await Promise.all([
     db
       .prepare(
-        `SELECT i.id, i.category_id, i.code, i.statement, i.scale_max, i.order_index,
+        `SELECT i.id, i.code, i.statement, i.scale_max, i.order_index,
             (SELECT COUNT(*) FROM response_scores s WHERE s.instrument_id = i.id) AS answers
          FROM instruments i WHERE i.measurement_id = ? ORDER BY i.order_index`,
       )
       .bind(row.id)
-      .all<{ id: number; category_id: number; code: string; statement: string; scale_max: number; order_index: number; answers: number }>(),
+      .all<{ id: number; code: string; statement: string; scale_max: number; order_index: number; answers: number }>(),
     db
       .prepare(
         `SELECT p.slug, p.name, p.batch, p.cycle, p.status,
@@ -127,14 +132,13 @@ export async function getMeasurement(db: D1Database, actor: SessionUser, slug: s
     ...row,
     locked: row.responses > 0,
     usedBy,
-    categoriesList: categories.map((c) => ({
-      id: c.id,
-      name: c.name,
-      weight: c.weight,
-      orderIndex: c.order_index,
-      instruments: instruments
-        .filter((i) => i.category_id === c.id)
-        .map((i) => ({ id: i.id, code: i.code, statement: i.statement, scaleMax: i.scale_max, orderIndex: i.order_index, answers: i.answers })),
+    instrumentsList: instruments.map((i) => ({
+      id: i.id,
+      code: i.code,
+      statement: i.statement,
+      scaleMax: i.scale_max,
+      orderIndex: i.order_index,
+      answers: i.answers,
     })),
   };
 }
@@ -188,29 +192,19 @@ export async function createMeasurement(db: D1Database, actor: SessionUser, inpu
 
 // Menyalin kategori dan soal dari pengukuran lain — titik awal yang lebih cepat daripada menyusun ulang.
 async function copyContents(db: D1Database, fromId: number, toId: number): Promise<number> {
-  const [{ results: categories }, { results: instruments }] = await Promise.all([
-    db.prepare("SELECT id, name, weight, order_index FROM instrument_categories WHERE measurement_id = ? ORDER BY order_index").bind(fromId).all<{ id: number; name: string; weight: number; order_index: number }>(),
-    db.prepare("SELECT category_id, code, statement, scale_max, order_index FROM instruments WHERE measurement_id = ? ORDER BY order_index").bind(fromId).all<{ category_id: number; code: string; statement: string; scale_max: number; order_index: number }>(),
-  ]);
+  const { results: instruments } = await db
+    .prepare("SELECT code, statement, scale_max, order_index FROM instruments WHERE measurement_id = ? ORDER BY order_index")
+    .bind(fromId)
+    .all<{ code: string; statement: string; scale_max: number; order_index: number }>();
+  if (instruments.length === 0) return 0;
 
-  const newId = new Map<number, number>();
-  for (const c of categories) {
-    const row = await db
-      .prepare("INSERT INTO instrument_categories (measurement_id, name, weight, order_index) VALUES (?, ?, ?, ?) RETURNING id")
-      .bind(toId, c.name, c.weight, c.order_index)
-      .first<{ id: number }>();
-    newId.set(c.id, row!.id);
-  }
-
-  if (instruments.length > 0) {
-    await db.batch(
-      instruments.map((i) =>
-        db
-          .prepare("INSERT INTO instruments (measurement_id, category_id, code, statement, scale_max, order_index) VALUES (?, ?, ?, ?, ?, ?)")
-          .bind(toId, newId.get(i.category_id)!, i.code, i.statement, i.scale_max, i.order_index),
-      ),
-    );
-  }
+  await db.batch(
+    instruments.map((i) =>
+      db
+        .prepare("INSERT INTO instruments (measurement_id, code, statement, scale_max, order_index) VALUES (?, ?, ?, ?, ?)")
+        .bind(toId, i.code, i.statement, i.scale_max, i.order_index),
+    ),
+  );
   return instruments.length;
 }
 
@@ -258,14 +252,11 @@ export async function deleteMeasurement(db: D1Database, actor: SessionUser, id: 
 
 // ---------- teks form publik ----------
 
-export type FormText = { title: string; subtitle: string | null };
-
 export async function getFormText(db: D1Database, actor: SessionUser, measurementId: number): Promise<FormText | null> {
   assertAdmin(actor);
   const row = await db.prepare("SELECT form_config FROM measurements WHERE id = ?").bind(measurementId).first<{ form_config: string | null }>();
   if (!row) return null;
-  const config = row.form_config ? (JSON.parse(row.form_config) as { title?: string; subtitle?: string }) : {};
-  return { title: config.title ?? "", subtitle: config.subtitle ?? null };
+  return parseFormText(row.form_config);
 }
 
 export async function updateFormText(db: D1Database, actor: SessionUser, measurementId: number, input: FormText): Promise<Ok | Fail> {
@@ -306,54 +297,6 @@ async function answersOf(db: D1Database, measurementId: number): Promise<number>
   return row?.n ?? 0;
 }
 
-export async function addCategory(db: D1Database, actor: SessionUser, measurementId: number, name: string): Promise<Ok | Fail> {
-  assertAdmin(actor);
-  if (await answersOf(db, measurementId)) return { ok: false, message: LOCKED };
-  const clean = name.trim();
-  if (!clean || clean.length > 120) return { ok: false, message: "Nama sub pengukuran wajib diisi (maksimal 120 karakter)." };
-
-  const taken = await db.prepare("SELECT 1 AS ada FROM instrument_categories WHERE measurement_id = ? AND lower(name) = lower(?)").bind(measurementId, clean).first<{ ada: number }>();
-  if (taken) return { ok: false, message: `Sub pengukuran "${clean}" sudah ada.` };
-
-  const next = await db.prepare("SELECT COALESCE(MAX(order_index), 0) + 1 AS n FROM instrument_categories WHERE measurement_id = ?").bind(measurementId).first<{ n: number }>();
-  await db.prepare("INSERT INTO instrument_categories (measurement_id, name, order_index) VALUES (?, ?, ?)").bind(measurementId, clean, next!.n).run();
-  await writeAudit(db, actor, { action: "subpengukuran.tambah", entity: "instrument_category", entityId: measurementId, summary: `Sub pengukuran "${clean}" ditambahkan` });
-  return { ok: true };
-}
-
-export async function renameCategory(db: D1Database, actor: SessionUser, measurementId: number, categoryId: number, name: string): Promise<Ok | Fail> {
-  assertAdmin(actor);
-  const clean = name.trim();
-  if (!clean || clean.length > 120) return { ok: false, message: "Nama sub pengukuran wajib diisi (maksimal 120 karakter)." };
-
-  const before = await db.prepare("SELECT name FROM instrument_categories WHERE id = ? AND measurement_id = ?").bind(categoryId, measurementId).first<{ name: string }>();
-  if (!before) return { ok: false, message: "Sub pengukuran tidak ditemukan." };
-  if (before.name === clean) return { ok: true };
-
-  const taken = await db.prepare("SELECT 1 AS ada FROM instrument_categories WHERE measurement_id = ? AND lower(name) = lower(?) AND id <> ?").bind(measurementId, clean, categoryId).first<{ ada: number }>();
-  if (taken) return { ok: false, message: `Sub pengukuran "${clean}" sudah ada.` };
-
-  // Mengganti nama aman walau sudah ada jawaban: nilai menempel ke id, bukan ke namanya.
-  await db.prepare("UPDATE instrument_categories SET name = ? WHERE id = ?").bind(clean, categoryId).run();
-  await writeAudit(db, actor, { action: "subpengukuran.ubah", entity: "instrument_category", entityId: categoryId, summary: `Sub pengukuran "${before.name}" diganti nama jadi "${clean}"` });
-  return { ok: true };
-}
-
-export async function deleteCategory(db: D1Database, actor: SessionUser, measurementId: number, categoryId: number): Promise<Ok | Fail> {
-  assertAdmin(actor);
-  if (await answersOf(db, measurementId)) return { ok: false, message: LOCKED };
-  const row = await db
-    .prepare("SELECT c.name, (SELECT COUNT(*) FROM instruments i WHERE i.category_id = c.id) AS n FROM instrument_categories c WHERE c.id = ? AND c.measurement_id = ?")
-    .bind(categoryId, measurementId)
-    .first<{ name: string; n: number }>();
-  if (!row) return { ok: false, message: "Sub pengukuran tidak ditemukan." };
-  if (row.n > 0) return { ok: false, message: `"${row.name}" masih berisi ${row.n} soal.` };
-
-  await db.prepare("DELETE FROM instrument_categories WHERE id = ?").bind(categoryId).run();
-  await writeAudit(db, actor, { action: "subpengukuran.hapus", entity: "instrument_category", entityId: categoryId, summary: `Sub pengukuran "${row.name}" dihapus` });
-  return { ok: true };
-}
-
 export type InstrumentInput = { code: string; statement: string; scaleMax: number };
 
 function validateInstrument(input: InstrumentInput): Fail | null {
@@ -364,28 +307,38 @@ function validateInstrument(input: InstrumentInput): Fail | null {
   return null;
 }
 
-export async function addInstrument(db: D1Database, actor: SessionUser, measurementId: number, categoryId: number, input: InstrumentInput): Promise<Ok | Fail> {
+export async function addInstrument(db: D1Database, actor: SessionUser, measurementId: number, input: InstrumentInput): Promise<Ok | Fail> {
   assertAdmin(actor);
-  if (await answersOf(db, measurementId)) return { ok: false, message: LOCKED };
   const invalid = validateInstrument(input);
   if (invalid) return invalid;
+  if (await answersOf(db, measurementId)) return { ok: false, message: "Jenis ini sudah punya jawaban, jadi soalnya tidak bisa ditambah lagi." };
 
-  const owns = await db.prepare("SELECT 1 AS ada FROM instrument_categories WHERE id = ? AND measurement_id = ?").bind(categoryId, measurementId).first<{ ada: number }>();
-  if (!owns) return { ok: false, message: "Sub pengukuran itu bukan milik pengukuran ini." };
-  const taken = await db.prepare("SELECT 1 AS ada FROM instruments WHERE measurement_id = ? AND code = ?").bind(measurementId, input.code.trim()).first<{ ada: number }>();
-  if (taken) return { ok: false, message: `Kode "${input.code.trim()}" sudah dipakai di pengukuran ini.` };
+  const jenis = await db.prepare("SELECT 1 AS ada FROM measurements WHERE id = ?").bind(measurementId).first<{ ada: number }>();
+  if (!jenis) return { ok: false, message: "Jenis pengukuran tidak ditemukan." };
 
-  const next = await db.prepare("SELECT COALESCE(MAX(order_index), 0) + 1 AS n FROM instruments WHERE measurement_id = ?").bind(measurementId).first<{ n: number }>();
+  const taken = await db
+    .prepare("SELECT 1 AS ada FROM instruments WHERE measurement_id = ? AND code = ?")
+    .bind(measurementId, input.code.trim())
+    .first<{ ada: number }>();
+  if (taken) return { ok: false, message: `Kode "${input.code.trim()}" sudah dipakai soal lain di jenis ini.` };
+
+  const next = await db
+    .prepare("SELECT COALESCE(MAX(order_index), 0) + 1 AS n FROM instruments WHERE measurement_id = ?")
+    .bind(measurementId)
+    .first<{ n: number }>();
   await db
-    .prepare("INSERT INTO instruments (measurement_id, category_id, code, statement, scale_max, order_index) VALUES (?, ?, ?, ?, ?, ?)")
-    .bind(measurementId, categoryId, input.code.trim(), input.statement.trim(), input.scaleMax, next!.n)
+    .prepare("INSERT INTO instruments (measurement_id, code, statement, scale_max, order_index) VALUES (?, ?, ?, ?, ?)")
+    .bind(measurementId, input.code.trim(), input.statement.trim(), input.scaleMax, next!.n)
     .run();
-  await writeAudit(db, actor, { action: "soal.tambah", entity: "instrument", entityId: measurementId, summary: `Soal ${input.code.trim()} ditambahkan` });
+  await writeAudit(db, actor, {
+    action: "soal.tambah",
+    entity: "instrument",
+    entityId: measurementId,
+    summary: `Soal "${input.code.trim()}" ditambahkan`,
+  });
   return { ok: true };
 }
 
-// Teks boleh diperbaiki kapan saja — salah ketik tidak mengubah arti jawaban. Kode dan skala ikut
-// menentukan cara data dibaca, jadi itu yang dikunci begitu ada jawaban.
 export async function updateInstrument(db: D1Database, actor: SessionUser, measurementId: number, instrumentId: number, input: InstrumentInput): Promise<Ok | Fail> {
   assertAdmin(actor);
   const before = await db
@@ -433,12 +386,10 @@ export type InstrumentListRow = InstrumentRow & {
   measurementId: number;
   measurementName: string;
   measurementSlug: string;
-  categoryId: number;
-  categoryName: string;
   locked: boolean;
 };
 
-export type InstrumentFilter = { measurementId?: number | null; categoryId?: number | null; search?: string };
+export type InstrumentFilter = { measurementId?: number | null; search?: string };
 
 // Satu daftar berisi soal dari semua pengukuran, untuk halaman Instrumen. `locked` dihitung per pengukuran:
 // begitu sebuah pengukuran menghasilkan jawaban, susunannya dikunci — tapi teks soalnya tetap bisa dirapikan.
@@ -449,10 +400,6 @@ export async function listAllInstruments(db: D1Database, actor: SessionUser, fil
   if (filter.measurementId) {
     where.push("i.measurement_id = ?");
     params.push(filter.measurementId);
-  }
-  if (filter.categoryId) {
-    where.push("i.category_id = ?");
-    params.push(filter.categoryId);
   }
   const search = filter.search?.trim().toLowerCase();
   if (search) {
@@ -465,20 +412,18 @@ export async function listAllInstruments(db: D1Database, actor: SessionUser, fil
     .prepare(
       `SELECT i.id, i.code, i.statement, i.scale_max, i.order_index,
           i.measurement_id, m.name AS measurement_name, m.slug AS measurement_slug,
-          i.category_id, c.name AS category_name,
           (SELECT COUNT(*) FROM response_scores s WHERE s.instrument_id = i.id) AS answers,
           (SELECT COUNT(*) FROM responses r WHERE r.measurement_id = m.id) AS measurement_answers
        FROM instruments i
        JOIN measurements m ON m.id = i.measurement_id
-       JOIN instrument_categories c ON c.id = i.category_id
        ${where.length ? `WHERE ${where.join(" AND ")}` : ""}
-       ORDER BY m.name, c.order_index, i.order_index`,
+       ORDER BY m.code, i.order_index`,
     )
     .bind(...params)
     .all<{
       id: number; code: string; statement: string; scale_max: number; order_index: number;
       measurement_id: number; measurement_name: string; measurement_slug: string;
-      category_id: number; category_name: string; answers: number; measurement_answers: number;
+      answers: number; measurement_answers: number;
     }>();
 
   return results.map((r) => ({
@@ -491,21 +436,8 @@ export async function listAllInstruments(db: D1Database, actor: SessionUser, fil
     measurementId: r.measurement_id,
     measurementName: r.measurement_name,
     measurementSlug: r.measurement_slug,
-    categoryId: r.category_id,
-    categoryName: r.category_name,
     locked: r.measurement_answers > 0,
   }));
 }
 
 // Pilihan sub pengukuran untuk form tambah soal, dikelompokkan per pengukuran.
-export async function listCategoryOptions(db: D1Database, actor: SessionUser): Promise<{ id: number; name: string; measurementId: number; measurementName: string }[]> {
-  assertAdmin(actor);
-  const { results } = await db
-    .prepare(
-      `SELECT c.id, c.name, c.measurement_id, m.name AS measurement_name
-       FROM instrument_categories c JOIN measurements m ON m.id = c.measurement_id
-       ORDER BY m.name, c.order_index`,
-    )
-    .all<{ id: number; name: string; measurement_id: number; measurement_name: string }>();
-  return results.map((r) => ({ id: r.id, name: r.name, measurementId: r.measurement_id, measurementName: r.measurement_name }));
-}

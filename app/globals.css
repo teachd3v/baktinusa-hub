@@ -1464,3 +1464,49 @@ a {
   color: var(--ink);
   font-weight: 700;
 }
+
+/* Pemisah antar bagian di dalam jendela pengaturan. */
+.modal-rule {
+  margin: 1.1rem 0;
+  border: none;
+  border-top: 1px solid var(--line);
+}
+
+/* ---------- peta jenis × siklus ---------- */
+
+.matrix th.num,
+.matrix td.num {
+  text-align: center;
+}
+
+/* Sel yang bisa diklik: kotak centang yang tampak seperti tombol, bukan tabel mati. */
+.matrix-cell {
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  background: var(--surface-sunken);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  color: var(--ink-soft);
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.matrix-cell:hover:not(:disabled) {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.matrix-cell.is-on {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--ink-invert);
+}
+
+.matrix-cell:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}

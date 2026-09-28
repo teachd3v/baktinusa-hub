@@ -136,9 +136,9 @@ export async function getPublicForm(referral: string, slug: string): Promise<For
   }
 
   const { results } = await env.DB.prepare(
-    `SELECT i.id, i.code, i.statement, i.scale_max, c.name AS category
-     FROM instruments i JOIN instrument_categories c ON c.id = i.category_id
-     WHERE i.measurement_id = ? ORDER BY c.order_index, i.order_index`,
+    `SELECT i.id, i.code, i.statement, i.scale_max, m.name AS category
+     FROM instruments i JOIN measurements m ON m.id = i.measurement_id
+     WHERE i.measurement_id = ? ORDER BY i.order_index`,
   ).bind(row.measurement_id).all<{ id: number; code: string; statement: string; scale_max: number; category: string }>();
 
   return {

@@ -137,7 +137,6 @@ const BACKUP_TABLES = [
   "regions",
   "awardees",
   "periods",
-  "instrument_categories",
   "instruments",
   "period_measurements",
   "responses",

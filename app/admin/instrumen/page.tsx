@@ -2,7 +2,7 @@ import { env } from "cloudflare:workers";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { requireUser } from "@/lib/auth";
-import { listAllInstruments, listCategoryOptions, listMeasurements } from "@/lib/data/measurements";
+import { listAllInstruments, listMeasurements } from "@/lib/data/measurements";
 import { InstrumentRowForm, NewInstrumentForm } from "./InstrumentForms";
 
 export const metadata: Metadata = { title: "Instrumen" };
@@ -10,23 +10,14 @@ export const metadata: Metadata = { title: "Instrumen" };
 export default async function InstrumentsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ pengukuran?: string; sub?: string; cari?: string }>;
+  searchParams: Promise<{ pengukuran?: string; cari?: string }>;
 }) {
   const admin = await requireUser("admin");
-  const { pengukuran, sub, cari } = await searchParams;
+  const { pengukuran, cari } = await searchParams;
   const measurements = await listMeasurements(env.DB, admin);
   const active = measurements.find((m) => m.slug === pengukuran) ?? null;
 
-  const [instruments, options] = await Promise.all([
-    listAllInstruments(env.DB, admin, { measurementId: active?.id ?? null, categoryId: Number(sub) || null, search: cari }),
-    listCategoryOptions(env.DB, admin),
-  ]);
-
-  const keep = (extra: Record<string, string>) => {
-    const params = new URLSearchParams({ ...(pengukuran ? { pengukuran } : {}), ...(cari ? { cari } : {}), ...extra });
-    return `/admin/instrumen${params.toString() ? `?${params}` : ""}`;
-  };
-  const subOptions = options.filter((o) => !active || o.measurementId === active.id);
+  const instruments = await listAllInstruments(env.DB, admin, { measurementId: active?.id ?? null, search: cari });
 
   return (
     <>
@@ -45,21 +36,8 @@ export default async function InstrumentsPage({
           ))}
         </div>
 
-        {/* Sub pengukuran baru ditampilkan setelah satu pengukuran dipilih: tanpa itu namanya bisa kembar antar pengukuran. */}
-        {active && subOptions.length > 0 && (
-          <div className="tabs">
-            <Link href={keep({})} aria-current={!sub ? "page" : undefined}>Semua sub</Link>
-            {subOptions.map((o) => (
-              <Link key={o.id} href={keep({ sub: String(o.id) })} aria-current={sub === String(o.id) ? "page" : undefined}>
-                {o.name}
-              </Link>
-            ))}
-          </div>
-        )}
-
         <form method="get" className="copy-row" style={{ margin: "0 0 1rem" }}>
           {pengukuran && <input type="hidden" name="pengukuran" value={pengukuran} />}
-          {sub && <input type="hidden" name="sub" value={sub} />}
           <input className="input" type="search" name="cari" defaultValue={cari ?? ""} placeholder="Cari kode atau isi soal…" aria-label="Cari soal" />
           <button type="submit" className="btn btn-small">Cari</button>
         </form>
@@ -72,7 +50,6 @@ export default async function InstrumentsPage({
               <tr>
                 <th scope="col">Kode</th>
                 <th scope="col">Pernyataan</th>
-                <th scope="col">Sub pengukuran</th>
                 <th scope="col" className="num">Skala</th>
                 <th scope="col" className="num">Jawaban</th>
                 <th scope="col"><span className="sr-only">Aksi</span></th>
@@ -90,9 +67,9 @@ export default async function InstrumentsPage({
       <section className="card">
         <h2 className="section-title">Tambah soal</h2>
         <p className="section-hint">
-          Soal menempel ke sub pengukuran, dan ikut terpakai oleh semua periode yang menjadwalkan pengukurannya.
+          Soal menempel ke satu jenis pengukuran, dan ikut terpakai oleh semua siklus yang menjalankannya.
         </p>
-        <NewInstrumentForm options={options} />
+        <NewInstrumentForm measurements={measurements} />
       </section>
     </>
   );

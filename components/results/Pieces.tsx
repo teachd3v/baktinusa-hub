@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { PREDICATE_LABEL, type CategoryScore, type Predicate, type TypeResult } from "@/lib/data/results";
+import { PREDICATE_LABEL, type Predicate, type TypeResult } from "@/lib/data/results";
 
 // Batang dibuat dari div, bukan SVG: ikut lebar kartu, tetap tajam di layar apa pun, dan tanpa JavaScript.
 
@@ -76,39 +76,31 @@ export function TypeCards({ types, hrefOf }: { types: TypeResult[]; hrefOf?: (t:
   );
 }
 
-// Perbandingan kategori antar sudut pandang. Kolom = tipe penilai, baris = kategori.
+// Perbandingan IPK antar sudut pandang. Sejak sub pengukuran dibuang (migrasi 0009) tidak ada lagi
+// rincian per kategori, jadi yang dibandingkan tinggal IPK dan jumlah respondennya.
 export function CategoryTable({ types }: { types: TypeResult[] }) {
   const shown = types.filter((t) => t.ipk !== null);
   if (shown.length === 0) return <p className="section-hint" style={{ margin: 0 }}>Belum ada nilai untuk dibandingkan.</p>;
-  const categories = shown[0]!.categories;
   return (
     <div className="table-wrap">
       <table className="table">
         <thead>
           <tr>
-            <th scope="col">Kategori</th>
-            {shown.map((t) => (
-              <th key={t.code} scope="col" className="num">{t.name}</th>
-            ))}
+            <th scope="col">Sudut pandang</th>
+            <th scope="col" className="num">IPK</th>
+            <th scope="col" className="num">Responden</th>
           </tr>
         </thead>
         <tbody>
-          {categories.map((c: CategoryScore) => (
-            <tr key={c.id}>
+          {shown.map((t) => (
+            <tr key={t.code}>
               <th scope="row" style={{ fontWeight: 600, textTransform: "none", letterSpacing: 0, fontSize: "0.88rem", color: "var(--ink)" }}>
-                {c.name}
+                {t.name}
               </th>
-              {shown.map((t) => (
-                <td key={t.code} className="num">{fmt(t.categories.find((x) => x.id === c.id)?.average ?? null)}</td>
-              ))}
+              <td className="num"><b>{fmt(t.ipk)}</b></td>
+              <td className="num">{t.responses}</td>
             </tr>
           ))}
-          <tr>
-            <th scope="row" style={{ fontWeight: 800, textTransform: "none", letterSpacing: 0, fontSize: "0.88rem", color: "var(--ink)" }}>IPK</th>
-            {shown.map((t) => (
-              <td key={t.code} className="num"><b>{fmt(t.ipk)}</b></td>
-            ))}
-          </tr>
         </tbody>
       </table>
     </div>

@@ -2,13 +2,10 @@
 
 import { useActionState, useState } from "react";
 import Link from "next/link";
-import { FILLED_BY_LABEL, PRESET_MEASUREMENTS, type CategoryRow, type FilledBy, type FormText, type MeasurementRow } from "@/lib/data/measurements";
+import { FILLED_BY_LABEL, PRESET_MEASUREMENTS, type FilledBy, type FormText, type MeasurementRow } from "@/lib/data/measurements";
 import {
-  addCategoryAction,
   createMeasurementAction,
   deleteMeasurementAction,
-  deleteCategoryAction,
-  renameCategoryAction,
   renameMeasurementAction,
   saveFormTextAction,
   type MeasurementState,
@@ -124,85 +121,6 @@ export function NewMeasurementForm({ measurements }: { measurements: Measurement
 }
 
 // Sub pengukuran bisa diganti namanya kapan saja — nilai menempel ke id, bukan ke namanya.
-export function CategoryNameForm({ measurementId, category }: { measurementId: number; category: CategoryRow }) {
-  const [state, action, pending] = useActionState<MeasurementState, FormData>(renameCategoryAction, null);
-  return (
-    <form action={action} className="copy-row" style={{ marginTop: "0.5rem" }}>
-      <input type="hidden" name="measurementId" value={measurementId} />
-      <input type="hidden" name="categoryId" value={category.id} />
-      <input className="input" name="name" maxLength={120} defaultValue={category.name} aria-label={`Nama sub pengukuran ${category.name}`} />
-      <button type="submit" className="btn btn-small" disabled={pending}>{pending ? "Menyimpan…" : "Ganti nama"}</button>
-      <Result state={state} />
-    </form>
-  );
-}
-
-// Satu baris sub pengukuran: ganti nama, hapus kalau kosong, dan tautan ke soal-soalnya.
-export function CategoryBlock({
-  measurementId,
-  measurementSlug,
-  category,
-  locked,
-}: {
-  measurementId: number;
-  measurementSlug: string;
-  category: CategoryRow;
-  locked: boolean;
-}) {
-  const [hapus, hapusAction, menghapus] = useActionState<MeasurementState, FormData>(deleteCategoryAction, null);
-  const [confirming, setConfirming] = useState(false);
-
-  return (
-    <section className="card" style={{ background: "var(--surface-sunken)", boxShadow: "none" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", gap: "0.75rem", flexWrap: "wrap", alignItems: "baseline" }}>
-        <h3 className="section-title" style={{ margin: 0 }}>{category.name}</h3>
-        <Link className="btn-link" href={`/admin/instrumen?pengukuran=${measurementSlug}&sub=${category.id}`}>
-          {category.instruments.length} soal — kelola
-        </Link>
-      </div>
-
-      <CategoryNameForm measurementId={measurementId} category={category} />
-
-      {locked || category.instruments.length > 0 ? (
-        <p className="section-hint" style={{ margin: "0.5rem 0 0" }}>
-          {locked
-            ? "Pengukuran ini sudah punya jawaban, jadi sub pengukuran tidak bisa dihapus."
-            : `Masih berisi ${category.instruments.length} soal, jadi belum bisa dihapus — pindahkan atau hapus soalnya dulu lewat menu Instrumen.`}
-        </p>
-      ) : (
-        <form action={hapusAction} style={{ marginTop: "0.5rem" }}>
-          <input type="hidden" name="measurementId" value={measurementId} />
-          <input type="hidden" name="categoryId" value={category.id} />
-          {confirming ? (
-            <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-              <button type="submit" className="btn-link" style={{ color: "var(--bad)" }} disabled={menghapus}>
-                {menghapus ? "Menghapus…" : "Ya, hapus sub pengukuran ini"}
-              </button>
-              <button type="button" className="btn-link" onClick={() => setConfirming(false)}>Batal</button>
-            </div>
-          ) : (
-            <button type="button" className="btn-link" onClick={() => setConfirming(true)}>Hapus sub pengukuran kosong ini</button>
-          )}
-          <Result state={hapus} />
-        </form>
-      )}
-    </section>
-  );
-}
-
-export function AddCategory({ measurementId }: { measurementId: number }) {
-  const [state, action, pending] = useActionState<MeasurementState, FormData>(addCategoryAction, null);
-  return (
-    <form action={action} className="copy-row">
-      <input type="hidden" name="measurementId" value={measurementId} />
-      <input className="input" name="name" maxLength={120} placeholder="Nama kategori baru" aria-label="Nama kategori baru" />
-      <button type="submit" className="btn btn-small" disabled={pending}>Tambah</button>
-      <Result state={state} />
-    </form>
-  );
-}
-
-// Judul & subjudul yang dilihat responden di form publik.
 export function FormTextForm({ measurementId, text }: { measurementId: number; text: FormText }) {
   const [state, action, pending] = useActionState<MeasurementState, FormData>(saveFormTextAction, null);
   return (
@@ -222,7 +140,8 @@ export function FormTextForm({ measurementId, text }: { measurementId: number; t
   );
 }
 
-// Ganti nama selalu aman; hapus hanya kalau tidak ada siklus yang menjalankannya.
+// Seluruh pengaturan satu jenis, muat dalam satu jendela: nama, teks form publik, dan penghapusan.
+// Soalnya tidak ikut ke sini — itu milik menu Instrumen, yang bisa menyaring per jenis.
 export function MeasurementSettings({ measurement }: { measurement: MeasurementRow }) {
   const [state, action, pending] = useActionState<MeasurementState, FormData>(renameMeasurementAction, null);
   const [hapus, hapusAction, menghapus] = useActionState<MeasurementState, FormData>(deleteMeasurementAction, null);
@@ -236,6 +155,20 @@ export function MeasurementSettings({ measurement }: { measurement: MeasurementR
         <button type="submit" className="btn btn-small" disabled={pending}>{pending ? "Menyimpan…" : "Ganti nama"}</button>
       </form>
       <Result state={state} />
+
+      <hr className="modal-rule" />
+      <h3 className="section-title" style={{ fontSize: "0.9rem" }}>Teks form publik</h3>
+      <p className="section-hint">Yang dilihat responden di bagian atas form penilaian.</p>
+      <FormTextForm measurementId={measurement.id} text={measurement.formText} />
+
+      <hr className="modal-rule" />
+      <p className="section-hint" style={{ margin: 0 }}>
+        <Link href={`/admin/instrumen?pengukuran=${measurement.slug}`}>
+          Kelola {measurement.instruments} soal di menu Instrumen →
+        </Link>
+      </p>
+
+      <hr className="modal-rule" />
 
       {measurement.periods > 0 ? (
         <p className="section-hint" style={{ margin: "0.75rem 0 0" }}>

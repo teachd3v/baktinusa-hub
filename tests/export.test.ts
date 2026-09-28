@@ -34,8 +34,8 @@ describe("matriks", () => {
     assert.equal(rows.length, 5); // header + 4 awardee
     assert.match(rows[0]!, /^Nama;Wilayah;Kampus;Kode referal;/);
     assert.match(rows[0]!, /Pengukuran Uji — IPK;Pengukuran Uji — responden/);
-    // Kategori disebut bersama kode jenisnya: empat jenis boleh punya kategori bernama sama.
-    assert.match(rows[0]!, /MA·Kategori Uji \(360°\);PA·Kategori Uji \(360°\);PU·Kategori Uji \(360°\)/);
+    // Kolom rincian per sub pengukuran hilang bersama sub pengukurannya.
+    assert.ok(!rows[0]!.includes("(360°)"));
     const ayu = rows.find((r) => r.startsWith("Ayu"))!;
     assert.match(ayu, /Ayu;Bandung;ITB;AAAA0001;/); // nama kampusnya, bukan id-nya
     const budi = rows.find((r) => r.startsWith("Budi"))!;

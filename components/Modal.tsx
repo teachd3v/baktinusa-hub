@@ -7,15 +7,25 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 //
 // Isinya tetap form biasa: pesan hasil muncul di dalam jendela dan jendelanya tidak menutup sendiri,
 // jadi kalau ada isian yang ditolak, yang sudah diketik tidak hilang.
-export function AddButton({
+export function AddButton(props: { label: string; title: string; hint?: string; children: ReactNode }) {
+  return <ModalButton {...props} trigger={<><span aria-hidden="true">+</span> {props.label}</>} />;
+}
+
+// Pemicu bebas: dipakai tombol "Atur" di tiap baris daftar, supaya mengelola satu baris tidak perlu
+// berpindah halaman.
+export function ModalButton({
   label,
   title,
   hint,
+  trigger: triggerLabel,
+  className = "btn btn-small btn-inline add-button",
   children,
 }: {
   label: string;
   title: string;
   hint?: string;
+  trigger?: ReactNode;
+  className?: string;
   children: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
@@ -46,8 +56,8 @@ export function AddButton({
 
   return (
     <>
-      <button ref={trigger} type="button" className="btn btn-small btn-inline add-button" onClick={() => setOpen(true)}>
-        <span aria-hidden="true">+</span> {label}
+      <button ref={trigger} type="button" className={className} onClick={() => setOpen(true)}>
+        {triggerLabel ?? label}
       </button>
 
       {open && (

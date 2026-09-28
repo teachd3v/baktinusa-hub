@@ -27,8 +27,6 @@ export function predicateOf(ipk: number | null): Predicate | null {
   return "perlu_peningkatan";
 }
 
-export type Category = { id: number; name: string; weight: number; orderIndex: number };
-export type CategoryScore = Category & { average: number | null };
 export type TypeResult = {
   typeId: number;
   code: string;
@@ -37,7 +35,6 @@ export type TypeResult = {
   responses: number;
   ipk: number | null;
   predicate: Predicate | null;
-  categories: CategoryScore[];
 };
 export type AwardeeResult = {
   id: number;
@@ -51,61 +48,35 @@ export type AwardeeResult = {
 
 const round = (n: number, digits = 2) => Math.round(n * 10 ** digits) / 10 ** digits;
 
-// IPK hanya dihitung dari kategori yang punya jawaban; kategori kosong tidak dianggap nol.
-export function ipkOf(categories: CategoryScore[]): number | null {
-  let sum = 0;
-  let weight = 0;
-  for (const c of categories) {
-    if (c.average === null) continue;
-    sum += c.average * c.weight;
-    weight += c.weight;
-  }
-  return weight === 0 ? null : round(sum / weight);
-}
+// IPK sekarang rata-rata polos semua skor dalam satu jenis. Sebelum migrasi 0009 ia adalah rata-rata
+// berbobot antar sub pengukuran, yang menghasilkan angka berbeda saat jumlah soal tiap sub tidak sama.
+export const ipkOf = (average: number | null): number | null => (average === null ? null : round(average));
 
-export async function listCategories(db: D1Database, periodId: number): Promise<Category[]> {
-  const { results } = await db
-    .prepare(
-      `SELECT c.id, m.code || '·' || c.name AS name, c.weight, c.order_index FROM instrument_categories c
-       JOIN period_measurements pm ON pm.measurement_id = c.measurement_id
-       JOIN measurements m ON m.id = c.measurement_id
-       WHERE pm.period_id = ? ORDER BY m.code, c.order_index`,
-    )
-    .bind(periodId)
-    .all<{ id: number; name: string; weight: number; order_index: number }>();
-  return results.map((r) => ({ id: r.id, name: r.name, weight: r.weight, orderIndex: r.order_index }));
-}
+type AggRow = { awardee_id: number; type_id: number; average: number; responses: number };
 
-type AggRow = { awardee_id: number; type_id: number; category_id: number; average: number; responses: number };
-
-const AGGREGATE = `SELECT r.awardee_id, r.measurement_id AS type_id, i.category_id,
+const AGGREGATE = `SELECT r.awardee_id, r.measurement_id AS type_id,
     AVG(s.score) AS average, COUNT(DISTINCT r.id) AS responses
   FROM response_scores s
   JOIN responses r ON r.id = s.response_id
-  JOIN instruments i ON i.id = s.instrument_id
   JOIN awardees a ON a.id = r.awardee_id
   WHERE r.period_id = ?`;
 
 function buildTypes(
-  categories: Category[],
   types: { id: number; code: string; name: string; audience: string }[],
   rows: AggRow[],
 ): TypeResult[] {
   return types.map((t) => {
-    const mine = rows.filter((r) => r.type_id === t.id);
-    const scored: CategoryScore[] = categories.map((c) => {
-      const row = mine.find((r) => r.category_id === c.id);
-      return { ...c, average: row ? round(row.average) : null };
-    });
+    const mine = rows.find((r) => r.type_id === t.id);
+    // Jenis tanpa satu pun jawaban tetap muncul dengan IPK kosong, bukan nol.
+    const ipk = mine ? ipkOf(mine.average) : null;
     return {
       typeId: t.id,
       code: t.code,
       name: t.name,
       audience: t.audience,
-      responses: mine[0]?.responses ?? 0,
-      ipk: ipkOf(scored),
-      predicate: predicateOf(ipkOf(scored)),
-      categories: scored,
+      responses: mine?.responses ?? 0,
+      ipk,
+      predicate: predicateOf(ipk),
     };
   });
 }
@@ -125,11 +96,10 @@ async function typesOfPeriod(db: D1Database, periodId: number) {
 // Satu baris per awardee dalam lingkup, lengkap dengan IPK tiap tipe penilai.
 export async function resultsForScope(db: D1Database, scope: Scope, periodId: number): Promise<AwardeeResult[]> {
   const f = awardeeFilter(scope);
-  const [categories, types, { results: rows }, { results: awardees }] = await Promise.all([
-    listCategories(db, periodId),
+  const [types, { results: rows }, { results: awardees }] = await Promise.all([
     typesOfPeriod(db, periodId),
     db
-      .prepare(`${AGGREGATE} AND ${f.sql} GROUP BY r.awardee_id, r.measurement_id, i.category_id`)
+      .prepare(`${AGGREGATE} AND ${f.sql} GROUP BY r.awardee_id, r.measurement_id`)
       .bind(periodId, ...f.params)
       .all<AggRow>(),
     db
@@ -150,13 +120,13 @@ export async function resultsForScope(db: D1Database, scope: Scope, periodId: nu
     referralCode: a.referral_code,
     regionId: a.region_id,
     region: a.region,
-    types: buildTypes(categories, types, rows.filter((r) => r.awardee_id === a.id)),
+    types: buildTypes(types, rows.filter((r) => r.awardee_id === a.id)),
   }));
 }
 
 // ---------- rincian satu awardee ----------
 
-export type QuestionScore = { code: string; text: string; categoryId: number; average: number; responses: number };
+export type QuestionScore = { code: string; text: string; average: number; responses: number };
 export type FeedbackEntry = { field: string; body: string; typeCode: string; typeName: string; audience: string; relation: string | null };
 export type AwardeeDetail = AwardeeResult & { questions: Record<string, QuestionScore[]>; feedback: FeedbackEntry[] };
 
@@ -179,16 +149,15 @@ export async function awardeeDetail(
     .first<{ id: number; name: string; campus: string | null; referral_code: string; region_id: number; region: string }>();
   if (!awardee) return null;
 
-  const [categories, types, { results: rows }, { results: questionRows }, { results: feedbackRows }] = await Promise.all([
-    listCategories(db, periodId),
+  const [types, { results: rows }, { results: questionRows }, { results: feedbackRows }] = await Promise.all([
     typesOfPeriod(db, periodId),
     db
-      .prepare(`${AGGREGATE} AND a.id = ? GROUP BY r.awardee_id, r.measurement_id, i.category_id`)
+      .prepare(`${AGGREGATE} AND a.id = ? GROUP BY r.awardee_id, r.measurement_id`)
       .bind(periodId, awardee.id)
       .all<AggRow>(),
     db
       .prepare(
-        `SELECT rt.code AS type_code, i.code, i.statement AS text, i.category_id,
+        `SELECT rt.code AS type_code, i.code, i.statement AS text,
             AVG(s.score) AS average, COUNT(*) AS responses
          FROM response_scores s
          JOIN responses r ON r.id = s.response_id
@@ -199,7 +168,7 @@ export async function awardeeDetail(
          ORDER BY i.order_index`,
       )
       .bind(periodId, awardee.id)
-      .all<{ type_code: string; code: string; text: string; category_id: number; average: number; responses: number }>(),
+      .all<{ type_code: string; code: string; text: string; average: number; responses: number }>(),
     db
       .prepare(
         `SELECT fb.field, fb.body, rt.code AS type_code, rt.name AS type_name, rt.filled_by AS audience, r.relation
@@ -218,7 +187,6 @@ export async function awardeeDetail(
     (questions[q.type_code] ??= []).push({
       code: q.code,
       text: q.text,
-      categoryId: q.category_id,
       average: round(q.average),
       responses: q.responses,
     });
@@ -231,7 +199,7 @@ export async function awardeeDetail(
     referralCode: awardee.referral_code,
     regionId: awardee.region_id,
     region: awardee.region,
-    types: buildTypes(categories, types, rows),
+    types: buildTypes(types, rows),
     questions,
     feedback: feedbackRows.map((r) => ({
       field: r.field,

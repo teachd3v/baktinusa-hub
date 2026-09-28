@@ -107,3 +107,20 @@ export async function createPeriodAction(_previous: ActionState, form: FormData)
   refresh();
   redirect(`/admin/periode/${(field(form, "slug").trim() || `${batch}-${cycle}`).toLowerCase()}`);
 }
+
+// Satu sel matriks: memasang atau melepas jenis dari siklus. Dipakai peta jenis × siklus di halaman
+// Siklus, supaya seluruh setup bisa dikerjakan dari satu layar.
+export async function toggleMatrixCellAction(_previous: ActionState, form: FormData): Promise<ActionState> {
+  const admin = await requireUser("admin");
+  const periodId = Number(form.get("periodId"));
+  const measurementId = Number(form.get("measurementId"));
+  if (!periodId || !measurementId) return gagal("Siklus atau jenis pengukuran tidak dikenal.");
+
+  const result =
+    form.get("on") === "1"
+      ? await addMeasurementToPeriod(env.DB, admin, periodId, measurementId)
+      : await removeMeasurementFromPeriod(env.DB, admin, periodId, measurementId);
+  if (!result.ok) return result;
+  refresh();
+  return { ok: true, message: form.get("on") === "1" ? "Dipasang." : "Dilepas." };
+}

@@ -37,12 +37,12 @@ beforeEach(async () => {
 });
 
 describe("rumus", () => {
-  test("IPK = rata-rata berbobot kategori; kategori kosong tidak dihitung nol", () => {
-    const cat = (id: number, average: number | null, weight = 1) => ({ id, name: `K${id}`, weight, orderIndex: id, average });
-    assert.equal(ipkOf([cat(1, 4), cat(2, 2)]), 3);
-    assert.equal(ipkOf([cat(1, 4), cat(2, 2, 3)]), 2.5);
-    assert.equal(ipkOf([cat(1, 3), cat(2, null)]), 3);
-    assert.equal(ipkOf([cat(1, null)]), null);
+  // Sejak migrasi 0009 IPK adalah rata-rata polos semua soal dalam satu jenis; sebelumnya rata-rata
+  // berbobot antar sub pengukuran. Yang dijaga di sini tinggal pembulatan dan jenis tanpa jawaban.
+  test("IPK dibulatkan dua angka; jenis tanpa jawaban tetap kosong, bukan nol", () => {
+    assert.equal(ipkOf(3), 3);
+    assert.equal(ipkOf(3.456), 3.46);
+    assert.equal(ipkOf(null), null);
   });
 
   test("predikat memakai ambang program BA15", () => {
@@ -55,14 +55,12 @@ describe("rumus", () => {
 });
 
 describe("hasil per awardee", () => {
-  test("rata-rata kategori dan IPK dihitung dari semua respons tipe itu", async () => {
+  test("IPK dihitung dari semua skor jenis itu, lintas respons", async () => {
     const results = await resultsForScope(db, scopeFor(admin), 1);
     const ayuResult = results.find((r) => r.name === "Ayu")!;
     const pu = ayuResult.types.find((t) => t.code === "PU")!;
     // Empat jawaban Ayu: 4, 3, 3, 2 → 3.00
     assert.equal(pu.responses, 2);
-    // Kategori siklus ini datang dari keempat jenis, jadi disebut namanya — bukan indeksnya.
-    assert.equal(pu.categories.find((c) => c.name === "PU·Kategori Uji")!.average, 3);
     assert.equal(pu.ipk, 3);
     assert.equal(pu.predicate, "sangat_memuaskan");
   });

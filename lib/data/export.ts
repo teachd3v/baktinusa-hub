@@ -4,7 +4,7 @@
 // Data mentah memuat identitas responden, jadi pemanggilnya dibatasi Admin di lapisan route.
 
 import { awardeeFilter, type Scope } from "./scope.ts";
-import { listCategories, resultsForScope, type AwardeeResult } from "./results.ts";
+import { resultsForScope, type AwardeeResult } from "./results.ts";
 
 // Excel di Windows membaca CSV dengan pemisah titik koma saat lokalnya Indonesia; koma di dalam nilai
 // tetap aman karena setiap sel dikutip.
@@ -23,7 +23,9 @@ export function toCsv(rows: (string | number | null)[][]): string {
 export const csvFilename = (kind: string, periodSlug: string) =>
   `baktinusa-${kind}-${periodSlug}-${new Date().toISOString().slice(0, 10)}.csv`;
 
-export function matrixRows(results: AwardeeResult[], categories: { id: number; name: string }[]): (string | number | null)[][] {
+// Satu kolom IPK + responden per jenis pengukuran. Kolom rincian per sub pengukuran hilang bersama
+// sub pengukurannya (migrasi 0009); rincian per soal tetap ada di ekspor data mentah.
+export function matrixRows(results: AwardeeResult[]): (string | number | null)[][] {
   const types = results[0]?.types ?? [];
   const header = [
     "Nama",
@@ -31,27 +33,21 @@ export function matrixRows(results: AwardeeResult[], categories: { id: number; n
     "Kampus",
     "Kode referal",
     ...types.flatMap((t) => [`${t.name} — IPK`, `${t.name} — responden`]),
-    ...categories.map((c) => `${c.name} (360°)`),
   ];
 
-  const body = results.map((a) => {
-    const external = a.types.find((t) => t.code === "external");
-    return [
-      a.name,
-      a.region,
-      a.campus,
-      a.referralCode,
-      ...a.types.flatMap((t) => [t.ipk, t.responses]),
-      ...categories.map((c) => external?.categories.find((x) => x.id === c.id)?.average ?? null),
-    ];
-  });
+  const body = results.map((a) => [
+    a.name,
+    a.region,
+    a.campus,
+    a.referralCode,
+    ...a.types.flatMap((t) => [t.ipk, t.responses]),
+  ]);
 
   return [header, ...body];
 }
 
 export async function matrixCsv(db: D1Database, scope: Scope, periodId: number): Promise<string> {
-  const [results, categories] = await Promise.all([resultsForScope(db, scope, periodId), listCategories(db, periodId)]);
-  return toCsv(matrixRows(results, categories));
+  return toCsv(matrixRows(await resultsForScope(db, scope, periodId)));
 }
 
 // Data mentah: satu baris per respons, satu kolom per pertanyaan — bentuk yang dulu ada di spreadsheet,
