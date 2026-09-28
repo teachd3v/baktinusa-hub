@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from "react";
 import Link from "next/link";
-import { FILLED_BY_LABEL, type CategoryRow, type FilledBy, type FormText, type MeasurementRow } from "@/lib/data/measurements";
+import { FILLED_BY_LABEL, PRESET_MEASUREMENTS, type CategoryRow, type FilledBy, type FormText, type MeasurementRow } from "@/lib/data/measurements";
 import {
   addCategoryAction,
   createMeasurementAction,
@@ -24,14 +24,24 @@ function Result({ state }: { state: MeasurementState }) {
   );
 }
 
-// Slug ikut mengikuti angkatan + jenis, tapi tetap bisa ditimpa — dia yang jadi bagian URL form publik.
-// Pengukuran baru bisa dimulai dari nol atau menyalin kuesioner pengukuran lain sebagai titik awal.
+// Nama dipilih dari daftar jenis baku; kode, slug, dan pengisinya ikut dari sana. Mengetik kode
+// sendiri tiap kali adalah cara paling mudah memutus rute — salah satu huruf, dan formnya jadi tidak
+// bisa dibuka siapa pun. Jenis yang kodenya sudah terpakai dimatikan dari daftar, bukan disembunyikan,
+// supaya terlihat bahwa ia memang sudah ada.
+//
+// "Lainnya" membuka isian manual untuk jenis di luar keenam itu.
 export function NewMeasurementForm({ measurements }: { measurements: MeasurementRow[] }) {
   const [state, action, pending] = useActionState<MeasurementState, FormData>(createMeasurementAction, null);
+  const terpakai = new Set(measurements.map((m) => m.code));
+  const tersedia = PRESET_MEASUREMENTS.filter((x) => !terpakai.has(x.code));
+
+  const [pilihan, setPilihan] = useState<string>(tersedia[0]?.code ?? "lainnya");
+  const preset = PRESET_MEASUREMENTS.find((x) => x.code === pilihan);
+
+  // Isian manual hanya hidup saat "Lainnya" dipilih.
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
   const [touched, setTouched] = useState(false);
-
   const ikutNama = (value: string) => {
     setName(value);
     if (!touched) setSlug(value.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, ""));
@@ -41,46 +51,70 @@ export function NewMeasurementForm({ measurements }: { measurements: Measurement
     <form action={action}>
       <div className="form-row">
         <div className="field">
-          <label className="label" htmlFor="name">Nama pengukuran</label>
-          <input id="name" className="input" name="name" maxLength={120} value={name}
-            onChange={(e) => ikutNama(e.target.value)} placeholder="Pengukuran Awardee 360°" />
-        </div>
-        <div className="field">
-          <label className="label" htmlFor="code">Kode</label>
-          <input id="code" className="input" name="code" maxLength={8} placeholder="SA"
-            onChange={(e) => (e.target.value = e.target.value.toUpperCase())} />
-        </div>
-      </div>
-
-      <div className="form-row">
-        <div className="field">
-          <label className="label" htmlFor="filledBy">Diisi oleh</label>
-          <select id="filledBy" className="select" name="filledBy" defaultValue="public">
-            {(Object.keys(FILLED_BY_LABEL) as FilledBy[]).map((value) => (
-              <option key={value} value={value}>{FILLED_BY_LABEL[value]}</option>
+          <label className="label" htmlFor="preset">Nama pengukuran</label>
+          <select id="preset" className="select" value={pilihan} onChange={(e) => setPilihan(e.target.value)}>
+            {PRESET_MEASUREMENTS.map((x) => (
+              <option key={x.code} value={x.code} disabled={terpakai.has(x.code)}>
+                {x.name} ({x.code}){terpakai.has(x.code) ? " — sudah ada" : ""}
+              </option>
             ))}
-          </select>
-          <p className="section-hint" style={{ margin: "0.3rem 0 0" }}>
-            Ini yang menentukan rutenya: siapa yang bisa membuka formnya, dan lewat jalur mana.
-          </p>
-        </div>
-      </div>
-
-      <div className="form-row">
-        <div className="field">
-          <label className="label" htmlFor="slug">Slug</label>
-          <input id="slug" className="input" name="slug" maxLength={60} value={slug}
-            onChange={(e) => { setTouched(true); setSlug(e.target.value); }} placeholder="pengukuran-awardee" />
-        </div>
-        <div className="field">
-          <label className="label" htmlFor="copyFromId">Salin kuesioner dari</label>
-          <select id="copyFromId" className="select" name="copyFromId" defaultValue="">
-            <option value="">Mulai kosong</option>
-            {measurements.map((m) => (
-              <option key={m.id} value={m.id}>{m.name} ({m.instruments} soal)</option>
-            ))}
+            <option value="lainnya">Lainnya — isi sendiri</option>
           </select>
         </div>
+
+        {preset ? (
+          <div className="field">
+            <label className="label">Kode &amp; pengisinya</label>
+            <p className="preset-note">
+              <code>{preset.code}</code> · diisi {FILLED_BY_LABEL[preset.filledBy].toLowerCase()}
+            </p>
+            <input type="hidden" name="name" value={preset.name} />
+            <input type="hidden" name="code" value={preset.code} />
+            <input type="hidden" name="slug" value={preset.slug} />
+            <input type="hidden" name="filledBy" value={preset.filledBy} />
+          </div>
+        ) : (
+          <div className="field">
+            <label className="label" htmlFor="code">Kode</label>
+            <input id="code" className="input" name="code" maxLength={8} placeholder="XX"
+              onChange={(e) => (e.target.value = e.target.value.toUpperCase())} />
+          </div>
+        )}
+      </div>
+
+      {!preset && (
+        <>
+          <div className="form-row">
+            <div className="field">
+              <label className="label" htmlFor="name">Nama jenis</label>
+              <input id="name" className="input" name="name" maxLength={120} value={name}
+                onChange={(e) => ikutNama(e.target.value)} placeholder="Uji Tambahan" />
+            </div>
+            <div className="field">
+              <label className="label" htmlFor="filledBy">Diisi oleh</label>
+              <select id="filledBy" className="select" name="filledBy" defaultValue="public">
+                {(Object.keys(FILLED_BY_LABEL) as FilledBy[]).map((value) => (
+                  <option key={value} value={value}>{FILLED_BY_LABEL[value]}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div className="field">
+            <label className="label" htmlFor="slug">Slug</label>
+            <input id="slug" className="input" name="slug" maxLength={60} value={slug}
+              onChange={(e) => { setTouched(true); setSlug(e.target.value); }} placeholder="uji-tambahan" />
+          </div>
+        </>
+      )}
+
+      <div className="field">
+        <label className="label" htmlFor="copyFromId">Salin kuesioner dari</label>
+        <select id="copyFromId" className="select" name="copyFromId" defaultValue="">
+          <option value="">Mulai kosong</option>
+          {measurements.map((m) => (
+            <option key={m.id} value={m.id}>{m.name} ({m.instruments} soal)</option>
+          ))}
+        </select>
       </div>
 
       <button type="submit" className="btn btn-small btn-inline" disabled={pending}>{pending ? "Membuat…" : "Buat pengukuran"}</button>

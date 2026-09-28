@@ -35,6 +35,22 @@ export const FILLED_BY_LABEL: Record<FilledBy, string> = {
 
 export const isFilledBy = (v: string): v is FilledBy => v in FILLED_BY_LABEL;
 
+// Enam jenis baku program. Admin memilih namanya; kode, slug, dan pengisinya ikut dari sini — bukan
+// diketik ulang tiap kali, karena salah satu huruf saja sudah cukup untuk memutus rutenya.
+//
+// Daftar ini bukan pagar: createMeasurement tetap menerima jenis di luar daftar (lihat "Lainnya" di
+// form), supaya program yang berubah tidak perlu menunggu rilis kode.
+export const PRESET_MEASUREMENTS = [
+  { code: "SA", name: "Self Assessment", slug: "self-assessment", filledBy: "self" },
+  { code: "PA", name: "Peer Awardee Assessment", slug: "peer-awardee-assessment", filledBy: "peer" },
+  { code: "MA", name: "Manajer Wilayah Assessment", slug: "manajer-wilayah-assessment", filledBy: "manwil" },
+  { code: "PU", name: "Public Assessment", slug: "public-assessment", filledBy: "public" },
+  { code: "LA", name: "Leadership Project Assessment", slug: "leadership-project-assessment", filledBy: "public" },
+  { code: "UA", name: "Uji Akhir", slug: "uji-akhir", filledBy: "admin" },
+] as const satisfies readonly { code: string; name: string; slug: string; filledBy: FilledBy }[];
+
+export type PresetMeasurement = (typeof PRESET_MEASUREMENTS)[number];
+
 export type MeasurementRow = {
   id: number;
   code: string;

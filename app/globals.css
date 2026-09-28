@@ -1449,3 +1449,18 @@ a {
   justify-content: space-between;
   gap: var(--gap-sm);
 }
+
+/* Kode & pengisinya yang ikut otomatis dari jenis yang dipilih — ditampilkan, bukan diketik. */
+.preset-note {
+  margin: 0;
+  padding: 0.55rem 0.8rem;
+  background: var(--surface-sunken);
+  border-radius: var(--radius-sm);
+  color: var(--ink-muted);
+  font-size: var(--text-sm);
+}
+
+.preset-note code {
+  color: var(--ink);
+  font-weight: 700;
+}
