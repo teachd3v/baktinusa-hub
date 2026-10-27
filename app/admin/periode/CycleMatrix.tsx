@@ -53,7 +53,7 @@ function Cell({ measurementId, cell }: { measurementId: number; cell: MatrixCell
   const [state, action, pending] = useActionState<ActionState, FormData>(toggleMatrixCellAction, null);
 
   // Siklusnya belum ada, jadi tidak ada yang bisa dipasangi.
-  if (cell.periodId === null) return <span className="section-hint">—</span>;
+  if (cell.periodId === null) return <span className="section-hint">tidak ada</span>;
 
   // Jenis yang sudah punya jawaban di siklus itu tidak boleh dilepas: jawabannya akan menggantung.
   const terkunci = cell.on && cell.responses > 0;

@@ -2,6 +2,7 @@ import { env } from "cloudflare:workers";
 import { notFound } from "next/navigation";
 import { AwardeeCard } from "@/components/AwardeeCard";
 import { BrandHeader } from "@/components/BrandHeader";
+import { Icon } from "@/components/Icon";
 import { formatWib } from "@/lib/format";
 import { getPublicForm } from "@/lib/survey";
 import { TURNSTILE_ACTION } from "@/lib/turnstile";
@@ -23,7 +24,7 @@ export default async function SurveyPage({ params }: { params: Promise<{ kode: s
         <div className="app-screen">
           <AwardeeCard {...awardee} />
           <div className="notice fade-in">
-            <div className="notice-emoji" aria-hidden="true">{closed ? "🔒" : "🗓️"}</div>
+            <Icon name={closed ? "lock" : "calendar"} className="notice-icon" />
             <h2 className="section-title">{closed ? "Survei sudah ditutup" : "Survei belum dibuka"}</h2>
             <p className="section-hint">
               {closed

@@ -2,6 +2,7 @@ import { env } from "cloudflare:workers";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { BrandHeader } from "@/components/BrandHeader";
+import { Icon } from "@/components/Icon";
 import { peekLoginToken } from "@/lib/data/auth";
 
 export const dynamic = "force-dynamic";
@@ -20,7 +21,7 @@ export default async function VerifyPage({ searchParams }: { searchParams: Promi
       <div className="app-screen">
         {pending ? (
           <section className="card fade-in notice">
-            <div className="notice-emoji" aria-hidden="true">👋</div>
+            <Icon name="user" className="notice-icon" />
             <h2 className="section-title">Masuk sebagai {pending.name}</h2>
             <p className="section-hint">Tautan ini hanya bisa dipakai sekali.</p>
             <form method="post" action="/api/auth/verify">
@@ -30,7 +31,7 @@ export default async function VerifyPage({ searchParams }: { searchParams: Promi
           </section>
         ) : (
           <div className="notice fade-in">
-            <div className="notice-emoji" aria-hidden="true">⌛</div>
+            <Icon name="clock" className="notice-icon" />
             <h2 className="section-title">Tautan masuk tidak berlaku</h2>
             <p className="section-hint">Tautan ini sudah dipakai atau sudah kedaluwarsa. Minta tautan baru untuk masuk.</p>
             <Link className="btn" href="/masuk">Minta tautan baru</Link>

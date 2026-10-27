@@ -50,7 +50,7 @@ export default async function RemindersPage({ searchParams }: { searchParams: Pr
 
       {behind.length === 0 ? (
         <section className="card">
-          <h2 className="section-title">Semua target sudah terpenuhi 🎉</h2>
+          <h2 className="section-title">Semua target sudah terpenuhi</h2>
           <p className="section-hint" style={{ margin: 0 }}>Tidak ada yang perlu diingatkan untuk periode ini.</p>
         </section>
       ) : (

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AwardeeCard } from "@/components/AwardeeCard";
+import { Icon, type IconName } from "@/components/Icon";
 import { BrandHeader } from "@/components/BrandHeader";
 import { DeadlineBanner } from "@/components/DeadlineBanner";
 import { Turnstile, type TurnstileHandle } from "@/components/Turnstile";
@@ -46,7 +47,7 @@ type Answers = {
   feedback: Partial<Record<FeedbackField, string>>;
 };
 
-type Modal = { kind: "confirm" } | { kind: "message"; emoji: string; title: string; text: string };
+type Modal = { kind: "confirm" } | { kind: "message"; icon: IconName; title: string; text: string };
 
 const EMPTY: Answers = { name: "", city: "", relationIndex: null, relationDetail: "", knownDuration: "", scores: {}, feedback: {} };
 
@@ -133,7 +134,7 @@ export function SurveyForm(props: Props) {
     for (let s = 0; s <= lastStep; s++) {
       const missing = firstMissing(s);
       if (missing) {
-        setModal({ kind: "message", emoji: "🥺", title: "Masih ada yang terlewat", text: "Yuk cek lagi — ada pertanyaan yang belum dijawab." });
+        setModal({ kind: "message", icon: "alert", title: "Masih ada yang terlewat", text: "Yuk cek lagi: ada pertanyaan yang belum dijawab." });
         if (s !== step) goTo(s);
         setTimeout(() => flag(missing), 350);
         return;
@@ -176,7 +177,7 @@ export function SurveyForm(props: Props) {
       const receipt = encodeURIComponent(data.receipt);
       router.push(isPublic ? `/s/${kode}/${periode}/selesai?r=${receipt}` : `${props.returnTo}?terkirim=${receipt}`);
     } catch (err) {
-      setModal({ kind: "message", emoji: "🥺", title: "Belum terkirim", text: err instanceof Error ? err.message : "Coba kirim lagi." });
+      setModal({ kind: "message", icon: "alert", title: "Belum terkirim", text: err instanceof Error ? err.message : "Coba kirim lagi." });
       turnstile.current?.reset();
       setSending(false);
     }
@@ -324,7 +325,7 @@ export function SurveyForm(props: Props) {
 
         <div className="actions">
           {step > 0 && (
-            <button type="button" className="btn btn-muted" onClick={() => goTo(step - 1)} aria-label="Kembali ke langkah sebelumnya">←</button>
+            <button type="button" className="btn btn-muted" onClick={() => goTo(step - 1)} aria-label="Kembali ke langkah sebelumnya"><Icon name="back" className="btn-icon" /></button>
           )}
           {step < lastStep ? (
             <button type="button" className="btn" onClick={next}>Lanjut</button>
@@ -343,7 +344,7 @@ export function SurveyForm(props: Props) {
       <div className="modal fade-in" role="dialog" aria-modal="true" aria-labelledby="modal-title">
         {modal.kind === "confirm" ? (
           <>
-            <div className="modal-emoji" aria-hidden="true">🤔</div>
+            <Icon name="help" className="modal-icon" />
             <h2 id="modal-title">Sudah yakin?</h2>
             <p>Pastikan jawaban Anda benar dan sejujur-jujurnya. Jawaban tidak bisa diubah setelah dikirim.</p>
             <div className="actions" style={{ marginTop: 0 }}>
@@ -353,7 +354,7 @@ export function SurveyForm(props: Props) {
           </>
         ) : (
           <>
-            <div className="modal-emoji" aria-hidden="true">{modal.emoji}</div>
+            <Icon name={modal.icon} className="modal-icon" />
             <h2 id="modal-title">{modal.title}</h2>
             <p>{modal.text}</p>
             <button type="button" className="btn" style={{ width: "100%" }} onClick={() => setModal(null)} autoFocus>Oke</button>
@@ -376,7 +377,7 @@ export function SurveyForm(props: Props) {
   return (
     <div className="internal-form">
       <div className="page-head">
-        <Link href={props.returnTo} className="back-link">← Kembali</Link>
+        <Link href={props.returnTo} className="back-link">Kembali</Link>
         <h1>{title}</h1>
         {subtitle && <p>{subtitle}</p>}
       </div>

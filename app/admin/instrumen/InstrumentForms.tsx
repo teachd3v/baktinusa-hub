@@ -31,7 +31,7 @@ function Fields({ instrument, locked }: { instrument?: InstrumentListRow; locked
       </div>
       <div className="field">
         <label className="label">Pernyataan</label>
-        <textarea className="textarea" name="statement" rows={2} maxLength={1000} defaultValue={instrument?.statement ?? ""} placeholder="Tulis sesuai pengisinya — &quot;Saya …&quot; untuk asesmen mandiri, &quot;Yang bersangkutan …&quot; untuk penilai lain." />
+        <textarea className="textarea" name="statement" rows={2} maxLength={1000} defaultValue={instrument?.statement ?? ""} placeholder="Tulis sesuai pengisinya: &quot;Saya …&quot; untuk asesmen mandiri, &quot;Yang bersangkutan …&quot; untuk penilai lain." />
       </div>
       {locked && (
         <p className="section-hint">

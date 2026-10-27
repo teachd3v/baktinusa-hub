@@ -26,11 +26,11 @@ export default async function PeriodDetailPage({ params }: { params: Promise<{ s
   return (
     <>
       <div className="page-head">
-        <Link href="/admin/periode" className="back-link">← Semua siklus</Link>
+        <Link href="/admin/periode" className="back-link">Semua siklus</Link>
         <h1>{period.name}</h1>
         <p>
-          {period.batch} · {CYCLE_LABEL[period.cycle]} · {period.measurements.length} jenis pengukuran ·{" "}
-          {period.instruments} soal · {period.responses} jawaban masuk
+          {period.batch}, {CYCLE_LABEL[period.cycle]}, {period.measurements.length} jenis pengukuran,{" "}
+          {period.instruments} soal, {period.responses} jawaban masuk
         </p>
       </div>
 
@@ -53,11 +53,11 @@ export default async function PeriodDetailPage({ params }: { params: Promise<{ s
       <section className="card">
         <h2 className="section-title">Jenis pengukuran yang dijalankan</h2>
         <p className="section-hint">
-          Jadwal per jenis menentukan kapan masing-masing bisa diisi. Yang paling cepat menutup yang dipakai — jadwal
+          Jadwal per jenis menentukan kapan masing-masing bisa diisi. Yang paling cepat menutup yang dipakai; jadwal
           siklus tetap jadi batas luarnya.
         </p>
         {period.measurements.length === 0 ? (
-          <p className="section-hint">Belum ada. Tambahkan di bawah — siklus tanpa jenis pengukuran tidak bisa dibuka.</p>
+          <p className="section-hint">Belum ada. Tambahkan di bawah: siklus tanpa jenis pengukuran tidak bisa dibuka.</p>
         ) : (
           <div style={{ display: "grid", gap: "0.75rem" }}>
             {period.measurements.map((m) => (

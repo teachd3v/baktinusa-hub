@@ -41,7 +41,7 @@ export default async function InstrumentsPage({
         <form method="get" className="copy-row" style={{ margin: "0 0 1rem" }}>
           {pengukuran && <input type="hidden" name="pengukuran" value={pengukuran} />}
           <input className="input" type="search" name="cari" defaultValue={cari ?? ""} placeholder="Cari kode atau isi soal…" aria-label="Cari soal" />
-          <button type="submit" className="btn btn-small">Cari</button>
+          <button type="submit" className="btn btn-muted btn-small">Cari</button>
         </form>
 
         <InstrumentsManager instruments={instruments} measurements={measurements} activeSlug={pengukuran} />

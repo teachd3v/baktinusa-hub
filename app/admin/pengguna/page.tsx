@@ -39,7 +39,7 @@ export default async function PeoplePage({ searchParams }: { searchParams: Promi
     <>
       <div className="page-head">
         <h1>Pengguna</h1>
-        <p>Satu tempat untuk semua orang: Admin, Manajer Wilayah, dan Awardee — beserta data awardee yang belum punya akun.</p>
+        <p>Satu tempat untuk semua orang: Admin, Manajer Wilayah, dan Awardee, beserta data awardee yang belum punya akun.</p>
       </div>
 
       <section className="card">
@@ -53,7 +53,7 @@ export default async function PeoplePage({ searchParams }: { searchParams: Promi
           <AddButton
             label="Tambah orang"
             title="Tambah orang"
-            hint="Untuk peran Awardee, data awardee ikut dibuat sekalian — atau hubungkan ke data yang sudah ada."
+            hint="Untuk peran Awardee, data awardee ikut dibuat sekalian, atau hubungkan ke data yang sudah ada."
           >
             <NewPersonForm regions={regions} campuses={campuses} freeAwardees={freeAwardees} />
           </AddButton>
@@ -70,7 +70,7 @@ export default async function PeoplePage({ searchParams }: { searchParams: Promi
         <form method="get" className="copy-row" style={{ margin: "0 0 1rem" }}>
           {peran && <input type="hidden" name="peran" value={peran} />}
           <input className="input" type="search" name="cari" defaultValue={cari ?? ""} placeholder="Cari nama, ID, email, wilayah…" aria-label="Cari orang" />
-          <button type="submit" className="btn btn-small">Cari</button>
+          <button type="submit" className="btn btn-muted btn-small">Cari</button>
         </form>
 
         <p className="section-hint">{shown.length} ditampilkan</p>

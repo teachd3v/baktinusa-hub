@@ -246,19 +246,28 @@ Menguji lokal: `npm run build`, lalu `npx wrangler dev --config dist/server/wran
 
 ## Design system
 
-Satu berkas token, `app/globals.css`, jadi sumber tunggal warna, tipografi, sudut, dan bayangan. Aturan mainnya:
-**halaman dan komponen tidak menulis warna sendiri** — semuanya memanggil token. Contoh hidupnya ada di `/admin/gaya`,
+Sistemnya dikunci di `design.md` (dibuat Hallmark, restyle 27 Okt 2026). Nilainya hidup di dua berkas: `app/tokens.css`
+(warna OKLCH, huruf, radius, skala jarak dan huruf, durasi) dan `app/globals.css`, yang memetakan nama lama proyek
+(`--ink`, `--surface`, `--card`, `--primary`) ke token itu supaya aturan komponennya tidak perlu ditulis ulang. Aturan main:
+**halaman dan komponen tidak menulis warna sendiri**, semuanya memanggil token. Contoh hidupnya ada di `/admin/gaya`,
 dirender memakai kelas yang sama persis seperti halaman sungguhan, jadi panduan itu tidak bisa basi diam-diam.
 
-- **Bahasa rupa**: latar terang lapang, kartu putih bersudut besar, rail navigasi navy, dan kartu pastel sebagai penanda
-  kategori. Merah BAKTI NUSA dipertahankan untuk aksi dan penanda aktif — bukan lagi sebagai latar halaman.
+- **Bahasa rupa**: kertas hampir putih yang ditint ke arah merah merek, kartu datar berbatas 1px bersudut 8px (batas
+  **atau** bayangan, tidak keduanya), sumur berwarna untuk bidang di dalam kartu, dan satu huruf, Plus Jakarta Sans, dalam
+  tiga bobot (400, 600, 700). Merah BAKTI NUSA adalah sinyal: aksi utama, menu aktif, cincin fokus, dan status. Bukan isi.
+- **Satu aksi utama terisi per layar.** Tombol sekunder bergaris (`.btn-muted`), termasuk Cari dan pemilih berkas; hapus
+  bergaris merah (`.btn-danger`). Tepi isian dan kontrol minimal 3:1 terhadap latarnya (`--field-edge`).
 - **Rail navigasi** (`.shell-bar`) berisi ikon SVG inline dari `components/NavIcon.tsx`; ikonnya dipilih dari label menu,
-  jadi menambah menu tidak perlu menyentuh dua berkas. Di layar ≤900px rail berubah jadi dua baris: merek & akun di atas,
-  menu yang bisa digeser mendatar di bawahnya.
-- **Pastel berputar otomatis**: `.score-grid > .score-card:nth-child(5n + …)` memberi warna bergantian, jadi halaman tidak
-  perlu menentukan warna per kartu.
+  jadi menambah menu tidak perlu menyentuh dua berkas. Menu aktif ditandai ubin lebih terang dan garis aksen di tepi kiri,
+  murni lewat CSS. Di layar ≤900px rail berubah jadi dua baris: merek & akun di atas, menu yang bisa digeser mendatar di bawahnya.
+- **Ikon pemberitahuan memakai SVG** dari `components/Icon.tsx`, bukan emoji, supaya mengikuti warna tinta dan tampil sama
+  di semua perangkat. Emoji hanya tersisa di skala penilaian (`form_config.scale`), karena itu isi data yang diatur Admin.
+- **Ubin skor** (`.score-tile`) adalah sumur netral di dalam kartu: satu warna, tanpa pastel bergantian.
 - **Warna grafik** punya tokennya sendiri (`--chart-*`), lebih pekat dari token status karena dipakai dalam potongan kecil.
-- Status tidak pernah disampaikan lewat warna saja — selalu ada kata di sebelahnya.
+- **Tipografi teks**: tidak ada tanda pisah (— atau –) di kalimat, tidak ada panah yang menempel di teks tautan, dan
+  titik tengah hanya satu per baris (byline). Kepala tabel dan label berhuruf biasa, satu langkah lebih kecil, tanpa
+  jarak antarhuruf.
+- Status tidak pernah disampaikan lewat warna saja, selalu ada kata di sebelahnya.
 
 ## Impor massal pengguna
 

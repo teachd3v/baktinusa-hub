@@ -32,7 +32,7 @@ export default async function RegionsPage() {
           </AddButton>
         </div>
         <p className="section-hint">
-          {regions.length} wilayah · {campuses.length} kampus · {terpakai} wilayah sedang dipakai. Wilayah yang masih
+          {regions.length} wilayah, {campuses.length} kampus, {terpakai} wilayah sedang dipakai. Wilayah yang masih
           dipakai tidak bisa dihapus, tapi namanya tetap bisa dirapikan kapan saja. Buka <b>Ubah</b> untuk mengelola
           kampusnya.
         </p>

@@ -39,7 +39,7 @@ export function PredicateSpread({ spread }: { spread: PredicateCount[] }) {
         {shown.map((p) => (
           <li key={keyOf(p.predicate)}>
             <i style={{ background: SPREAD_COLOR[keyOf(p.predicate)] }} aria-hidden="true" />
-            {labelOf(p.predicate)} — {p.count}
+            {labelOf(p.predicate)}: {p.count}
           </li>
         ))}
       </ul>
@@ -65,11 +65,11 @@ export function QuestionHighlights({ questions, count = 3 }: { questions: Questi
     <div className="grid-2">
       <div>
         <p className="label">Nilai tertinggi</p>
-        <BarRows rows={top.map((q) => ({ label: q.code, value: q.average, note: q.text }))} />
+        <BarRows rows={top.map((q) => ({ label: q.code, value: q.average, note: q.text, tone: "ink" as const }))} />
       </div>
       <div>
         <p className="label">Paling perlu perhatian</p>
-        <BarRows rows={bottom.map((q) => ({ label: q.code, value: q.average, note: q.text }))} />
+        <BarRows rows={bottom.map((q) => ({ label: q.code, value: q.average, note: q.text, tone: "accent" as const }))} />
       </div>
     </div>
   );

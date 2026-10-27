@@ -38,7 +38,7 @@ function arc(from: number, to: number) {
   return `M ${x1} ${y1} A ${outer} ${outer} 0 ${besar} 1 ${x2} ${y2} L ${x3} ${y3} A ${inner} ${inner} 0 ${besar} 0 ${x4} ${y4} Z`;
 }
 
-export function PredicateDonut({ spread, caption }: { spread: PredicateCount[]; caption?: string }) {
+export function PredicateDonut({ spread, center }: { spread: PredicateCount[]; center?: { value: string; label: string } }) {
   const shown = spread.filter((p) => p.count > 0);
   const total = shown.reduce((s, p) => s + p.count, 0);
   if (total === 0) return <p className="section-hint" style={{ margin: 0 }}>Belum ada data.</p>;
@@ -61,14 +61,14 @@ export function PredicateDonut({ spread, caption }: { spread: PredicateCount[]; 
             <path key={keyOf(p.predicate)} d={p.d} fill={COLOR[keyOf(p.predicate)]} />
           ),
         )}
-        <text x="60" y="56" textAnchor="middle" className="chart-donut-value">{total}</text>
-        <text x="60" y="72" textAnchor="middle" className="chart-donut-label">{caption ?? "awardee"}</text>
+        <text x="60" y="58" textAnchor="middle" className="chart-donut-value">{center?.value ?? total}</text>
+        <text x="60" y="74" textAnchor="middle" className="chart-donut-label">{center?.label ?? "awardee"}</text>
       </svg>
       <ul className="legend">
         {shown.map((p) => (
           <li key={keyOf(p.predicate)}>
             <i style={{ background: COLOR[keyOf(p.predicate)] }} aria-hidden="true" />
-            {labelOf(p.predicate)} — <b>{p.count}</b>
+            {labelOf(p.predicate)}: <b>{p.count}</b>
           </li>
         ))}
       </ul>
@@ -102,12 +102,13 @@ export function ColumnChart({ columns, max = 4, ticks = 4 }: { columns: Column[]
       <div className="chart-plot">
         {columns.map((c) => (
           <div key={c.label} className="chart-col">
-            <span className="chart-col-value">{c.value === null ? "—" : c.value.toFixed(2)}</span>
             <span className="chart-col-track">
               <span
                 className="chart-col-fill"
                 style={{ height: `${c.value === null ? 0 : Math.max(1, Math.min(100, (c.value / max) * 100))}%` }}
-              />
+              >
+                <span className="chart-col-value">{c.value === null ? "belum ada" : c.value.toFixed(2)}</span>
+              </span>
             </span>
             <span className="chart-col-label">
               {c.label}
@@ -126,7 +127,7 @@ export function ScoreCards({ cards }: { cards: { label: string; value: string; n
   return (
     <div className="score-grid">
       {cards.map((c) => (
-        <div key={c.label} className="score-card">
+        <div key={c.label} className="score-tile">
           <span className="score-label">{c.label}</span>
           <b className="score-value">{c.value}</b>
           {c.note && <span className="score-note">{c.note}</span>}

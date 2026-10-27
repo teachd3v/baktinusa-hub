@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Icon } from "@/components/Icon";
 import { requireUser } from "@/lib/auth";
 
 export const metadata: Metadata = { title: "Panduan Gaya" };
@@ -12,11 +13,12 @@ const COLORS: { group: string; items: { token: string; note: string }[] }[] = [
     items: [
       { token: "--ink", note: "Teks utama" },
       { token: "--ink-muted", note: "Teks pendukung" },
-      { token: "--ink-soft", note: "Placeholder, label tabel" },
       { token: "--surface", note: "Latar halaman" },
-      { token: "--surface-sunken", note: "Bidang di dalam kartu" },
-      { token: "--card", note: "Kartu" },
-      { token: "--line", note: "Garis pemisah" },
+      { token: "--surface-sunken", note: "Sumur di dalam kartu" },
+      { token: "--card", note: "Kartu: kertas yang sama dengan halaman, dibatasi garis" },
+      { token: "--line", note: "Garis pemisah dan batas kartu" },
+      { token: "--line-strong", note: "Garis yang lebih tegas" },
+      { token: "--field-edge", note: "Tepi isian dan kontrol, 3:1 ke atas" },
     ],
   },
   {
@@ -26,19 +28,8 @@ const COLORS: { group: string; items: { token: string; note: string }[] }[] = [
       { token: "--rail-raised", note: "Bidang di dalam rail" },
       { token: "--primary", note: "Aksi utama" },
       { token: "--primary-hover", note: "Aksi utama saat disentuh" },
-      { token: "--primary-ink", note: "Teks di atas latar merah muda" },
+      { token: "--primary-ink", note: "Teks tautan di atas kertas" },
       { token: "--primary-soft", note: "Penanda aktif, sorotan" },
-    ],
-  },
-  {
-    group: "Pastel kategori",
-    items: [
-      { token: "--pastel-blush", note: "Kartu ke-2" },
-      { token: "--pastel-peach", note: "Kartu ke-1" },
-      { token: "--pastel-lilac", note: "Kartu ke-3" },
-      { token: "--pastel-mint", note: "Kartu ke-4" },
-      { token: "--pastel-sky", note: "Kartu ke-5" },
-      { token: "--pastel-sand", note: "Netral" },
     ],
   },
   {
@@ -77,7 +68,7 @@ export default async function StyleGuidePage() {
       <section className="card">
         <h2 className="section-title">Warna</h2>
         <p className="section-hint">
-          Halaman dan komponen tidak menulis warna sendiri — semuanya memanggil token di bawah ini.
+          Halaman dan komponen tidak menulis warna sendiri: semuanya memanggil token di bawah ini.
         </p>
         {COLORS.map((group) => (
           <div key={group.group} style={{ marginBottom: "1.25rem" }}>
@@ -100,18 +91,18 @@ export default async function StyleGuidePage() {
       <div className="grid-2">
         <section className="card">
           <h2 className="section-title">Tipografi</h2>
-          <p className="section-hint">Satu keluarga huruf, dibedakan oleh ukuran dan ketebalan.</p>
+          <p className="section-hint">Satu keluarga huruf, Plus Jakarta Sans, dalam tiga bobot: 400, 600, dan 700.</p>
           <h1 style={{ margin: "0 0 0.25rem" }}>Judul halaman</h1>
-          <p className="section-hint">--text-2xl · 800</p>
+          <p className="section-hint">--text-2xl, bobot 700</p>
           <h2 className="section-title">Judul bagian</h2>
-          <p className="section-hint">--text-lg · 700</p>
+          <p className="section-hint">--text-lg, bobot 700</p>
           <p style={{ margin: "0 0 0.25rem" }}>Teks isi yang dibaca responden dan pengelola.</p>
-          <p className="section-hint" style={{ marginBottom: 0 }}>Teks pendukung · --text-sm · warna --ink-muted</p>
+          <p className="section-hint" style={{ marginBottom: 0 }}>Teks pendukung: --text-sm, warna --ink-muted</p>
         </section>
 
         <section className="card">
-          <h2 className="section-title">Sudut & bayangan</h2>
-          <p className="section-hint">Kartu memakai --radius-lg, rail --radius-xl, isian --radius-md.</p>
+          <h2 className="section-title">Sudut dan batas</h2>
+          <p className="section-hint">Kartu memakai --radius-lg, rail dan jendela --radius-xl, kontrol dan isian --radius-md, lencana --radius-sm. Kartu dibatasi garis, bukan bayangan.</p>
           <div style={{ display: "flex", flexWrap: "wrap", gap: "0.75rem" }}>
             {RADII.map((r) => (
               <div
@@ -122,8 +113,8 @@ export default async function StyleGuidePage() {
                   width: "6rem",
                   height: "4.5rem",
                   background: "var(--card)",
+                  border: "1px solid var(--line-strong)",
                   borderRadius: `var(${r})`,
-                  boxShadow: "var(--shadow-card)",
                   fontSize: "0.7rem",
                   fontWeight: 700,
                 }}
@@ -150,7 +141,7 @@ export default async function StyleGuidePage() {
 
         <section className="card">
           <h2 className="section-title">Status</h2>
-          <p className="section-hint">Warna selalu berpasangan dengan kata — tidak pernah warna saja.</p>
+          <p className="section-hint">Warna selalu berpasangan dengan kata, tidak pernah warna saja.</p>
           <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem" }}>
             <span className="pill pill-ok">terpenuhi</span>
             <span className="pill pill-info">sangat memuaskan</span>
@@ -160,18 +151,18 @@ export default async function StyleGuidePage() {
           </div>
           <p className="label" style={{ marginTop: "1rem" }}>Lencana</p>
           <div className="badges" style={{ marginTop: 0 }}>
-            <span className="badge">📍 Medan</span>
-            <span className="badge">🎓 Universitas Sumatera Utara</span>
+            <span className="badge"><Icon name="pin" className="badge-icon" />Medan</span>
+            <span className="badge"><Icon name="cap" className="badge-icon" />Universitas Sumatera Utara</span>
           </div>
         </section>
       </div>
 
       <section className="card">
-        <h2 className="section-title">Kartu skor</h2>
-        <p className="section-hint">Warna pastel berputar otomatis mengikuti urutan, jadi tidak perlu ditentukan tiap halaman.</p>
+        <h2 className="section-title">Ubin skor</h2>
+        <p className="section-hint">Sumur netral di dalam kartu: satu warna untuk semua, tanpa pastel bergantian.</p>
         <div className="score-grid">
-          {["Asesmen Awal", "Asesmen Tengah", "Peer Awardee", "Manajer Wilayah", "Jejaring Eksternal"].map((name, i) => (
-            <div key={name} className="score-card">
+          {["Asesmen Mandiri", "Peer Awardee", "Manajer Wilayah", "Evaluasi Publik", "Leadership Project"].map((name, i) => (
+            <div key={name} className="score-tile">
               <span className="score-label">{name}</span>
               <b className="score-value">{(3.1 + i * 0.12).toFixed(2)}</b>
               <span className="pill pill-info">Sangat Memuaskan</span>

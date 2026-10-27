@@ -1,9 +1,10 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Playfair_Display } from "next/font/google";
+import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
-const playfair = Playfair_Display({ subsets: ["latin"], variable: "--font-playfair" });
+// Satu keluarga, tiga bobot (400, 600, 700). Plus Jakarta Sans dirancang di Indonesia, dan dipakai untuk isi
+// maupun judul: layar kerja tidak butuh huruf tampilan. Playfair Display dulu ikut dimuat tapi tidak dipakai.
+const jakarta = Plus_Jakarta_Sans({ subsets: ["latin"], weight: ["400", "600", "700"], variable: "--font-jakarta", display: "swap" });
 
 export const metadata: Metadata = {
   title: { default: "BAKTINUSA HUB", template: "%s · BAKTINUSA HUB" },
@@ -11,12 +12,12 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#1b1f2e",
+  themeColor: "#1e1616",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="id" className={`${inter.variable} ${playfair.variable}`}>
+    <html lang="id" className={jakarta.variable}>
       <body>{children}</body>
     </html>
   );

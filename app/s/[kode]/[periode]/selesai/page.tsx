@@ -17,7 +17,7 @@ export default async function ThankYou({
 
   return (
     <main className="page">
-      <BrandHeader title="Terima kasih!" subtitle="Penilaian Anda sudah tersimpan" emoji="🎉" />
+      <BrandHeader title="Terima kasih!" subtitle="Penilaian Anda sudah tersimpan" icon="check" />
       <div className="app-screen">
         <div className="notice fade-in">
           <h2 className="section-title">Evaluasi berhasil dikirim</h2>

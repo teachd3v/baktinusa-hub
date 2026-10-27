@@ -92,7 +92,7 @@ export function LoginForm({ siteKey, action }: { siteKey: string; action: string
       {error && <p className="form-error" role="alert">{error}</p>}
 
       <p className="section-hint" style={{ margin: "1rem 0 0", textAlign: "center" }}>
-        Lupa kata sandi? Hubungi Admin program — Admin yang mengatur ulang kata sandi akun Anda.
+        Lupa kata sandi? Hubungi Admin program. Admin yang mengatur ulang kata sandi akun Anda.
       </p>
     </form>
   );

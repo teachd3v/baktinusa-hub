@@ -33,7 +33,7 @@ export default async function AwardeeHome() {
         <section className="card">
           <h2 className="section-title">Tautan penilaian Anda</h2>
           <p className="section-hint">
-            Bagikan ke jejaring Anda — rekan organisasi, pembina, tim, penerima manfaat — saat periode penilaian dibuka.
+            Bagikan ke jejaring Anda (rekan organisasi, pembina, tim, penerima manfaat) saat periode penilaian dibuka.
             Siapa pun yang memegang tautan ini bisa menilai Anda.
           </p>
           {shareUrl && <CopyField value={shareUrl} label="tautan-penilaian" />}

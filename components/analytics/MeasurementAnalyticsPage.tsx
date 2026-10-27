@@ -59,7 +59,7 @@ export async function MeasurementAnalyticsPage({
     return (
       <>
         <div className="page-head">
-          <Link href={`${basePath}?${q}`} className="back-link">← Kembali ke analitik</Link>
+          <Link href={`${basePath}?${q}`} className="back-link">Kembali ke analitik</Link>
           <h1>{kode.toUpperCase()}</h1>
           <p>{active.name}</p>
         </div>
@@ -106,10 +106,10 @@ export async function MeasurementAnalyticsPage({
   return (
     <>
       <div className="page-head">
-        <Link href={`${basePath}?${q}`} className="back-link">← Kembali ke analitik</Link>
+        <Link href={`${basePath}?${q}`} className="back-link">Kembali ke analitik</Link>
         <h1>{data.name}</h1>
         <p>
-          {data.code} · diisi oleh {isFilledBy(data.filledBy) ? FILLED_BY_LABEL[data.filledBy] : data.filledBy} · {active.name}
+          {data.code}, diisi oleh {isFilledBy(data.filledBy) ? FILLED_BY_LABEL[data.filledBy] : data.filledBy}, {active.name}
         </p>
       </div>
 
@@ -159,7 +159,7 @@ export async function MeasurementAnalyticsPage({
         <section className="card">
           <h2 className="section-title">Kuesionernya masih kosong</h2>
           <p className="section-hint" style={{ margin: 0 }}>
-            Jenis ini dijadwalkan siklus {active.name}, tetapi belum punya satu soal pun — jadi tidak akan
+            Jenis ini dijadwalkan siklus {active.name}, tetapi belum punya satu soal pun, jadi tidak akan
             pernah menghasilkan nilai. Isi soalnya dari menu Pengukuran.
           </p>
         </section>
@@ -200,7 +200,7 @@ export async function MeasurementAnalyticsPage({
 
           <section className="card">
             <h2 className="section-title">Soal terkuat &amp; terlemah</h2>
-            <p className="section-hint">Rata-rata lintas awardee — bahan untuk memilih fokus pembinaan.</p>
+            <p className="section-hint">Rata-rata lintas awardee, bahan untuk memilih fokus pembinaan.</p>
             <QuestionHighlights questions={data.questions} />
           </section>
 
@@ -216,7 +216,7 @@ export async function MeasurementAnalyticsPage({
         <h2 className="section-title">Awardee</h2>
         <p className="section-hint">
           {data.rows.length} awardee dalam lingkup dan saringan ini. Yang belum dinilai sengaja tetap
-          ditampilkan — kosongnya itu sendiri yang perlu ditindaklanjuti.
+          ditampilkan. Kosongnya itu sendiri yang perlu ditindaklanjuti.
         </p>
         {data.rows.length === 0 ? (
           <p className="section-hint" style={{ margin: 0 }}>Tidak ada awardee yang cocok dengan saringan.</p>

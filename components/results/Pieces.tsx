@@ -18,7 +18,7 @@ export function PredicateBadge({ predicate }: { predicate: Predicate | null }) {
 }
 
 // Satu batang skala 0–max. Nilai kosong ditampilkan sebagai jalur kosong, bukan batang nol.
-export function Bar({ value, max = 4, tone = "accent" }: { value: number | null; max?: number; tone?: "accent" | "muted" }) {
+export function Bar({ value, max = 4, tone = "accent" }: { value: number | null; max?: number; tone?: "accent" | "muted" | "ink" }) {
   const pct = value === null ? 0 : Math.max(0, Math.min(100, (value / max) * 100));
   return (
     <span className="bar" aria-hidden="true">
@@ -32,7 +32,7 @@ export function BarRows({
   max = 4,
   digits = 2,
 }: {
-  rows: { label: string; value: number | null; note?: string }[];
+  rows: { label: string; value: number | null; note?: string; tone?: "accent" | "muted" | "ink" }[];
   max?: number;
   digits?: number;
 }) {
@@ -44,7 +44,7 @@ export function BarRows({
             {r.label}
             {r.note && <small>{r.note}</small>}
           </span>
-          <Bar value={r.value} max={max} />
+          <Bar value={r.value} max={max} tone={r.tone ?? "ink"} />
           <b className="bar-value">{fmt(r.value, digits)}</b>
         </div>
       ))}
@@ -67,9 +67,9 @@ export function TypeCards({ types, hrefOf }: { types: TypeResult[]; hrefOf?: (t:
           </>
         );
         return href ? (
-          <Link key={t.code} className="score-card score-link" href={href}>{body}</Link>
+          <Link key={t.code} className="score-tile score-link" href={href}>{body}</Link>
         ) : (
-          <div key={t.code} className="score-card">{body}</div>
+          <div key={t.code} className="score-tile">{body}</div>
         );
       })}
     </div>
@@ -83,7 +83,7 @@ export function CategoryTable({ types }: { types: TypeResult[] }) {
   if (shown.length === 0) return <p className="section-hint" style={{ margin: 0 }}>Belum ada nilai untuk dibandingkan.</p>;
   return (
     <div className="table-wrap">
-      <table className="table">
+      <table className="table table-fit">
         <thead>
           <tr>
             <th scope="col">Sudut pandang</th>

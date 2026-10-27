@@ -101,7 +101,7 @@ export function PeopleTable({
                 <ul className="bulk-failures">
                   {state.failures.map((f, i) => (
                     <li key={i}>
-                      <b>{f.name}</b> — {f.message}
+                      <b>{f.name}</b>: {f.message}
                     </li>
                   ))}
                 </ul>

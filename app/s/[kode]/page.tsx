@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { AwardeeCard } from "@/components/AwardeeCard";
 import { BrandHeader } from "@/components/BrandHeader";
+import { Icon } from "@/components/Icon";
 import { listOpenForms } from "@/lib/survey";
 
 export const dynamic = "force-dynamic";
@@ -21,7 +22,7 @@ export default async function AwardeeLanding({ params }: { params: Promise<{ kod
         <AwardeeCard name={awardee.name} region={awardee.region} campus={awardee.campus} referralCode={awardee.referralCode} />
         {forms.length === 0 ? (
           <div className="notice fade-in">
-            <div className="notice-emoji" aria-hidden="true">🗓️</div>
+            <Icon name="calendar" className="notice-icon" />
             <h2 className="section-title">Belum ada survei yang dibuka</h2>
             <p className="section-hint">
               Saat ini tidak ada survei untuk {awardee.name}. Coba buka tautan ini lagi saat periode penilaian berjalan.

@@ -21,7 +21,7 @@ export function ResultDetail({ detail, showProgram = false }: { detail: AwardeeD
     <>
       <section className="card">
         <h2 className="section-title">IPK per sudut pandang</h2>
-        <p className="section-hint">Skala 0–4, rata-rata seluruh soal dalam tiap jenis pengukuran.</p>
+        <p className="section-hint">Skala 0 sampai 4, rata-rata seluruh soal dalam tiap jenis pengukuran.</p>
         <TypeCards types={detail.types} />
       </section>
 
@@ -34,7 +34,7 @@ export function ResultDetail({ detail, showProgram = false }: { detail: AwardeeD
       <section className="card">
         <h2 className="section-title">Kekuatan &amp; catatan</h2>
         <p className="section-hint">
-          {byOthers ? `Menurut ${byOthers.name.toLowerCase()} — ${byOthers.responses} responden.` : "Belum ada penilaian dari orang lain."}
+          {byOthers ? `Menurut ${byOthers.name.toLowerCase()}, ${byOthers.responses} responden.` : "Belum ada penilaian dari orang lain."}
         </p>
         <QuestionHighlights questions={questions} />
       </section>

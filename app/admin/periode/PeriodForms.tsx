@@ -266,7 +266,7 @@ export function PeriodRowForm({ period }: { period: PeriodAdminRow }) {
             {open ? "Tutup" : "Ubah"}
           </button>
           <Link href={`/admin/periode/${period.slug}`} className="btn-link" style={{ marginLeft: "0.5rem" }}>
-            Atur ↗
+            Atur
           </Link>
         </td>
       </tr>

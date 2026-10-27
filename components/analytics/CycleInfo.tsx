@@ -17,7 +17,7 @@ const STATUS: Record<PeriodItem["status"], { label: string; tone: string }> = {
 const number = new Intl.NumberFormat("id-ID");
 
 function schedule(p: PeriodItem): string {
-  if (p.opensAt && p.closesAt) return `${formatWibDate(p.opensAt)} – ${formatWibDate(p.closesAt)}`;
+  if (p.opensAt && p.closesAt) return `${formatWibDate(p.opensAt)} sampai ${formatWibDate(p.closesAt)}`;
   if (p.opensAt) return `dibuka ${formatWibDate(p.opensAt)}, tanpa batas tutup`;
   if (p.closesAt) return `ditutup ${formatWibDate(p.closesAt)}`;
   return "tanpa jadwal";

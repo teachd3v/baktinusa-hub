@@ -1,8 +1,10 @@
-export function BrandHeader({ title, subtitle, emoji }: { title: string; subtitle?: string; emoji?: string }) {
+import { Icon, type IconName } from "@/components/Icon";
+
+export function BrandHeader({ title, subtitle, icon }: { title: string; subtitle?: string; icon?: IconName }) {
   return (
     <header className="brand-header">
-      <div className="blob" aria-hidden={emoji ? true : undefined}>
-        {emoji ? <span style={{ fontSize: "1.9rem" }}>{emoji}</span> : <img src="/logo.webp" alt="BAKTI NUSA" />}
+      <div className="blob" aria-hidden={icon ? true : undefined}>
+        {icon ? <Icon name={icon} className="notice-icon" /> : <img src="/logo.webp" alt="BAKTI NUSA" />}
       </div>
       <div>
         <h1>{title}</h1>

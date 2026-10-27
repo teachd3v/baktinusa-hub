@@ -64,7 +64,7 @@ export async function AnalyticsOverview({
         <h1>Analitik</h1>
         <p>
           {active.name}
-          {rinci ? ` · ${rinci.name} (${rinci.code})` : ` · ${semuaJenis.length} jenis pengukuran`}
+          {rinci ? `, ${rinci.name} (${rinci.code})` : `, ${semuaJenis.length} jenis pengukuran`}
         </p>
       </div>
 
@@ -75,7 +75,7 @@ export async function AnalyticsOverview({
           { label: "Total Awardee", value: String(totals.awardees), note: active.batch },
           { label: "Total Wilayah", value: String(totals.regions), note: totals.regions === 1 ? "wilayah" : "wilayah terwakili" },
           { label: "Total Responden", value: String(totals.responses), note: rinci ? rinci.name : "semua pengukuran" },
-          { label: "Rata-rata IPK", value: fmt(totals.ipk), note: "skala 0–4" },
+          { label: "Rata-rata IPK", value: fmt(totals.ipk), note: "skala 0 sampai 4" },
         ]}
       />
 
@@ -97,7 +97,7 @@ export async function AnalyticsOverview({
           periode={active.slug}
         />
         <p className="section-hint" style={{ marginTop: "0.8rem", marginBottom: 0 }}>
-          Semua angka di bawah dihitung ulang dari data yang lolos saringan — bukan sekadar disembunyikan.
+          Semua angka di bawah dihitung ulang dari data yang lolos saringan, bukan sekadar disembunyikan.
         </p>
       </section>
 
@@ -151,14 +151,14 @@ function SemuaJenis({ types }: { types: Awaited<ReturnType<typeof analyticsDashb
         />
       </section>
 
-      <div className="grid-2">
+      <div className="chart-cards">
         {types.map((t) => (
           <section key={t.code} className="card">
             <h2 className="section-title">{t.name}</h2>
             <p className="section-hint">
-              {isFilledBy(t.filledBy) ? FILLED_BY_LABEL[t.filledBy] : t.filledBy} · {t.responses} respons · IPK {fmt(t.ipk)}
+              {isFilledBy(t.filledBy) ? FILLED_BY_LABEL[t.filledBy] : t.filledBy}, {t.responses} respons, IPK {fmt(t.ipk)}
             </p>
-            <PredicateDonut spread={t.spread} />
+            <PredicateDonut spread={t.spread} center={{ value: fmt(t.ipk), label: "IPK" }} />
           </section>
         ))}
       </div>
@@ -204,7 +204,7 @@ function SatuJenis({
         <section className="card">
           <h2 className="section-title">Sebaran predikat</h2>
           <p className="section-hint">{rinci.scored} dari {rinci.awardees} awardee sudah dinilai.</p>
-          <PredicateDonut spread={rinci.spread} />
+          <PredicateDonut spread={rinci.spread} center={{ value: fmt(rinci.ipk), label: "IPK" }} />
         </section>
 
         <section className="card">
@@ -220,7 +220,7 @@ function SatuJenis({
       <section className="card">
         <h2 className="section-title">Soal terkuat &amp; terlemah</h2>
         <p className="section-hint">
-          Rata-rata lintas awardee — inilah yang tidak bisa dibaca dari halaman Hasil, karena di sana
+          Rata-rata lintas awardee. Inilah yang tidak bisa dibaca dari halaman Hasil, karena di sana
           rincian per soal selalu milik satu orang.
         </p>
         <QuestionHighlights questions={rinci.questions} />

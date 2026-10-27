@@ -224,7 +224,7 @@ export function InstrumentImportPanel({
 
         {isLocked && (
           <p className="form-error" style={{ margin: "0.5rem 0 0" }}>
-            ⚠ <b>Pengukuran terkunci</b>: Jenis ini sudah memiliki {currentMeasurement.responses} jawaban responden.
+            <b>Pengukuran terkunci</b>: Jenis ini sudah memiliki {currentMeasurement.responses} jawaban responden.
             Penambahan soal baru dilarang, hanya perbaikan kalimat pernyataan untuk soal yang sudah ada yang diizinkan.
           </p>
         )}
@@ -260,7 +260,7 @@ export function InstrumentImportPanel({
         />
         <button
           type="button"
-          className="btn btn-small btn-inline"
+          className="btn btn-muted btn-small btn-inline"
           onClick={() => fileInput.current?.click()}
           disabled={stage.kind === "reading" || stage.kind === "applying"}
         >
@@ -281,7 +281,7 @@ export function InstrumentImportPanel({
             Pratinjau {stage.fileName} untuk <b>{stage.targetMeasurement.code} · {stage.targetMeasurement.name}</b>
           </p>
           <p className="section-hint">
-            {hitung(stage.plans, "buat")} akan dibuat · {hitung(stage.plans, "perbarui")} akan diperbarui ·{" "}
+            {hitung(stage.plans, "buat")} akan dibuat, {hitung(stage.plans, "perbarui")} akan diperbarui,{" "}
             {hitung(stage.plans, "tolak")} ditolak
           </p>
 

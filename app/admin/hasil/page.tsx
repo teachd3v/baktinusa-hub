@@ -75,7 +75,7 @@ export default async function AdminResults({ searchParams }: { searchParams: Pro
       <section className="card">
         <h2 className="section-title">Unduh data</h2>
         <p className="section-hint">
-          CSV siap dibuka di Excel. Data mentah memuat identitas responden — simpan seperti data pribadi lainnya.
+          CSV siap dibuka di Excel. Data mentah memuat identitas responden. Simpan seperti data pribadi lainnya.
         </p>
         <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
           <a className="btn btn-small btn-inline" href={`/api/ekspor/matriks?periode=${active.slug}`}>Matriks (CSV)</a>
@@ -88,7 +88,7 @@ export default async function AdminResults({ searchParams }: { searchParams: Pro
         <form method="get" className="copy-row" style={{ margin: "0 0 1rem" }}>
           <input type="hidden" name="periode" value={active.slug} />
           <input className="input" type="search" name="cari" defaultValue={cari ?? ""} placeholder="Cari nama, wilayah, atau kampus…" aria-label="Cari awardee" />
-          <button type="submit" className="btn btn-small">Cari</button>
+          <button type="submit" className="btn btn-muted btn-small">Cari</button>
         </form>
         <p className="section-hint">
           Menampilkan {shown.length} dari {results.length} awardee. Klik nama untuk rinciannya.

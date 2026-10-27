@@ -1,13 +1,14 @@
 import { env } from "cloudflare:workers";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Icon, type IconName } from "@/components/Icon";
 import { SurveyForm } from "@/components/SurveyForm";
 import { getCurrentUser } from "@/lib/auth";
 import { resolveInternalForm, type ResolveFailure } from "@/lib/data/evaluations";
 
-const REFUSED: Record<Exclude<ResolveFailure, "not_found" | "forbidden">, { emoji: string; title: string; text: string }> = {
-  closed: { emoji: "🔒", title: "Penilaian tidak dibuka", text: "Periode atau jendela pengisian penilaian ini sedang tidak dibuka." },
-  submitted: { emoji: "✅", title: "Sudah terkirim", text: "Anda sudah mengisi penilaian ini. Jawaban yang sudah dikirim tidak bisa diubah." },
+const REFUSED: Record<Exclude<ResolveFailure, "not_found" | "forbidden">, { icon: IconName; title: string; text: string }> = {
+  closed: { icon: "lock", title: "Penilaian tidak dibuka", text: "Periode atau jendela pengisian penilaian ini sedang tidak dibuka." },
+  submitted: { icon: "check", title: "Sudah terkirim", text: "Anda sudah mengisi penilaian ini. Jawaban yang sudah dikirim tidak bisa diubah." },
 };
 
 // Halaman form berakun, dipakai bersama route Awardee dan Manwil. Layout peran sudah memanggil requireUser();
@@ -24,7 +25,7 @@ export async function EvaluationPage({ params, returnTo }: { params: Promise<{ p
     const notice = REFUSED[resolved.reason as keyof typeof REFUSED];
     return (
       <div className="notice fade-in">
-        <div className="notice-emoji" aria-hidden="true">{notice.emoji}</div>
+        <Icon name={notice.icon} className="notice-icon" />
         <h2 className="section-title">{notice.title}</h2>
         <p className="section-hint">{notice.text}</p>
         <Link href={returnTo} className="btn btn-inline">Kembali ke daftar</Link>

@@ -52,10 +52,10 @@ export function NewMeasurementForm({ measurements }: { measurements: Measurement
           <select id="preset" className="select" value={pilihan} onChange={(e) => setPilihan(e.target.value)}>
             {PRESET_MEASUREMENTS.map((x) => (
               <option key={x.code} value={x.code} disabled={terpakai.has(x.code)}>
-                {x.name} ({x.code}){terpakai.has(x.code) ? " — sudah ada" : ""}
+                {x.name} ({x.code}){terpakai.has(x.code) ? " (sudah ada)" : ""}
               </option>
             ))}
-            <option value="lainnya">Lainnya — isi sendiri</option>
+            <option value="lainnya">Lainnya (isi sendiri)</option>
           </select>
         </div>
 
@@ -164,7 +164,7 @@ export function MeasurementSettings({ measurement }: { measurement: MeasurementR
       <hr className="modal-rule" />
       <p className="section-hint" style={{ margin: 0 }}>
         <Link href={`/admin/instrumen?pengukuran=${measurement.slug}`}>
-          Kelola {measurement.instruments} soal di menu Instrumen →
+          Kelola {measurement.instruments} soal di menu Instrumen
         </Link>
       </p>
 

@@ -32,11 +32,11 @@ export async function AwardeeDetailPage({
   return (
     <>
       <div className="page-head">
-        <Link href={basePath} className="back-link">← Kembali ke daftar</Link>
+        <Link href={basePath} className="back-link">Kembali ke daftar</Link>
         <h1>{detail.name}</h1>
         <p>
           {detail.region}
-          {detail.campus ? ` · ${detail.campus}` : ""} · {active.name}
+          {detail.campus ? `, ${detail.campus}` : ""}, {active.name}
         </p>
       </div>
 

@@ -38,7 +38,7 @@ export function DeadlineBanner({ closesAt }: { closesAt: string | null }) {
   const total = Math.max(0, Math.floor(msLeft / 1000));
   return (
     <div className="deadline" role="status">
-      <strong>⏳ Survei segera ditutup</strong>
+      <strong>Survei segera ditutup</strong>
       <span>Form ditutup otomatis pada {formatWib(closesAt)}.</span>
       <span className="countdown" aria-label="Sisa waktu">
         {pad(Math.floor(total / 3600))}:{pad(Math.floor((total % 3600) / 60))}:{pad(total % 60)}

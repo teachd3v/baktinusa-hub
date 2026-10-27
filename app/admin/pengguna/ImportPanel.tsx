@@ -137,8 +137,8 @@ export function ImportPanel() {
   return (
     <>
       <p className="section-hint">
-        Unduh template, isi di Excel, lalu unggah kembali. Berkasnya diperiksa dulu dan ditampilkan di sini —
-        tidak ada yang tersimpan sampai Anda menekan tombol terapkan.
+        Unduh template, isi di Excel, lalu unggah kembali. Berkasnya diperiksa dulu dan ditampilkan di sini.
+        Tidak ada yang tersimpan sampai Anda menekan tombol terapkan.
       </p>
 
       <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", alignItems: "center" }}>
@@ -155,7 +155,7 @@ export function ImportPanel() {
             if (file) void pilihBerkas(file);
           }}
         />
-        <button type="button" className="btn btn-small btn-inline" onClick={() => fileInput.current?.click()} disabled={stage.kind === "reading" || stage.kind === "applying"}>
+        <button type="button" className="btn btn-muted btn-small btn-inline" onClick={() => fileInput.current?.click()} disabled={stage.kind === "reading" || stage.kind === "applying"}>
           {stage.kind === "reading" ? "Membaca…" : "Pilih berkas"}
         </button>
       </div>
@@ -166,7 +166,7 @@ export function ImportPanel() {
         <div style={{ marginTop: "1rem" }}>
           <p className="label">Pratinjau {stage.fileName}</p>
           <p className="section-hint">
-            {hitung(stage.plans, "buat")} akan dibuat · {hitung(stage.plans, "perbarui")} akan diperbarui ·{" "}
+            {hitung(stage.plans, "buat")} akan dibuat, {hitung(stage.plans, "perbarui")} akan diperbarui,{" "}
             {hitung(stage.plans, "tolak")} ditolak
           </p>
 

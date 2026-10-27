@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
+import { Icon } from "@/components/Icon";
 import type { InstrumentListRow, MeasurementRow } from "@/lib/data/measurements";
 import { deleteManyInstrumentsAction, type BulkInstrumentState } from "./actions";
 import { InstrumentRowForm } from "./InstrumentForms";
@@ -298,7 +299,7 @@ export function InstrumentsManager({
                       fontWeight: 700,
                     }}
                   >
-                    {isOpen ? "▼" : "▶"}
+                    <Icon name="chevron" className={isOpen ? "chevron open" : "chevron"} />
                   </span>
                   <span style={{ fontWeight: 700, fontSize: "0.95rem" }}>
                     {m.name}
@@ -307,7 +308,7 @@ export function InstrumentsManager({
                     {m.code}
                   </code>
                   <span className="section-hint" style={{ margin: 0, fontSize: "0.8rem" }}>
-                    · {items.length} soal {m.responses > 0 ? `· ${m.responses} jawaban` : ""}
+                    {items.length} soal{m.responses > 0 ? `, ${m.responses} jawaban` : ""}
                   </span>
                   {m.responses > 0 && (
                     <span className="pill pill-warn" style={{ fontSize: "0.7rem", padding: "0.1rem 0.4rem" }}>
@@ -322,7 +323,7 @@ export function InstrumentsManager({
                     className="btn-link"
                     style={{ fontSize: "0.8rem" }}
                   >
-                    Buka tab ↗
+                    Buka tab
                   </Link>
                 </div>
               </div>

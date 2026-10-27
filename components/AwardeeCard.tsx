@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Icon } from "@/components/Icon";
 
 type Props = { name: string; region: string; campus: string | null; referralCode: string };
 
@@ -19,8 +20,8 @@ export function AwardeeCard({ name, region, campus, referralCode }: Props) {
       <div>
         <h2 className="awardee-name">{name}</h2>
         <div className="badges">
-          <span className="badge">📍 {region}</span>
-          {campus && <span className="badge">🎓 {campus}</span>}
+          <span className="badge"><Icon name="pin" className="badge-icon" />{region}</span>
+          {campus && <span className="badge"><Icon name="cap" className="badge-icon" />{campus}</span>}
         </div>
       </div>
     </section>

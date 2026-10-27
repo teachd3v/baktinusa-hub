@@ -97,11 +97,11 @@ function Fields({
           >
             <option value="">Buat data awardee baru</option>
             {freeAwardees.map((a) => (
-              <option key={a.id} value={a.id}>{a.name} — {a.region}</option>
+              <option key={a.id} value={a.id}>{a.name} ({a.region})</option>
             ))}
           </select>
           <p className="section-hint" style={{ margin: "0.3rem 0 0" }}>
-            {link ? "Memakai data awardee yang sudah ada — wilayah dan kode referalnya dipertahankan." : "Data awardee baru akan dibuat sekalian."}
+            {link ? "Memakai data awardee yang sudah ada. Wilayah dan kode referalnya dipertahankan." : "Data awardee baru akan dibuat sekalian."}
           </p>
         </div>
       )}
@@ -196,7 +196,7 @@ export function NewPersonForm({
     <form action={action}>
       <Fields regions={regions} campuses={campuses} freeAwardees={freeAwardees} role={role} setRole={setRole} />
       <p className="section-hint">
-        Kata sandi tampil apa adanya di sini supaya bisa disalin sekali — setelah tersimpan, yang tersisa hanya turunannya
+        Kata sandi tampil apa adanya di sini supaya bisa disalin sekali. Setelah tersimpan, yang tersisa hanya turunannya
         dan tidak ada yang bisa membacanya lagi.
       </p>
       <button type="submit" className="btn btn-inline" disabled={pending}>{pending ? "Menyimpan…" : "Tambah"}</button>

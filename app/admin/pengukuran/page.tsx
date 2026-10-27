@@ -18,7 +18,7 @@ export default async function MeasurementsPage() {
         <h1>Pengukuran</h1>
         <p>
           Jenis pengukuran: SA, PA, MA, dan seterusnya. Tiap jenis punya kodenya sendiri, daftar soalnya sendiri, dan
-          menyatakan siapa pengisinya — itu yang menentukan siapa bisa membuka formnya.
+          menyatakan siapa pengisinya. Itu yang menentukan siapa bisa membuka formnya.
         </p>
       </div>
 

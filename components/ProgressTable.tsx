@@ -7,7 +7,7 @@ function Status({ type }: { type: TypeProgress }) {
   return (
     <span className={`pill ${tone}`} title={label}>
       {type.count} / {type.target}
-      <span className="sr-only"> — {label}</span>
+      <span className="sr-only">, {label}</span>
     </span>
   );
 }
