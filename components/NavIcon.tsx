@@ -5,6 +5,8 @@ const PATHS: Record<string, string> = {
   beranda: "M4 10.5 12 4l8 6.5V19a1 1 0 0 1-1 1h-4v-5H9v5H5a1 1 0 0 1-1-1z",
   nilai: "M9 4h6v3H9zM6 7h12v13H6zM9 12h6M9 16h4",
   hasil: "M5 19V9M10 19V5M15 19v-7M20 19v-4M3 21h18",
+  // Sumbu dengan garis tren — sengaja beda dari batang "hasil", karena keduanya bisa muncul berdampingan.
+  analitik: "M4 4v16h16M8 15l3.5-4.5 3 2.5L19 7M15 7h4v4",
   periode: "M4 6h16v14H4zM4 10h16M8 3v4M16 3v4M9 15h2",
   awardee: "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM5 20a7 7 0 0 1 14 0",
   respons: "M5 5h14v10H9l-4 4z",
@@ -21,6 +23,7 @@ const PATHS: Record<string, string> = {
 const KEY_OF: [RegExp, string][] = [
   [/beranda|ringkasan/i, "beranda"],
   [/penilaian/i, "nilai"],
+  [/analitik/i, "analitik"],
   [/hasil/i, "hasil"],
   [/periode|siklus/i, "periode"],
   [/awardee/i, "awardee"],

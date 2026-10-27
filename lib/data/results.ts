@@ -1,11 +1,12 @@
-// Hasil penilaian: rata-rata per kategori, IPK, dan predikat.
+// Hasil penilaian: IPK per jenis pengukuran dan predikatnya.
 //
-// Kategori dibaca dari `instruments.category_id`, tidak pernah dari rentang nomor soal — inilah yang membuat
-// bug Q19 di dashboard lama (Q1–Q19 & Q20–Q39) tidak mungkin terulang.
+// IPK = rata-rata polos semua soal dalam satu jenis. Dulu ia rata-rata berbobot antar sub pengukuran,
+// tapi sub pengukuran dibuang di migrasi 0009 — lihat catatan di berkas migrasi itu soal pergeseran
+// angkanya. Soal tidak lagi punya kategori, jadi tidak ada lagi rentang nomor soal maupun bobot.
 //
-// IPK = rata-rata berbobot dari rata-rata tiap kategori, bukan rata-rata datar seluruh jawaban. Dashboard lama
-// memakai rumus yang sama; keduanya identik selama tiap responden mengisi semua soal, dan validasi form
-// memang mewajibkan itu.
+// Sudut pandang penilai dikenali dari `measurements.filled_by`, BUKAN dari kode jenisnya. Kode dikarang
+// Admin dan sudah pernah berubah seluruhnya (migrasi 0008 membuang 'external', 'self_initial', dan
+// kawan-kawan), sementara filled_by adalah rute yang menentukan siapa boleh mengisi.
 
 import { awardeeFilter, type Scope } from "./scope.ts";
 
@@ -17,6 +18,12 @@ export const PREDICATE_LABEL: Record<Predicate, string> = {
   memuaskan: "Memuaskan",
   perlu_peningkatan: "Perlu Peningkatan",
 };
+
+// IPK selalu dinyatakan pada skala 0–4, berapa pun `scale_max` tiap soal: ambang predikat di bawah
+// berasal dari rubrik BA15 yang memakai skala itu. Soal berskala lain dinormalkan dulu saat dijumlahkan
+// (lihat AGGREGATE), jadi jenis pengukuran berskala 1–10 tidak lagi membuat semua orang "Cumlaude".
+// Untuk soal berskala 4 — bawaan dan yang dipakai BA15 — normalisasinya tidak mengubah angka apa pun.
+export const IPK_SCALE = 4;
 
 // Ambang dari program BA15 (skala 0–4), dipertahankan apa adanya supaya predikat di hub sama dengan rapor lama.
 export function predicateOf(ipk: number | null): Predicate | null {
@@ -54,11 +61,14 @@ export const ipkOf = (average: number | null): number | null => (average === nul
 
 type AggRow = { awardee_id: number; type_id: number; average: number; responses: number };
 
+// `instruments` ikut di-join hanya untuk scale_max: skor dinormalkan ke skala IPK sebelum dirata-ratakan,
+// supaya satu jenis boleh memuat soal berskala berbeda tanpa membuat rata-ratanya tak bermakna.
 const AGGREGATE = `SELECT r.awardee_id, r.measurement_id AS type_id,
-    AVG(s.score) AS average, COUNT(DISTINCT r.id) AS responses
+    AVG(s.score * CAST(${IPK_SCALE} AS REAL) / i.scale_max) AS average, COUNT(DISTINCT r.id) AS responses
   FROM response_scores s
   JOIN responses r ON r.id = s.response_id
   JOIN awardees a ON a.id = r.awardee_id
+  JOIN instruments i ON i.id = s.instrument_id
   WHERE r.period_id = ?`;
 
 function buildTypes(
@@ -158,7 +168,7 @@ export async function awardeeDetail(
     db
       .prepare(
         `SELECT rt.code AS type_code, i.code, i.statement AS text,
-            AVG(s.score) AS average, COUNT(*) AS responses
+            AVG(s.score * CAST(${IPK_SCALE} AS REAL) / i.scale_max) AS average, COUNT(*) AS responses
          FROM response_scores s
          JOIN responses r ON r.id = s.response_id
          JOIN instruments i ON i.id = s.instrument_id
@@ -258,3 +268,15 @@ export const ipkAcross = (types: TypeResult[]): number | null => {
   const ipks = types.map((t) => t.ipk).filter((n): n is number => n !== null);
   return ipks.length === 0 ? null : round(ipks.reduce((s, n) => s + n, 0) / ipks.length);
 };
+
+// ---------- sudut pandang publik ----------
+
+// Jenis yang diisi lewat tautan referal. Dicari dari filled_by, BUKAN dari kode: dashboard dulu mencari
+// kode 'external' yang sudah tidak ada sejak migrasi 0008, jadi panel predikatnya diam-diam selalu kosong.
+//
+// Yang dikembalikan daftar, bukan satu yang dipilih sembarang: satu siklus boleh membuka beberapa jenis
+// publik sekaligus — Siklus Tengah BA16 menjalankan PU dan LA berdampingan.
+export const publicTypesOf = (types: TypeResult[]): TypeResult[] => types.filter((t) => t.audience === "public");
+
+// Predikat gabungan seluruh penilaian publik, tiap jenis berbobot sama — aturan yang sama dengan ipkAcross.
+export const publicPredicateOf = (types: TypeResult[]): Predicate | null => predicateOf(ipkAcross(publicTypesOf(types)));

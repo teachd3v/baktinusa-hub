@@ -3,7 +3,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { listAllInstruments, listMeasurements } from "@/lib/data/measurements";
-import { InstrumentRowForm, NewInstrumentForm } from "./InstrumentForms";
+import { NewInstrumentForm } from "./InstrumentForms";
+import { InstrumentImportPanel } from "./InstrumentImportPanel";
+import { InstrumentsManager } from "./InstrumentsManager";
 
 export const metadata: Metadata = { title: "Instrumen" };
 
@@ -42,30 +44,16 @@ export default async function InstrumentsPage({
           <button type="submit" className="btn btn-small">Cari</button>
         </form>
 
-        <p className="section-hint">{instruments.length} soal ditampilkan</p>
-
-        <div className="table-wrap">
-          <table className="table">
-            <thead>
-              <tr>
-                <th scope="col">Kode</th>
-                <th scope="col">Pernyataan</th>
-                <th scope="col" className="num">Skala</th>
-                <th scope="col" className="num">Jawaban</th>
-                <th scope="col"><span className="sr-only">Aksi</span></th>
-              </tr>
-            </thead>
-            <tbody>
-              {instruments.map((i) => (
-                <InstrumentRowForm key={i.id} instrument={i} />
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <InstrumentsManager instruments={instruments} measurements={measurements} activeSlug={pengukuran} />
       </section>
 
       <section className="card">
-        <h2 className="section-title">Tambah soal</h2>
+        <h2 className="section-title">Impor massal soal</h2>
+        <InstrumentImportPanel measurements={measurements} activeSlug={pengukuran} />
+      </section>
+
+      <section className="card">
+        <h2 className="section-title">Tambah soal manual</h2>
         <p className="section-hint">
           Soal menempel ke satu jenis pengukuran, dan ikut terpakai oleh semua siklus yang menjalankannya.
         </p>

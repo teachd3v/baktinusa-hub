@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { MatrixTable, NoPeriod, PeriodTabs, PredicateSpread, RegionBars } from "@/components/results/Panels";
 import { fmt } from "@/components/results/Pieces";
 import { requireUser } from "@/lib/auth";
-import { ipkAcross, predicateSpread, resultsForScope, summarizeRegions } from "@/lib/data/results";
+import { ipkAcross, predicateSpread, publicTypesOf, resultsForScope, summarizeRegions } from "@/lib/data/results";
 import { scopeFor } from "@/lib/data/scope";
 import { pickPeriod } from "@/lib/periode";
 
@@ -26,6 +26,9 @@ export default async function ManwilResults({ searchParams }: { searchParams: Pr
   const types = results[0]?.types.map((t) => ({ code: t.code, name: t.name })) ?? [];
   const region = summarizeRegions(results)[0];
   const scored = results.filter((r) => r.types.some((t) => t.ipk !== null));
+  // Jenis publik siklus ini — yang dulu dicari dengan kode mati 'external'. Bisa lebih dari satu:
+  // Siklus Tengah menjalankan PU dan LA berdampingan, jadi masing-masing dapat sebarannya sendiri.
+  const publicTypes = publicTypesOf(results[0]?.types ?? []);
 
   return (
     <>
@@ -46,8 +49,19 @@ export default async function ManwilResults({ searchParams }: { searchParams: Pr
             <li><b>{region?.responses ?? 0}</b> respons masuk</li>
           </ul>
           <div style={{ marginTop: "1rem" }}>
-            <p className="label">Sebaran predikat penilaian 360°</p>
-            <PredicateSpread spread={predicateSpread(results, "external")} />
+            {publicTypes.length === 0 ? (
+              <>
+                <p className="label">Sebaran predikat penilaian 360°</p>
+                <p className="section-hint" style={{ margin: 0 }}>Siklus ini belum menjalankan jenis pengukuran publik.</p>
+              </>
+            ) : (
+              publicTypes.map((t) => (
+                <div key={t.code} style={{ marginBottom: "1rem" }}>
+                  <p className="label">Sebaran predikat {t.name}</p>
+                  <PredicateSpread spread={predicateSpread(results, t.code)} />
+                </div>
+              ))
+            )}
           </div>
         </section>
 
@@ -68,7 +82,7 @@ export default async function ManwilResults({ searchParams }: { searchParams: Pr
       <section className="card">
         <h2 className="section-title">Awardee binaan</h2>
         <p className="section-hint">
-          Klik nama untuk melihat rincian per kategori dan masukan yang masuk.{" "}
+          Klik nama untuk melihat rincian per soal dan masukan yang masuk.{" "}
           <a href={`/api/ekspor/matriks?periode=${active.slug}`}>Unduh matriks wilayah (CSV)</a>.
         </p>
         <MatrixTable results={results} typeCodes={types} hrefBase="/manwil/hasil" />

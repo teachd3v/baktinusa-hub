@@ -10,10 +10,18 @@ import { resultsForScope, type AwardeeResult } from "./results.ts";
 // tetap aman karena setiap sel dikutip.
 const SEP = ";";
 
+// Sel yang diawali = + - @ (atau tab/CR) dibaca Excel dan Sheets sebagai FORMULA, bukan teks. Kolom
+// identitas dan saran di ekspor data mentah diisi responden publik tanpa akun, jadi tanpa pagar ini
+// seorang responden bisa menitipkan formula yang berjalan di komputer Admin saat berkasnya dibuka.
+// Mengutip selnya tidak menolong — Excel tetap mengevaluasi isi di dalam kutip; yang menolong adalah
+// awalan kutip tunggal, penanda "baca sebagai teks". Hanya berlaku untuk teks: angka dari aplikasi
+// sendiri (skor, IPK, id) dibiarkan apa adanya supaya nilai negatif tidak ikut dipagari.
+const FORMULA_LEAD = /^[=+\-@\t\r]/;
+
 export function toCsv(rows: (string | number | null)[][]): string {
   const cell = (v: string | number | null) => {
     if (v === null) return "";
-    const text = String(v);
+    const text = typeof v === "number" ? String(v) : FORMULA_LEAD.test(v) ? `'${v}` : v;
     return /["\n\r;]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
   };
   // BOM supaya Excel mengenali UTF-8 dan nama dengan tanda baca tidak berubah.

@@ -12,6 +12,8 @@ import {
   setPeriodStatus,
   updateMeasurementConfig,
   updatePeriod,
+  deletePeriod,
+  updatePeriodDetails,
   type Fail,
   type PeriodMeasurementConfig,
 } from "@/lib/data/admin-periods";
@@ -124,3 +126,50 @@ export async function toggleMatrixCellAction(_previous: ActionState, form: FormD
   refresh();
   return { ok: true, message: form.get("on") === "1" ? "Dipasang." : "Dilepas." };
 }
+
+export async function updatePeriodDetailsAction(
+  _previous: ActionState,
+  form: FormData,
+): Promise<ActionState> {
+  const admin = await requireUser("admin");
+  const periodId = Number(form.get("periodId"));
+  if (!periodId) return gagal("ID siklus tidak dikenal.");
+
+  const cycle = field(form, "cycle");
+  if (!isCycle(cycle)) return gagal("Pilih siklusnya: Awal, Tengah, atau Akhir.");
+
+  const status = field(form, "status");
+  if (!isStatus(status)) return gagal("Status siklus tidak dikenal.");
+
+  const window = windowOf(form);
+  if (!window.ok) return window;
+
+  const result = await updatePeriodDetails(env.DB, admin, periodId, {
+    name: field(form, "name"),
+    batch: field(form, "batch"),
+    cycle,
+    slug: field(form, "slug"),
+    status,
+    opensAt: window.opensAt,
+    closesAt: window.closesAt,
+  });
+
+  if (!result.ok) return result;
+  refresh();
+  return { ok: true, message: "Data siklus berhasil diperbarui." };
+}
+
+export async function deletePeriodAction(
+  _previous: ActionState,
+  form: FormData,
+): Promise<ActionState> {
+  const admin = await requireUser("admin");
+  const periodId = Number(form.get("periodId"));
+  if (!periodId) return gagal("ID siklus tidak dikenal.");
+
+  const result = await deletePeriod(env.DB, admin, periodId);
+  if (!result.ok) return result;
+  refresh();
+  return { ok: true, message: "Siklus berhasil dihapus." };
+}
+

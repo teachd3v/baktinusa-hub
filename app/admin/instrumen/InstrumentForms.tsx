@@ -68,7 +68,17 @@ export function NewInstrumentForm({ measurements }: { measurements: MeasurementO
   );
 }
 
-export function InstrumentRowForm({ instrument }: { instrument: InstrumentListRow }) {
+export function InstrumentRowForm({
+  instrument,
+  selected,
+  onToggle,
+  showMeasurementColumn = false,
+}: {
+  instrument: InstrumentListRow;
+  selected?: boolean;
+  onToggle?: (id: number) => void;
+  showMeasurementColumn?: boolean;
+}) {
   const [state, action, pending] = useActionState<MeasurementState, FormData>(updateInstrumentAction, null);
   const [hapus, hapusAction, menghapus] = useActionState<MeasurementState, FormData>(deleteInstrumentAction, null);
   const [open, setOpen] = useState(false);
@@ -77,11 +87,21 @@ export function InstrumentRowForm({ instrument }: { instrument: InstrumentListRo
   return (
     <>
       <tr>
+        <td style={{ width: "2.5rem", textAlign: "center" }}>
+          <input
+            type="checkbox"
+            checked={selected ?? false}
+            disabled={instrument.answers > 0}
+            title={instrument.answers > 0 ? "Soal sudah memiliki jawaban, tidak bisa dihapus" : "Pilih untuk dihapus"}
+            aria-label={`Pilih soal ${instrument.code}`}
+            onChange={() => onToggle?.(instrument.id)}
+          />
+        </td>
         <td><code style={{ fontSize: "0.78rem" }}>{instrument.code}</code></td>
         <td>
           {instrument.statement}
         </td>
-        <td>{instrument.measurementName}</td>
+        {showMeasurementColumn && <td>{instrument.measurementName}</td>}
         <td className="num">{instrument.scaleMax}</td>
         <td className="num">
           {instrument.answers > 0 ? <span className="pill pill-info">{instrument.answers}</span> : <span className="section-hint">0</span>}
@@ -91,7 +111,7 @@ export function InstrumentRowForm({ instrument }: { instrument: InstrumentListRo
 
       {open && (
         <tr>
-          <td colSpan={6} style={{ background: "var(--surface-sunken)" }}>
+          <td colSpan={showMeasurementColumn ? 7 : 6} style={{ background: "var(--surface-sunken)" }}>
             <form action={action}>
               <input type="hidden" name="measurementId" value={instrument.measurementId} />
               <input type="hidden" name="instrumentId" value={instrument.id} />

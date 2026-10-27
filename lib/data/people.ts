@@ -235,10 +235,26 @@ export async function updatePerson(
   const invalid = validate(input, { needPassword: false });
   if (invalid) return invalid;
 
+  // Angkatan, wilayah, dan jumlah penilaian awardee-nya ikut dibaca: form ini juga menulis ke tabel
+  // awardees, jadi pagar yang berlaku di halaman "data awardee" harus berlaku di sini juga.
   const before = await db
-    .prepare("SELECT name, role, awardee_id, status FROM users WHERE id = ?")
+    .prepare(
+      `SELECT u.name, u.role, u.awardee_id, u.status,
+          a.batch AS awardee_batch, a.region_id AS awardee_region_id,
+          (SELECT COUNT(*) FROM responses r WHERE r.awardee_id = u.awardee_id) AS awardee_responses
+       FROM users u LEFT JOIN awardees a ON a.id = u.awardee_id
+       WHERE u.id = ?`,
+    )
     .bind(userId)
-    .first<{ name: string; role: Role; awardee_id: number | null; status: string }>();
+    .first<{
+      name: string;
+      role: Role;
+      awardee_id: number | null;
+      status: string;
+      awardee_batch: string | null;
+      awardee_region_id: number | null;
+      awardee_responses: number;
+    }>();
   if (!before) return { ok: false, message: "Akun tidak ditemukan." };
   if (before.role !== input.role) return { ok: false, message: "Peran akun tidak bisa diubah. Hapus akunnya lalu buat yang baru." };
   if (userId === actor.id && input.status === "disabled") return { ok: false, message: "Anda tidak bisa menonaktifkan akun sendiri." };
@@ -271,13 +287,31 @@ export async function updatePerson(
         .first<{ ada: number }>();
       if (taken) return { ok: false, message: `Kode referal "${code}" sudah dipakai awardee lain.` };
     }
+
+    // Angkatan menentukan siklus mana yang berlaku baginya; memindahkannya menggantungkan penilaian yang
+    // sudah masuk. Pagar yang sama dipegang updateAwardeeData() — data yang sama tidak boleh punya dua aturan.
+    const batch = clean(input.batch)?.toUpperCase() ?? null;
+    if (batch && batch !== before.awardee_batch && before.awardee_responses > 0) {
+      return {
+        ok: false,
+        message: `Awardee ini sudah punya ${before.awardee_responses} penilaian, jadi angkatannya tidak bisa dipindah.`,
+      };
+    }
+
+    // Kampus milik wilayah lain tidak boleh menempel, walau dropdown-nya sudah disaring di browser.
+    // Yang diperiksa wilayah EFEKTIF: regionId kosong berarti "biarkan wilayah yang lama".
+    if (input.campusId !== null) {
+      const salah = await campusBelongsTo(db, input.campusId, input.regionId ?? before.awardee_region_id);
+      if (salah) return salah;
+    }
+
     statements.push(
       db
         .prepare(
           `UPDATE awardees SET name = ?, campus_id = ?, region_id = COALESCE(?, region_id), batch = COALESCE(?, batch),
               referral_code = COALESCE(?, referral_code) WHERE id = ?`,
         )
-        .bind(name, input.campusId, input.regionId, clean(input.batch)?.toUpperCase() ?? null, code || null, before.awardee_id),
+        .bind(name, input.campusId, input.regionId, batch, code || null, before.awardee_id),
     );
   }
 
@@ -369,6 +403,12 @@ export async function updateAwardeeData(
     .bind(code, awardeeId)
     .first<{ ada: number }>();
   if (taken) return { ok: false, message: `Kode referal "${code}" sudah dipakai awardee lain.` };
+
+  // Wilayah di sini wajib terisi (dicek di atas), jadi kampusnya diperiksa langsung terhadap wilayah itu.
+  if (input.campusId !== null) {
+    const salah = await campusBelongsTo(db, input.campusId, input.regionId);
+    if (salah) return salah;
+  }
 
   await db
     .prepare("UPDATE awardees SET name = ?, region_id = ?, batch = ?, campus_id = ?, referral_code = ? WHERE id = ?")

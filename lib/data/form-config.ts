@@ -10,7 +10,10 @@ export type FormConfig = {
   title: string;
   subtitle?: string;
   identity: { name: string; city: string };
-  relation: { question: string; options: { label: string; type: string; detail?: string }[] };
+  // `type` dulu memilih respondent_type dari pilihan hubungan. Sejak migrasi 0008 jenis penilaian
+  // ditentukan oleh form yang dibuka, bukan oleh jawaban pengisi, jadi tidak ada lagi yang membacanya —
+  // opsional supaya konfigurasi baru tidak perlu mengarang nilai yang tak berarti.
+  relation: { question: string; options: { label: string; type?: string; detail?: string }[] };
   knownDuration?: { question: string; options: string[] };
   feedback: FeedbackItem[];
   scale: ScaleOption[];

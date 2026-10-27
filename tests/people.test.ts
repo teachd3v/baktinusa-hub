@@ -117,12 +117,64 @@ describe("membuat orang", () => {
 
 describe("mengubah orang", () => {
   test("nama & wilayah ikut berubah di data awardee-nya", async () => {
+    // Kampusnya ikut berpindah ke milik wilayah baru (USU di Medan): kampus tidak bisa ikut melintas wilayah.
     const hasil = await updatePerson(db, admin, 3, {
-      ...input({ name: "Ayu Lestari", loginId: "BA00126", email: "ayu@contoh.id", regionId: 2, batch: "BA15", referralCode: "AAAA0001", password: "" }),
+      ...input({ name: "Ayu Lestari", loginId: "BA00126", email: "ayu@contoh.id", regionId: 2, campusId: 3, batch: "BA15", referralCode: "AAAA0001", password: "" }),
     });
     assert.ok(hasil.ok, "message" in hasil ? hasil.message : "");
     const ayu = (await listPeople(db, admin)).find((p) => p.userId === 3)!;
-    assert.deepEqual({ nama: ayu.name, wilayah: ayu.region }, { nama: "Ayu Lestari", wilayah: "Medan" });
+    assert.deepEqual(
+      { nama: ayu.name, wilayah: ayu.region, kampus: ayu.campus },
+      { nama: "Ayu Lestari", wilayah: "Medan", kampus: "USU" },
+    );
+  });
+
+  test("kampus milik wilayah lain ditolak, lewat pintu mana pun", async () => {
+    // Unpad (id 2) milik Bandung; Citra (awardee 3) ada di Medan. Dropdown di browser memang disaring,
+    // tapi kiriman form bisa dikarang — jadi yang menolak harus lapisan data.
+    const lewatAkun = await updatePerson(
+      db,
+      admin,
+      4,
+      input({ loginId: "BA00426", email: "citra@contoh.id", password: "", regionId: 2, campusId: 2, batch: "BA15", referralCode: "BBBB0003" }),
+    );
+    assert.match((lewatAkun as { message: string }).message, /milik wilayah Bandung/);
+
+    const lewatDataAwardee = await updateAwardeeData(db, admin, 2, {
+      name: "Budi",
+      batch: "BA15",
+      regionId: 2,
+      campusId: 2,
+      referralCode: "AAAA0002",
+    });
+    assert.match((lewatDataAwardee as { message: string }).message, /milik wilayah Bandung/);
+
+    // Kampus yang memang milik wilayahnya tetap lolos.
+    assert.ok(
+      (await updateAwardeeData(db, admin, 2, { name: "Budi", batch: "BA15", regionId: 1, campusId: 2, referralCode: "AAAA0002" })).ok,
+    );
+  });
+
+  test("angkatan tidak bisa dipindah dari form akun kalau penilaiannya sudah masuk", async () => {
+    // Ayu punya 2 penilaian di fixture. updateAwardeeData() sudah menolak ini; form akun harus sama.
+    const pindah = await updatePerson(
+      db,
+      admin,
+      3,
+      input({ loginId: "BA00126", email: "ayu@contoh.id", password: "", regionId: 1, campusId: 1, batch: "BA16", referralCode: "AAAA0001" }),
+    );
+    assert.match((pindah as { message: string }).message, /angkatannya tidak bisa dipindah/);
+    assert.equal((await db.prepare("SELECT batch FROM awardees WHERE id = 1").first<{ batch: string }>())!.batch, "BA15");
+
+    // Angkatan yang sama (tidak dipindah) tetap boleh disimpan.
+    assert.ok(
+      (await updatePerson(
+        db,
+        admin,
+        3,
+        input({ loginId: "BA00126", email: "ayu@contoh.id", password: "", regionId: 1, campusId: 1, batch: "BA15", referralCode: "AAAA0001" }),
+      )).ok,
+    );
   });
 
   test("peran tidak bisa ditukar, dan Admin tidak bisa mematikan dirinya sendiri", async () => {

@@ -335,6 +335,181 @@ export async function createPeriod(db: D1Database, actor: SessionUser, input: Ne
   return { ok: true, id: created!.id };
 }
 
+// ---------- daftar siklus lengkap untuk Admin ----------
+
+export type PeriodAdminRow = PeriodItem & {
+  measurementsCount: number;
+  instrumentsCount: number;
+  responsesCount: number;
+};
+
+export async function listPeriodsForAdmin(db: D1Database, actor: SessionUser): Promise<PeriodAdminRow[]> {
+  assertAdmin(actor);
+  const { results } = await db
+    .prepare(
+      `SELECT p.id, p.slug, p.name, p.batch, p.cycle, p.status, p.opens_at AS opensAt, p.closes_at AS closesAt,
+          (SELECT COUNT(*) FROM period_measurements pm WHERE pm.period_id = p.id) AS measurementsCount,
+          (SELECT COUNT(*) FROM instruments i JOIN period_measurements pm ON pm.measurement_id = i.measurement_id
+           WHERE pm.period_id = p.id) AS instrumentsCount,
+          (SELECT COUNT(*) FROM responses r WHERE r.period_id = p.id) AS responsesCount
+       FROM periods p
+       ORDER BY p.batch DESC, CASE p.cycle WHEN 'awal' THEN 0 WHEN 'tengah' THEN 1 ELSE 2 END`,
+    )
+    .all<PeriodAdminRow>();
+  return results;
+}
+
+// ---------- update lengkap & hapus siklus ----------
+
+export type UpdatePeriodInput = {
+  name: string;
+  batch: string;
+  cycle: Cycle;
+  slug: string;
+  status: PeriodStatus;
+  opensAt: string | null;
+  closesAt: string | null;
+};
+
+export async function updatePeriodDetails(
+  db: D1Database,
+  actor: SessionUser,
+  periodId: number,
+  input: UpdatePeriodInput,
+): Promise<Ok | Fail> {
+  assertAdmin(actor);
+
+  const row = await db
+    .prepare(
+      `SELECT p.id, p.name, p.batch, p.cycle, p.slug, p.status, p.opens_at, p.closes_at,
+          (SELECT COUNT(*) FROM period_measurements pm WHERE pm.period_id = p.id) AS measurements,
+          (SELECT COUNT(*) FROM instruments i JOIN period_measurements pm ON pm.measurement_id = i.measurement_id
+             WHERE pm.period_id = p.id) AS instruments,
+          (SELECT COUNT(*) FROM responses r WHERE r.period_id = p.id) AS responses
+       FROM periods p WHERE p.id = ?`,
+    )
+    .bind(periodId)
+    .first<{
+      id: number;
+      name: string;
+      batch: string;
+      cycle: Cycle;
+      slug: string;
+      status: PeriodStatus;
+      opens_at: string | null;
+      closes_at: string | null;
+      measurements: number;
+      instruments: number;
+      responses: number;
+    }>();
+
+  if (!row) return { ok: false, message: "Siklus tidak ditemukan." };
+
+  const name = input.name.trim();
+  if (!name || name.length > 120) return { ok: false, message: "Nama siklus wajib diisi (maksimal 120 karakter)." };
+
+  const batch = input.batch.trim().toUpperCase();
+  if (!batch || batch.length > 20) return { ok: false, message: "Angkatan wajib diisi, misalnya BA16." };
+
+  if (!isCycle(input.cycle)) return { ok: false, message: "Pilih siklusnya: Awal, Tengah, atau Akhir." };
+
+  const slug = input.slug.trim().toLowerCase();
+  if (!SLUG_PATTERN.test(slug) || slug.length > 60) {
+    return { ok: false, message: "Slug hanya boleh huruf kecil, angka, dan tanda hubung." };
+  }
+
+  if (!isStatus(input.status)) return { ok: false, message: "Status siklus tidak dikenal." };
+  if (!orderOk(input.opensAt, input.closesAt)) return { ok: false, message: "Waktu tutup harus setelah waktu buka." };
+
+  // Guard: jika sudah ada respons, angkatan & siklus dikunci
+  if (row.responses > 0 && (batch !== row.batch || input.cycle !== row.cycle)) {
+    return {
+      ok: false,
+      message: `Siklus ini sudah memiliki ${row.responses} respons jawaban. Angkatan dan siklus terkunci demi integritas data.`,
+    };
+  }
+
+  // Guard: status
+  if (input.status === "open" && row.measurements === 0) {
+    return { ok: false, message: "Tentukan dulu jenis pengukuran yang dijalankan siklus ini sebelum membukanya." };
+  }
+  if (input.status === "open" && row.instruments === 0) {
+    return { ok: false, message: "Jenis pengukuran yang dipilih belum punya satu pun soal, jadi belum bisa dibuka." };
+  }
+  if (input.status === "draft" && row.responses > 0) {
+    return { ok: false, message: "Siklus ini sudah menerima jawaban, jadi tidak bisa dikembalikan ke draft. Tutup saja." };
+  }
+
+  // Cek bentrok (batch, cycle)
+  if (batch !== row.batch || input.cycle !== row.cycle) {
+    const kembar = await db
+      .prepare("SELECT 1 AS ada FROM periods WHERE batch = ? AND cycle = ? AND id <> ?")
+      .bind(batch, input.cycle, periodId)
+      .first<{ ada: number }>();
+    if (kembar) return { ok: false, message: `${batch} sudah punya ${CYCLE_LABEL[input.cycle]}.` };
+  }
+
+  // Cek bentrok slug
+  if (slug !== row.slug) {
+    const taken = await db
+      .prepare("SELECT 1 AS ada FROM periods WHERE slug = ? AND id <> ?")
+      .bind(slug, periodId)
+      .first<{ ada: number }>();
+    if (taken) return { ok: false, message: `Slug "${slug}" sudah dipakai siklus lain.` };
+  }
+
+  await db
+    .prepare("UPDATE periods SET name = ?, batch = ?, cycle = ?, slug = ?, status = ?, opens_at = ?, closes_at = ? WHERE id = ?")
+    .bind(name, batch, input.cycle, slug, input.status, input.opensAt, input.closesAt, periodId)
+    .run();
+
+  await writeAudit(db, actor, {
+    action: "siklus.ubah",
+    entity: "period",
+    entityId: periodId,
+    summary: `Data siklus "${name}" (${batch} · ${CYCLE_LABEL[input.cycle]}) diperbarui`,
+  });
+
+  return { ok: true };
+}
+
+export async function deletePeriod(
+  db: D1Database,
+  actor: SessionUser,
+  periodId: number,
+): Promise<Ok | Fail> {
+  assertAdmin(actor);
+
+  const row = await db
+    .prepare(
+      `SELECT p.id, p.name, p.batch, p.cycle,
+          (SELECT COUNT(*) FROM responses r WHERE r.period_id = p.id) AS responses
+       FROM periods p WHERE p.id = ?`,
+    )
+    .bind(periodId)
+    .first<{ id: number; name: string; batch: string; cycle: Cycle; responses: number }>();
+
+  if (!row) return { ok: false, message: "Siklus tidak ditemukan." };
+  if (row.responses > 0) {
+    return {
+      ok: false,
+      message: `Siklus "${row.name}" sudah memiliki ${row.responses} respons jawaban, jadi tidak bisa dihapus.`,
+    };
+  }
+
+  await db.prepare("DELETE FROM period_measurements WHERE period_id = ?").bind(periodId).run();
+  await db.prepare("DELETE FROM periods WHERE id = ?").bind(periodId).run();
+
+  await writeAudit(db, actor, {
+    action: "siklus.hapus",
+    entity: "period",
+    entityId: periodId,
+    summary: `Siklus "${row.name}" (${row.batch} · ${CYCLE_LABEL[row.cycle]}) dihapus`,
+  });
+
+  return { ok: true };
+}
+
 // ---------- peta jenis × siklus ----------
 
 export type MatrixCell = {

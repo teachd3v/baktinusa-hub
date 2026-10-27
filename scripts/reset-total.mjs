@@ -3,11 +3,11 @@
 // Pakai:  node scripts/reset-total.mjs [--remote] [--id ADM001] [--email admin@contoh.id]
 //
 // Yang TIDAK dihapus:
-//   respondent_types — 10 jenis responden. Tidak dibuat oleh migrasi mana pun (asalnya seed-ba15),
-//                      jadi kalau ikut terhapus, aplikasinya tidak bisa dipakai sampai di-seed ulang.
-//   d1_migrations    — catatan migrasi. Menghapusnya membuat wrangler menjalankan ulang semuanya.
+//   d1_migrations — catatan migrasi. Menghapusnya membuat wrangler menjalankan ulang semuanya.
 //
-// Semua sisanya hilang: akun, sesi, awardee, wilayah, pengukuran, soal, periode, jawaban, skor, jejak.
+// Semua sisanya hilang: akun, sesi, awardee, wilayah, kampus, jenis pengukuran, soal, siklus, jawaban,
+// skor, jejak. Setelah reset, isi lagi dengan `npm run seed:ba15` atau lewat konsol Admin — tidak ada
+// data master yang dibuat migrasi, termasuk jenis pengukuran.
 //
 // Kata sandinya tidak pernah lewat argumen (argumen terbaca di daftar proses) dan tidak pernah
 // dicetak untuk --remote. Isi lewat env: set SUPERADMIN_PASSWORD=... lalu jalankan.
@@ -61,16 +61,20 @@ const ORDER = [
   "response_feedback",
   "response_scores",
   "responses",
-  "period_respondent_types",
+  "period_measurements",
+  "period_respondent_types", // nama lama, dibuang migrasi 0008 — dilewati sendiri kalau tidak ada
   "periods",
   "instruments",
-  "instrument_categories",
+  "instrument_categories", // dibuang migrasi 0009
   "measurements",
   "sessions",
   "login_tokens",
   "audit_log",
   "users",
   "awardees",
+  // campuses lahir di migrasi 0007 dan sempat tidak ada di daftar ini, sehingga DELETE FROM regions
+  // selalu kandas: awardees sudah hilang, tapi campuses masih memegang region_id.
+  "campuses",
   "regions",
 ];
 
@@ -95,7 +99,7 @@ const now = new Date().toISOString();
 const statements = [
   ...dihapus.map((t) => `DELETE FROM ${t};`),
   // Nomor id mulai dari 1 lagi, supaya basis data barunya benar-benar terlihat baru.
-  ada.has("sqlite_sequence") ? `DELETE FROM sqlite_sequence WHERE name NOT IN ('respondent_types');` : null,
+  ada.has("sqlite_sequence") ? `DELETE FROM sqlite_sequence;` : null,
   `INSERT INTO users (email, name, role, region_id, awardee_id, status, login_id, password_hash, password_updated_at)
    VALUES (${q(EMAIL)}, ${q(NAME)}, 'admin', NULL, NULL, 'active', ${q(LOGIN_ID)}, ${q(hash)}, ${q(now)});`,
 ].filter(Boolean);

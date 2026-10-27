@@ -3,10 +3,14 @@ import assert from "node:assert/strict";
 import { beforeEach, describe, test } from "node:test";
 import {
   addMeasurementToPeriod,
+  createPeriod,
+  deletePeriod,
   getPeriodDetail,
+  listPeriodsForAdmin,
   removeMeasurementFromPeriod,
   setPeriodStatus,
   updatePeriod,
+  updatePeriodDetails,
   updateMeasurementConfig,
 } from "../lib/data/admin-periods.ts";
 import { listAudit } from "../lib/data/audit.ts";
@@ -144,5 +148,91 @@ describe("jenis pengukuran dalam siklus", () => {
     assert.equal(d.responses, 5);
     assert.deepEqual(d.measurements.map((m) => m.code), ["MA", "PA", "PU", "SA"]);
     assert.deepEqual(d.available, []);
+  });
+});
+
+describe("CRUD siklus penilaian", () => {
+  test("listPeriodsForAdmin menghitung pengukuran dan respons per siklus", async () => {
+    const list = await listPeriodsForAdmin(db, admin);
+    assert.ok(list.length >= 1);
+    const p1 = list.find((p) => p.id === 1);
+    assert.ok(p1);
+    assert.equal(p1.measurementsCount, 4);
+    assert.equal(p1.responsesCount, 5);
+  });
+
+  test("membuat siklus baru lalu menghapusnya jika belum ada respons", async () => {
+    const created = await createPeriod(db, admin, {
+      batch: "BA16",
+      cycle: "awal",
+      name: "BA16 Siklus Awal",
+      slug: "ba16-awal",
+    });
+    assert.ok(created.ok);
+    const newId = (created as { id: number }).id;
+
+    // Menghapus siklus yang baru dibuat (0 respons)
+    const del = await deletePeriod(db, admin, newId);
+    assert.ok(del.ok);
+
+    const sisa = await db.prepare("SELECT 1 FROM periods WHERE id = ?").bind(newId).first();
+    assert.equal(sisa, null);
+
+    const audits = await listAudit(db, admin);
+    const audit = audits.find((a) => a.action === "siklus.hapus");
+    assert.ok(audit);
+    assert.match(audit.summary, /BA16 Siklus Awal/);
+  });
+
+  test("siklus yang sudah memiliki respons ditolak untuk dihapus", async () => {
+    // Siklus 1 punya 5 respons di fixture
+    const del = await deletePeriod(db, admin, 1);
+    assert.equal(del.ok, false);
+    assert.match((del as { message: string }).message, /sudah memiliki 5 respons jawaban/);
+
+    const tetapAda = await db.prepare("SELECT 1 FROM periods WHERE id = 1").first();
+    assert.ok(tetapAda);
+  });
+
+  test("updatePeriodDetails memperbarui rincian dan menegakkan guard integritas", async () => {
+    // Buat siklus kosong tanpa respons
+    const created = await createPeriod(db, admin, {
+      batch: "BA16",
+      cycle: "akhir",
+      name: "BA16 Siklus Akhir",
+      slug: "ba16-akhir",
+    });
+    assert.ok(created.ok);
+    const id = (created as { id: number }).id;
+
+    // Update seluruh data (karena responses == 0, angkatan & cycle bebas diubah)
+    const upd = await updatePeriodDetails(db, admin, id, {
+      name: "BA16 Siklus Evaluasi Akhir",
+      batch: "BA16",
+      cycle: "tengah",
+      slug: "ba16-tengah-baru",
+      status: "draft",
+      opensAt: "2026-11-01T00:00:00.000Z",
+      closesAt: "2026-11-30T23:59:00.000Z",
+    });
+    assert.ok(upd.ok);
+
+    const updated = await db.prepare("SELECT name, slug, cycle FROM periods WHERE id = ?").bind(id).first<{ name: string; slug: string; cycle: string }>();
+    assert.equal(updated?.name, "BA16 Siklus Evaluasi Akhir");
+    assert.equal(updated?.slug, "ba16-tengah-baru");
+    assert.equal(updated?.cycle, "tengah");
+
+    // Sekarang coba update siklus 1 (yang punya 5 respons): mengubah batch atau cycle ditolak!
+    const updLocked = await updatePeriodDetails(db, admin, 1, {
+      name: "Ganti Nama",
+      batch: "BA99",
+      cycle: "awal",
+      slug: "uji",
+      status: "closed",
+      opensAt: null,
+      closesAt: null,
+    });
+    assert.equal(updLocked.ok, false);
+    assert.match((updLocked as { message: string }).message, /Angkatan dan siklus terkunci/);
   });
 });

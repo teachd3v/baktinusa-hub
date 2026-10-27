@@ -1,4 +1,4 @@
-// Hitungan hasil: rata-rata kategori, IPK, predikat, dan lingkup siapa boleh melihat angka siapa.
+// Hitungan hasil: IPK per jenis pengukuran, predikat, dan lingkup siapa boleh melihat angka siapa.
 import assert from "node:assert/strict";
 import { beforeEach, describe, test } from "node:test";
 import {
@@ -6,6 +6,8 @@ import {
   ipkOf,
   predicateOf,
   predicateSpread,
+  publicPredicateOf,
+  publicTypesOf,
   resultsForScope,
   summarizeRegions,
 } from "../lib/data/results.ts";
@@ -120,6 +122,64 @@ describe("ringkasan dashboard", () => {
       [["cumlaude", 1], ["sangat_memuaskan", 2], ["memuaskan", 0], ["perlu_peningkatan", 1], [null, 0]],
     );
     // Belum ada asesmen mandiri sama sekali: keempatnya masuk kolom "belum dinilai", bukan dianggap nol.
-    assert.equal(predicateSpread(results, "self_initial").find((p) => p.predicate === null)!.count, 4);
+    // Kodenya 'SA' — kode asesmen mandiri yang sebenarnya. Dulu baris ini memakai 'self_initial', kode
+    // yang dibuang migrasi 0008, jadi ia lulus karena tidak cocok apa pun, bukan karena datanya kosong.
+    assert.equal(predicateSpread(results, "SA").find((p) => p.predicate === null)!.count, 4);
+  });
+});
+
+describe("sudut pandang publik dikenali dari filled_by", () => {
+  test("jenis publik dikumpulkan dari filled_by, bukan kode yang ditebak", async () => {
+    const results = await resultsForScope(db, scopeFor(admin), 1);
+    const types = results[0]!.types;
+    // Fixture menjalankan PU (public), SA (self), PA (peer), MA (manwil).
+    assert.deepEqual(publicTypesOf(types).map((t) => t.code), ["PU"]);
+
+    // Inilah yang dulu bocor: dashboard mencari kode 'external' dan selalu dapat kosong.
+    assert.equal(types.find((t) => t.code === "external"), undefined);
+
+    // Tanpa jenis publik sama sekali: daftar kosong dan predikat null, bukan jenis lain yang kebetulan terambil.
+    const tanpaPublik = types.filter((t) => t.audience !== "public");
+    assert.deepEqual(publicTypesOf(tanpaPublik), []);
+    assert.equal(publicPredicateOf(tanpaPublik), null);
+  });
+
+  test("predikat publik menggabungkan beberapa jenis publik dengan bobot sama", async () => {
+    // Siklus nyata (BA16 Tengah) membuka PU dan LA berdampingan. LA dibuka di sini dengan satu respons
+    // bernilai 4: predikat gabungan Ayu jadi rata-rata PU 3.00 dan LA 4.00 → 3.50, bukan salah satunya.
+    await db.exec(`
+      INSERT INTO measurements (id, code, slug, name, filled_by) VALUES (5, 'LA', 'la', 'Leadership Assessment', 'public');
+      INSERT INTO period_measurements (period_id, measurement_id, target_rule, target_min) VALUES (1, 5, 'fixed', 1);
+      INSERT INTO instruments (id, measurement_id, code, statement, order_index) VALUES (9, 5, 'Q1', 'Dampak nyata', 1);
+      INSERT INTO responses (id, period_id, awardee_id, measurement_id, source) VALUES (10, 1, 1, 5, 'app');
+      INSERT INTO response_scores (response_id, instrument_id, score) VALUES (10, 9, 4);
+    `);
+    const results = await resultsForScope(db, scopeFor(admin), 1);
+    const ayuResult = results.find((r) => r.name === "Ayu")!;
+    assert.deepEqual(publicTypesOf(ayuResult.types).map((t) => t.code), ["PU", "LA"]);
+    // 3.50 jatuh tepat di bawah ambang cumlaude (3.51), jadi gabungannya "sangat memuaskan" —
+    // bukan "cumlaude" yang akan keluar kalau hanya LA yang dibaca.
+    assert.equal(publicPredicateOf(ayuResult.types), "sangat_memuaskan");
+  });
+});
+
+describe("IPK dinormalkan ke skala 0–4", () => {
+  test("soal berskala 8 dengan skor dua kali lipat memberi IPK yang sama", async () => {
+    // Sebelum normalisasi, skor 6 & 4 pada skala 8 ikut dirata-ratakan apa adanya dan IPK Ayu
+    // melonjak dari 3.00 ke 4.25 — di atas batas skalanya sendiri.
+    await db.exec(`
+      UPDATE instruments SET scale_max = 8 WHERE id = 2;
+      UPDATE response_scores SET score = 6 WHERE response_id = 1 AND instrument_id = 2;
+      UPDATE response_scores SET score = 4 WHERE response_id = 2 AND instrument_id = 2;
+    `);
+    const results = await resultsForScope(db, scopeFor(admin), 1);
+    const ayuResult = results.find((r) => r.name === "Ayu")!;
+    assert.equal(ayuResult.types.find((t) => t.code === "PU")!.ipk, 3);
+    assert.equal(ayuResult.types.find((t) => t.code === "PU")!.predicate, "sangat_memuaskan");
+
+    // Rincian per soal ikut dinormalkan, supaya batang 0–4 di layar tidak meluber.
+    const detail = (await awardeeDetail(db, scopeFor(admin), 1, "AAAA0001"))!;
+    const q2 = detail.questions["PU"]!.find((q) => q.code === "Q2")!;
+    assert.equal(q2.average, 2.5); // (6/8 + 4/8) / 2 * 4
   });
 });

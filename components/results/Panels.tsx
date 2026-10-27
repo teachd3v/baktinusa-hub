@@ -3,6 +3,7 @@ import { BarRows, fmt, PredicateBadge } from "@/components/results/Pieces";
 import type { PeriodItem } from "@/lib/data/periods";
 import {
   PREDICATE_LABEL,
+  publicPredicateOf,
   type AwardeeResult,
   type FeedbackEntry,
   type Predicate,
@@ -130,7 +131,8 @@ export function MatrixTable({
         </thead>
         <tbody>
           {results.map((a) => {
-            const external = a.types.find((t) => t.code === "external");
+            // Gabungan semua jenis publik siklus ini, bukan satu kode yang ditebak.
+            const publicPredicate = publicPredicateOf(a.types);
             return (
               <tr key={a.id}>
                 <td>
@@ -145,7 +147,7 @@ export function MatrixTable({
                 {typeCodes.map((t) => (
                   <td key={t.code} className="num">{fmt(a.types.find((x) => x.code === t.code)?.ipk ?? null)}</td>
                 ))}
-                <td><PredicateBadge predicate={external?.predicate ?? null} /></td>
+                <td><PredicateBadge predicate={publicPredicate} /></td>
               </tr>
             );
           })}

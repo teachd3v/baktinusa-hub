@@ -1,11 +1,34 @@
-// Seed data master BA15: wilayah, awardee, tipe responden, dan kuesioner.
+// Seed data master BA15: wilayah, kampus, awardee, jenis pengukuran, siklus, dan kuesioner.
 //
-// Idempoten dan aman dijalankan ulang ke production: semua baris di-upsert, tidak ada yang dihapus. Periode baru dibuat
-// sebagai draft tanpa tanggal; status & tanggal periode yang sudah diatur Admin tidak ditimpa.
+// Idempoten dan aman dijalankan ulang ke production: semua baris di-upsert, tidak ada yang dihapus.
+// Siklus baru dibuat sebagai draft tanpa tanggal; status & tanggal siklus yang sudah diatur Admin tidak ditimpa.
 //
-// Kuesioner dibaca dari seed/kuesioner-ba15.csv dan konfigurasi form dari seed/formulir-ba15.json (keduanya di repo).
-// Daftar awardee dibaca dari luar repo karena berisi data pribadi — default-nya CSV app leadpro-survey lama,
-// bisa diganti lewat BA15_AWARDEE_CSV.
+// ---------- bentuk datanya sejak migrasi 0008 & 0009 ----------
+//
+// Dulu: dua periode (pengukuran & leadpro), masing-masing memegang satu kuesioner, dengan sepuluh
+// `respondent_types` yang menempel lewat `period_respondent_types`. Soal punya dua versi teks dalam satu
+// baris — "Saya …" untuk asesmen mandiri dan "Yang bersangkutan …" untuk penilai lain — dan dikelompokkan
+// ke `instrument_categories`.
+//
+// Sekarang: **jenis pengukuran** memegang kuesionernya sendiri dan menyatakan siapa pengisinya lewat
+// `filled_by`; **siklus** (Awal/Tengah/Akhir) tinggal jadwal milik satu angkatan yang menjalankan beberapa
+// jenis sekaligus lewat `period_measurements`. Kategori tidak ada lagi, dan tiap soal hanya punya satu
+// `statement`. Karena itu kuesioner 50 soal yang dulu dipakai bersama kini disalin menjadi empat set —
+// satu per jenis yang memakainya — dan SA mengambil versi "Saya …" sementara sisanya versi "Yang bersangkutan …".
+//
+// Sepuluh tipe responden lama menyusut jadi lima jenis di sini (UA/Uji Akhir tidak punya kuesioner BA15,
+// jadi dibuat dari konsol kalau memang dipakai):
+//
+//   self_initial + self_mid                                  → SA, dijalankan di DUA siklus berbeda
+//   peer                                                     → PA
+//   manwil                                                   → MA
+//   external                                                 → PU
+//   lp_team + lp_beneficiary + lp_volunteer + lp_partner + lp_other → LA
+//     (bedanya pindah ke isian hubungan pada formnya, tersimpan apa adanya di responses.relation)
+//
+// Kuesioner dibaca dari seed/kuesioner-ba15.csv dan konfigurasi form dari seed/formulir-ba15.json (keduanya
+// di repo). Daftar awardee dibaca dari luar repo karena berisi data pribadi — default-nya CSV app
+// leadpro-survey lama, bisa diganti lewat BA15_AWARDEE_CSV.
 //
 // Pakai:  npm run seed:ba15
 //         npx wrangler d1 execute baktinusa-hub-db --remote --file .seed/ba15.sql
@@ -17,32 +40,40 @@ import Papa from "papaparse";
 const BATCH = "BA15";
 const AWARDEE_CSV = process.env.BA15_AWARDEE_CSV ?? "../leadpro-survey/survey-app/src/data/daftar_awardee.csv";
 
-const RESPONDENT_TYPES = [
-  { id: 1, code: "self_initial", name: "Asesmen Awal", audience: "self" },
-  { id: 2, code: "self_mid", name: "Asesmen Tengah", audience: "self" },
-  { id: 3, code: "peer", name: "Peer Awardee", audience: "internal" },
-  { id: 4, code: "manwil", name: "Manajer Wilayah", audience: "internal" },
-  { id: 5, code: "external", name: "Jejaring Eksternal", audience: "external" },
-  { id: 6, code: "lp_team", name: "Tim Leadership Project", audience: "external" },
-  { id: 7, code: "lp_beneficiary", name: "Penerima Manfaat Leadership Project", audience: "external" },
-  { id: 8, code: "lp_volunteer", name: "Volunteer Leadership Project", audience: "external" },
-  { id: 9, code: "lp_partner", name: "Mitra", audience: "external" },
-  { id: 10, code: "lp_other", name: "Lainnya", audience: "external" },
+// Jenis pengukuran BA15. `soal` menunjuk kolom `periode` di kuesioner-ba15.csv, `teks` memilih versi mana
+// yang dipakai, dan `form` menunjuk kunci di formulir-ba15.json.
+//
+// Id-nya dipegang tetap supaya seed ulang menimpa baris yang sama, dan dipakai juga sebagai blok id soal
+// (jenis 1 → soal 1001.., jenis 2 → 2001.., dan seterusnya) sehingga nomor soal tidak pernah bertabrakan
+// antar jenis walau kodenya sama-sama Q1.
+const MEASUREMENTS = [
+  { id: 1, code: "SA", slug: "ba15-asesmen-mandiri", name: "Asesmen Mandiri", filledBy: "self", soal: "pengukuran", teks: "diri", form: "pengukuran" },
+  { id: 2, code: "PA", slug: "ba15-peer-awardee", name: "Peer Awardee", filledBy: "peer", soal: "pengukuran", teks: "publik", form: "pengukuran" },
+  { id: 3, code: "MA", slug: "ba15-manajer-wilayah", name: "Manajer Wilayah", filledBy: "manwil", soal: "pengukuran", teks: "publik", form: "pengukuran" },
+  { id: 4, code: "PU", slug: "ba15-evaluasi-publik", name: "Evaluasi Publik", filledBy: "public", soal: "pengukuran", teks: "publik", form: "pengukuran" },
+  { id: 5, code: "LA", slug: "ba15-leadership-project", name: "Leadership Project", filledBy: "public", soal: "leadpro", teks: "publik", form: "leadpro" },
 ];
 
-const PERIODS = [
-  { id: 1, key: "pengukuran", slug: "ba15-pengukuran", name: "BA15 · Pengukuran Awardee", kind: "assessment" },
-  { id: 2, key: "leadpro", slug: "ba15-leadpro", name: "BA15 · Leadership Project", kind: "leadpro" },
+// Siklus BA15. Dulu "Asesmen Awal" dan "Asesmen Tengah" adalah dua tipe responden dalam satu periode;
+// sekarang keduanya jadi SIKLUS, dan jenis yang sama (SA) dijalankan dua kali.
+const CYCLES = [
+  { id: 1, cycle: "awal", slug: "ba15-awal", name: "BA15 · Siklus Awal" },
+  { id: 2, cycle: "tengah", slug: "ba15-tengah", name: "BA15 · Siklus Tengah" },
 ];
 
-// Target minimal dari dashboard lama: Manwil 1, Peer = awardee lain se-wilayah, Eksternal 20.
-const PERIOD_TYPES = [
-  { period: 1, type: 1, rule: "fixed", min: 1 },
-  { period: 1, type: 2, rule: "fixed", min: 1 },
-  { period: 1, type: 3, rule: "region_peers", min: null },
-  { period: 1, type: 4, rule: "fixed", min: 1 },
-  { period: 1, type: 5, rule: "fixed", min: 20 },
-  ...[6, 7, 8, 9, 10].map((type) => ({ period: 2, type, rule: "none", min: null })),
+// Jenis mana dijalankan siklus mana, beserta target minimalnya. Target diambil apa adanya dari dashboard
+// lama: Manwil 1, Peer = semua awardee lain se-wilayah, Eksternal 20, asesmen mandiri 1, Leadpro tanpa target.
+//
+// PEMBACAAN JADWAL BA15 ADA DI SINI. Model lama tidak menyimpan siklus, jadi pemetaan di bawah adalah
+// tafsir yang paling dekat: putaran 360° (PA/MA/PU) dan Leadership Project berjalan bersama asesmen tengah.
+// Kalau BA15 sebenarnya berjalan lain, cukup ubah tabel ini — tidak ada tempat lain yang perlu disentuh.
+const SCHEDULE = [
+  { cycle: 1, code: "SA", rule: "fixed", min: 1 },
+  { cycle: 2, code: "SA", rule: "fixed", min: 1 },
+  { cycle: 2, code: "PA", rule: "region_peers", min: null },
+  { cycle: 2, code: "MA", rule: "fixed", min: 1 },
+  { cycle: 2, code: "PU", rule: "fixed", min: 20 },
+  { cycle: 2, code: "LA", rule: "none", min: null },
 ];
 
 const clean = (s) => String(s ?? "").trim();
@@ -117,63 +148,78 @@ const awardees = ordered.map((r, i) => [
 
 const questionnaire = await readCsv("seed/kuesioner-ba15.csv");
 const formConfigs = JSON.parse(await readFile("seed/formulir-ba15.json", "utf8"));
-for (const period of PERIODS) {
-  const config = formConfigs[period.key];
-  if (!config) throw new Error(`seed/formulir-ba15.json tidak punya konfigurasi "${period.key}"`);
-  for (const option of config.relation.options) {
-    const allowed = PERIOD_TYPES.some((x) => x.period === period.id && RESPONDENT_TYPES.find((t) => t.id === x.type).code === option.type);
-    if (!allowed) throw new Error(`Pilihan hubungan "${option.label}" memakai tipe "${option.type}" yang tidak dibuka di periode ${period.slug}`);
+
+const byCode = new Map(MEASUREMENTS.map((m) => [m.code, m]));
+for (const row of SCHEDULE) {
+  if (!byCode.has(row.code)) throw new Error(`Jadwal menunjuk jenis "${row.code}" yang tidak ada di MEASUREMENTS`);
+  if (!CYCLES.some((c) => c.id === row.cycle)) throw new Error(`Jadwal menunjuk siklus #${row.cycle} yang tidak ada di CYCLES`);
+  if ((row.rule === "fixed") !== (row.min !== null)) {
+    throw new Error(`Jenis "${row.code}" di siklus #${row.cycle}: target "fixed" wajib punya angka, aturan lain wajib tanpa angka`);
   }
 }
-const categories = [];
+
 const instruments = [];
-for (const period of PERIODS) {
-  for (const row of questionnaire.filter((r) => clean(r.periode) === period.key)) {
-    let category = categories.find((c) => c.periodId === period.id && c.name === clean(row.kategori));
-    if (!category) {
-      category = { id: categories.length + 1, periodId: period.id, name: clean(row.kategori), order: categories.filter((c) => c.periodId === period.id).length + 1 };
-      categories.push(category);
-    }
+for (const m of MEASUREMENTS) {
+  if (!formConfigs[m.form]) throw new Error(`seed/formulir-ba15.json tidak punya konfigurasi "${m.form}" untuk jenis ${m.code}`);
+  const rows = questionnaire.filter((r) => clean(r.periode) === m.soal);
+  if (rows.length === 0) throw new Error(`seed/kuesioner-ba15.csv tidak punya soal "${m.soal}" untuk jenis ${m.code}`);
+
+  for (const row of rows) {
     const code = clean(row.kode);
-    instruments.push([instruments.length + 1, period.id, category.id, code, clean(row.teks_diri) || null, clean(row.teks_publik), 4, Number.parseInt(code.replace(/^Q/, ""), 10)]);
+    const statement = m.teks === "diri" ? clean(row.teks_diri) : clean(row.teks_publik);
+    if (!statement) {
+      throw new Error(`Soal ${m.soal}/${code} tidak punya teks_${m.teks === "diri" ? "diri" : "publik"} — dibutuhkan jenis ${m.code}`);
+    }
+    const order = Number.parseInt(code.replace(/^Q/, ""), 10);
+    // Blok id per jenis: soal yang sama di jenis berbeda tetap baris sendiri, dan nomornya terbaca.
+    instruments.push([m.id * 1000 + order, m.id, code, statement, 4, order]);
   }
 }
+
+// Teks form. `title` hanya terbaca pada form publik (lib/survey.ts); untuk jenis berakun judulnya datang
+// dari nama jenisnya, jadi di sana disamakan supaya isi tabel tidak menyesatkan saat dibaca langsung.
+//
+// Properti `type` pada pilihan hubungan dibuang: dulu ia memilih respondent_type, dan sejak migrasi 0008
+// jenisnya ditentukan oleh form yang dibuka. Jawabannya tetap tersimpan apa adanya di responses.relation.
+const formConfigFor = (m) => {
+  const base = formConfigs[m.form];
+  return JSON.stringify({
+    ...base,
+    title: m.filledBy === "public" ? base.title : m.name,
+    relation: { ...base.relation, options: base.relation.options.map(({ type, ...rest }) => rest) },
+  });
+};
 
 // ---------- tulis SQL ----------
 
 const statements = [
   "-- Dihasilkan oleh scripts/seed-ba15.mjs. Berisi nama awardee: jangan di-commit.",
   ...upsertStatements("regions", ["id", "name"], regionNames.map((name) => [regionId.get(name), name]), { on: ["id"], update: ["name"] }),
-  ...upsertStatements("respondent_types", ["id", "code", "name", "audience"], RESPONDENT_TYPES.map((t) => [t.id, t.code, t.name, t.audience]),
-    { on: ["id"], update: ["code", "name", "audience"] }),
   ...upsertStatements("campuses", ["id", "region_id", "name"], campuses, { on: ["id"], update: ["region_id", "name"] }),
   ...upsertStatements("awardees", ["id", "region_id", "batch", "name", "campus_id", "referral_code", "photo_key", "leadpro_name", "leadpro_field", "leadpro_description"], awardees,
     { on: ["id"], update: ["region_id", "batch", "name", "campus_id", "referral_code", "photo_key", "leadpro_name", "leadpro_field", "leadpro_description"] }),
-  // Pengukuran memiliki kuesionernya; id-nya sengaja sama dengan id periode yang menjadwalkannya,
-  // mengikuti pemetaan yang dibuat migrasi 0006.
-  ...upsertStatements("measurements", ["id", "slug", "name", "kind", "form_config"],
-    PERIODS.map((p) => [p.id, p.slug, p.name, p.kind, JSON.stringify(formConfigs[p.key])]),
-    { on: ["id"], update: ["slug", "name", "kind", "form_config"] }),
-  // Status & tanggal periode tidak ikut diperbarui: itu wewenang Admin.
-  ...upsertStatements("periods", ["id", "slug", "name", "batch", "kind", "opens_at", "closes_at", "status", "measurement_id"],
-    PERIODS.map((p) => [p.id, p.slug, p.name, BATCH, p.kind, null, null, "draft", p.id]),
-    { on: ["id"], update: ["slug", "name", "batch", "kind", "measurement_id"] }),
-  ...upsertStatements("period_respondent_types", ["period_id", "respondent_type_id", "target_rule", "target_min", "opens_at", "closes_at"],
-    PERIOD_TYPES.map((x) => [x.period, x.type, x.rule, x.min, null, null]),
-    { on: ["period_id", "respondent_type_id"], update: ["target_rule", "target_min"] }),
-  ...upsertStatements("instrument_categories", ["id", "measurement_id", "name", "weight", "order_index"],
-    categories.map((c) => [c.id, c.periodId, c.name, 1, c.order]),
-    { on: ["id"], update: ["measurement_id", "name", "weight", "order_index"] }),
-  ...upsertStatements("instruments", ["id", "measurement_id", "category_id", "code", "text_self", "text_public", "scale_max", "order_index"], instruments,
-    { on: ["id"], update: ["measurement_id", "category_id", "code", "text_self", "text_public", "scale_max", "order_index"] }),
+  // Jenis pengukuran memegang kuesioner dan menyatakan siapa pengisinya.
+  ...upsertStatements("measurements", ["id", "code", "slug", "name", "filled_by", "form_config"],
+    MEASUREMENTS.map((m) => [m.id, m.code, m.slug, m.name, m.filledBy, formConfigFor(m)]),
+    { on: ["id"], update: ["code", "slug", "name", "filled_by", "form_config"] }),
+  // Status & tanggal siklus tidak ikut diperbarui: itu wewenang Admin.
+  ...upsertStatements("periods", ["id", "slug", "name", "batch", "cycle", "opens_at", "closes_at", "status"],
+    CYCLES.map((c) => [c.id, c.slug, c.name, BATCH, c.cycle, null, null, "draft"]),
+    { on: ["id"], update: ["slug", "name", "batch", "cycle"] }),
+  ...upsertStatements("period_measurements", ["period_id", "measurement_id", "target_rule", "target_min", "opens_at", "closes_at"],
+    SCHEDULE.map((x) => [x.cycle, byCode.get(x.code).id, x.rule, x.min, null, null]),
+    { on: ["period_id", "measurement_id"], update: ["target_rule", "target_min"] }),
+  ...upsertStatements("instruments", ["id", "measurement_id", "code", "statement", "scale_max", "order_index"], instruments,
+    { on: ["id"], update: ["measurement_id", "code", "statement", "scale_max", "order_index"] }),
 ];
 
 await mkdir(".seed", { recursive: true });
 await writeFile(".seed/ba15.sql", statements.join("\n") + "\n", "utf8");
 
-console.log(`wilayah ${regionNames.length}, awardee ${awardees.length} (ID dari kolom No: ${useSourceNumbers}), kategori ${categories.length}, instrumen ${instruments.length}`);
-for (const c of categories) {
-  const codes = instruments.filter((x) => x[2] === c.id).map((x) => x[7]);
-  console.log(`  ${PERIODS.find((p) => p.id === c.periodId).slug}  Q${Math.min(...codes)}–Q${Math.max(...codes)}  ${c.name}`);
+console.log(`wilayah ${regionNames.length}, kampus ${campuses.length}, awardee ${awardees.length} (ID dari kolom No: ${useSourceNumbers})`);
+for (const m of MEASUREMENTS) {
+  const mine = instruments.filter((i) => i[1] === m.id);
+  const jadwal = SCHEDULE.filter((s) => s.code === m.code).map((s) => CYCLES.find((c) => c.id === s.cycle).cycle);
+  console.log(`  ${m.code.padEnd(3)} ${m.filledBy.padEnd(7)} ${String(mine.length).padStart(2)} soal (teks ${m.teks})  siklus: ${jadwal.join(", ") || "—"}`);
 }
-console.log(`SQL: .seed/ba15.sql (${statements.length} pernyataan)`);
+console.log(`SQL: .seed/ba15.sql (${statements.length} pernyataan, ${instruments.length} soal)`);

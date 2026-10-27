@@ -380,6 +380,67 @@ export async function deleteInstrument(db: D1Database, actor: SessionUser, measu
   return { ok: true };
 }
 
+export type DeleteInstrumentOutcome = {
+  id: number;
+  code: string;
+  ok: boolean;
+  message: string;
+};
+
+// Menghapus banyak soal sekaligus dengan tetap menegakkan guard:
+// soal yang sudah pernah dijawab responden tidak bisa dihapus.
+export async function deleteManyInstruments(
+  db: D1Database,
+  actor: SessionUser,
+  instrumentIds: number[],
+): Promise<DeleteInstrumentOutcome[]> {
+  assertAdmin(actor);
+  if (instrumentIds.length > 200) {
+    throw new ScopeError("Maksimal 200 butir soal sekaligus.");
+  }
+
+  const outcomes: DeleteInstrumentOutcome[] = [];
+  for (const id of instrumentIds) {
+    const row = await db
+      .prepare(
+        `SELECT i.id, i.code, i.measurement_id,
+            (SELECT COUNT(*) FROM response_scores s WHERE s.instrument_id = i.id) AS answers
+         FROM instruments i WHERE i.id = ?`,
+      )
+      .bind(id)
+      .first<{ id: number; code: string; measurement_id: number; answers: number }>();
+
+    if (!row) {
+      outcomes.push({ id, code: "", ok: false, message: "Soal tidak ditemukan." });
+      continue;
+    }
+    if (row.answers > 0) {
+      outcomes.push({
+        id,
+        code: row.code,
+        ok: false,
+        message: `Soal ${row.code} sudah dijawab ${row.answers} kali, tidak bisa dihapus.`,
+      });
+      continue;
+    }
+
+    await db.prepare("DELETE FROM instruments WHERE id = ?").bind(id).run();
+    outcomes.push({ id, code: row.code, ok: true, message: "Dihapus." });
+  }
+
+  const berhasil = outcomes.filter((o) => o.ok).length;
+  if (berhasil > 0) {
+    await writeAudit(db, actor, {
+      action: "soal.hapus-massal",
+      entity: "instrument",
+      summary: `Hapus massal: ${berhasil} dari ${instrumentIds.length} butir soal dihapus`,
+      detail: outcomes.filter((o) => !o.ok).map((o) => `${o.code}: ${o.message}`),
+    });
+  }
+
+  return outcomes;
+}
+
 // ---------- soal lintas pengukuran ----------
 
 export type InstrumentListRow = InstrumentRow & {
