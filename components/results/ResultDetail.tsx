@@ -1,3 +1,4 @@
+import { CollapseCard } from "@/components/CollapseCard";
 import { CategoryTable, TypeCards } from "@/components/results/Pieces";
 import { FeedbackList, QuestionHighlights } from "@/components/results/Panels";
 import type { AwardeeDetail } from "@/lib/data/results";
@@ -19,46 +20,40 @@ export function ResultDetail({ detail, showProgram = false }: { detail: AwardeeD
 
   return (
     <>
-      <section className="card">
-        <h2 className="section-title">IPK per sudut pandang</h2>
-        <p className="section-hint">Skala 0 sampai 4, rata-rata seluruh soal dalam tiap jenis pengukuran.</p>
+      <CollapseCard title="IPK per sudut pandang" openMobile>
+        <p className="section-hint hide-mobile">Skala 0 sampai 4, rata-rata seluruh soal dalam tiap jenis pengukuran.</p>
         <TypeCards types={detail.types} />
-      </section>
+      </CollapseCard>
 
-      <section className="card">
-        <h2 className="section-title">Perbandingan sudut pandang</h2>
-        <p className="section-hint">Bagaimana penilaian diri dibanding penilaian orang lain.</p>
+      <CollapseCard title="Perbandingan sudut pandang">
+        <p className="section-hint hide-mobile">Bagaimana penilaian diri dibanding penilaian orang lain.</p>
         <CategoryTable types={detail.types} />
-      </section>
+      </CollapseCard>
 
-      <section className="card">
-        <h2 className="section-title">Kekuatan &amp; catatan</h2>
+      <CollapseCard title="Kekuatan &amp; catatan">
         <p className="section-hint">
           {byOthers ? `Menurut ${byOthers.name.toLowerCase()}, ${byOthers.responses} responden.` : "Belum ada penilaian dari orang lain."}
         </p>
         <QuestionHighlights questions={questions} />
-      </section>
+      </CollapseCard>
 
-      <section className="card">
-        <h2 className="section-title">Masukan dari penilai</h2>
-        <p className="section-hint">Ditulis tanpa nama pengisi, supaya masukannya bisa jujur.</p>
+      <CollapseCard title="Masukan dari penilai">
+        <p className="section-hint hide-mobile">Ditulis tanpa nama pengisi, supaya masukannya bisa jujur.</p>
         <FeedbackList entries={detail.feedback} field="saran_diri" from="others" />
-      </section>
+      </CollapseCard>
 
       {detail.feedback.some((f) => f.audience === "self" && f.field === "saran_diri") && (
-        <section className="card">
-          <h2 className="section-title">Refleksi pribadi</h2>
-          <p className="section-hint">Ditulis sendiri saat mengisi asesmen mandiri.</p>
+        <CollapseCard title="Refleksi pribadi">
+          <p className="section-hint hide-mobile">Ditulis sendiri saat mengisi asesmen mandiri.</p>
           <FeedbackList entries={detail.feedback} field="saran_diri" from="self" />
-        </section>
+        </CollapseCard>
       )}
 
       {showProgram && (
-        <section className="card">
-          <h2 className="section-title">Saran untuk program</h2>
-          <p className="section-hint">Masukan responden tentang program BAKTI NUSA, bukan tentang awardee.</p>
+        <CollapseCard title="Saran untuk program">
+          <p className="section-hint hide-mobile">Masukan responden tentang program BAKTI NUSA, bukan tentang awardee.</p>
           <FeedbackList entries={detail.feedback} field="saran_program" />
-        </section>
+        </CollapseCard>
       )}
     </>
   );

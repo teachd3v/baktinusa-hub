@@ -9,7 +9,7 @@ export default async function ManwilLayout({ children }: { children: React.React
     <AppShell
       user={user}
       nav={[
-        { href: "/manwil", label: "Wilayah saya" },
+        { href: "/manwil", label: "Beranda" },
         { href: "/manwil/nilai", label: "Penilaian" },
         { href: "/manwil/hasil", label: "Hasil" },
         { href: "/manwil/analitik", label: "Analitik" },

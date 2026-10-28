@@ -1,5 +1,6 @@
 import { env } from "cloudflare:workers";
 import type { Metadata } from "next";
+import { CollapseCard } from "@/components/CollapseCard";
 import { MatrixTable, NoPeriod, PeriodTabs, PredicateSpread, RegionBars } from "@/components/results/Panels";
 import { fmt } from "@/components/results/Pieces";
 import { requireUser } from "@/lib/auth";
@@ -40,8 +41,7 @@ export default async function ManwilResults({ searchParams }: { searchParams: Pr
       <PeriodTabs periods={periods} active={active.slug} basePath="/manwil/hasil" />
 
       <div className="grid-2">
-        <section className="card">
-          <h2 className="section-title">Ringkasan wilayah</h2>
+        <CollapseCard title="Ringkasan wilayah" openMobile>
           <ul className="stat-list">
             <li><b>{results.length}</b> awardee</li>
             <li><b>{scored.length}</b> sudah dinilai</li>
@@ -63,10 +63,9 @@ export default async function ManwilResults({ searchParams }: { searchParams: Pr
               ))
             )}
           </div>
-        </section>
+        </CollapseCard>
 
-        <section className="card">
-          <h2 className="section-title">Rata-rata IPK per tipe penilai</h2>
+        <CollapseCard title="Rata-rata IPK per tipe penilai">
           <RegionBars
             regions={types.map((t) => ({
               regionId: 0,
@@ -76,17 +75,16 @@ export default async function ManwilResults({ searchParams }: { searchParams: Pr
               ipk: ipkAcross(results.flatMap((r) => r.types.filter((x) => x.code === t.code))),
             }))}
           />
-        </section>
+        </CollapseCard>
       </div>
 
-      <section className="card">
-        <h2 className="section-title">Awardee binaan</h2>
-        <p className="section-hint">
+      <CollapseCard title="Awardee binaan" openMobile>
+        <p className="section-hint hide-mobile">
           Klik nama untuk melihat rincian per soal dan masukan yang masuk.{" "}
           <a href={`/api/ekspor/matriks?periode=${active.slug}`}>Unduh matriks wilayah (CSV)</a>.
         </p>
         <MatrixTable results={results} typeCodes={types} hrefBase="/manwil/hasil" />
-      </section>
+      </CollapseCard>
     </>
   );
 }

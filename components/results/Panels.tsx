@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ParamSelect } from "@/components/ListControls";
 import { BarRows, fmt, PredicateBadge } from "@/components/results/Pieces";
 import type { PeriodItem } from "@/lib/data/periods";
 import {
@@ -118,7 +119,7 @@ export function MatrixTable({
   if (results.length === 0) return <p className="section-hint" style={{ margin: 0 }}>Tidak ada awardee yang cocok.</p>;
   return (
     <div className="table-wrap">
-      <table className="table">
+      <table className="table" data-collapse="1">
         <thead>
           <tr>
             <th scope="col">Awardee</th>
@@ -141,9 +142,9 @@ export function MatrixTable({
                   ) : (
                     <b>{a.name}</b>
                   )}
-                  {a.campus && <div className="section-hint" style={{ margin: 0 }}>{a.campus}</div>}
+                  {a.campus && <div className="section-hint hide-mobile" style={{ margin: 0 }}>{a.campus}</div>}
                 </td>
-                <td>{a.region}</td>
+                <td className="hide-mobile">{a.region}</td>
                 {typeCodes.map((t) => (
                   <td key={t.code} className="num">{fmt(a.types.find((x) => x.code === t.code)?.ipk ?? null)}</td>
                 ))}
@@ -157,17 +158,18 @@ export function MatrixTable({
   );
 }
 
-// Pemilih periode. Tautan biasa, bukan tab berJavaScript — halaman ini dirender di server.
+// Pemilih periode: dropdown yang mengganti alamat halaman, jadi tetap bisa dibagikan dan tombol Back bekerja.
 export function PeriodTabs({ periods, active, basePath }: { periods: PeriodItem[]; active: string; basePath: string }) {
   if (periods.length < 2) return null;
   return (
-    <div className="tabs">
-      {periods.map((p) => (
-        <Link key={p.slug} href={`${basePath}?periode=${p.slug}`} aria-current={p.slug === active ? "page" : undefined}>
-          {p.name}
-        </Link>
-      ))}
-    </div>
+    <ParamSelect
+      path={basePath}
+      param="periode"
+      value={active}
+      options={periods.map((p): [string, string] => [p.slug, p.name])}
+      label="Pilih siklus"
+      className="select period-select"
+    />
   );
 }
 

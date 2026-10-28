@@ -17,7 +17,7 @@ export function ProgressTable({ rows, showAwardee = true }: { rows: AwardeeProgr
   const types = rows[0]?.types ?? [];
   return (
     <div className="table-wrap">
-      <table className="table">
+      <table className="table" data-collapse={showAwardee ? "1" : undefined}>
         <thead>
           <tr>
             {showAwardee && <th scope="col">Awardee</th>}
@@ -32,7 +32,7 @@ export function ProgressTable({ rows, showAwardee = true }: { rows: AwardeeProgr
               {showAwardee && (
                 <td>
                   <b>{row.name}</b>
-                  {row.campus && <div className="section-hint" style={{ margin: 0 }}>{row.campus}</div>}
+                  {row.campus && <div className="section-hint hide-mobile" style={{ margin: 0 }}>{row.campus}</div>}
                 </td>
               )}
               {row.types.map((t) => (

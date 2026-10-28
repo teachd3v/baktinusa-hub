@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { MobileCollapse } from "@/components/MobileCollapse";
 import type { EvalTask } from "@/lib/data/evaluations";
 import { formatWib } from "@/lib/format";
 
@@ -15,13 +16,20 @@ export function EvaluationTasks({ tasks, basePath }: { tasks: EvalTask[]; basePa
     const items = tasks.filter((t) => t.period.slug === period.slug);
     const done = items.filter((t) => t.submitted).length;
     return (
-      <div key={period.slug} style={{ marginTop: "0.75rem" }}>
-        <p className="label">
-          {period.name}{" "}
-          <span className={`pill ${done === items.length ? "pill-ok" : done > 0 ? "pill-warn" : "pill-bad"}`}>
-            {done} / {items.length} selesai
-          </span>
-        </p>
+      // Di ponsel periode yang semua penilaiannya sudah terkirim dilipat; yang masih ada tugasnya terbuka.
+      <MobileCollapse
+        key={period.slug}
+        className="progress-period"
+        openMobile={done < items.length}
+        summary={
+          <p className="label" style={{ margin: 0 }}>
+            {period.name}{" "}
+            <span className={`pill ${done === items.length ? "pill-ok" : done > 0 ? "pill-warn" : "pill-bad"}`}>
+              {done} / {items.length} selesai
+            </span>
+          </p>
+        }
+      >
         <div className="table-wrap">
           <table className="table">
             <thead>
@@ -37,10 +45,10 @@ export function EvaluationTasks({ tasks, basePath }: { tasks: EvalTask[]; basePa
                 <tr key={`${task.type.code}:${task.target.referralCode}`}>
                   <td>
                     <b>{task.type.name}</b>
-                    <div className="section-hint" style={{ margin: 0 }}>{KIND_LABEL[task.kind]}</div>
+                    <div className="section-hint hide-mobile" style={{ margin: 0 }}>{KIND_LABEL[task.kind]}</div>
                   </td>
                   <td>{task.kind === "self" ? "Diri sendiri" : task.target.name}</td>
-                  <td>{task.period.closesAt ? formatWib(task.period.closesAt) : "—"}</td>
+                  <td className="hide-mobile">{task.period.closesAt ? formatWib(task.period.closesAt) : "—"}</td>
                   <td className="num">
                     {task.submitted ? (
                       <span className="pill pill-ok">terkirim</span>
@@ -55,7 +63,7 @@ export function EvaluationTasks({ tasks, basePath }: { tasks: EvalTask[]; basePa
             </tbody>
           </table>
         </div>
-      </div>
+      </MobileCollapse>
     );
   });
 }

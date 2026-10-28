@@ -2798,3 +2798,59 @@ ul.badges {
     padding-left: var(--gap-sm);
   }
 }
+
+/* Awardee dan Manwil di ponsel: kartu aksi satu baris (judul di kiri, tombol di kanan) dan periode yang dilipat. */
+@media (max-width: 640px) {
+  .shell-main .action-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--gap-sm);
+  }
+
+  .shell-main .action-card .section-title {
+    margin: 0;
+  }
+
+  .progress-period + .progress-period {
+    margin-top: var(--space-xs);
+    padding-top: var(--space-xs);
+    border-top: 1px solid var(--line);
+  }
+}
+
+/* Pemilih siklus (dropdown) dan ubin angka tiga kolom untuk Manwil. */
+.period-select {
+  display: block;
+  width: 100%;
+  max-width: 22rem;
+  margin: 0 0 var(--gap-md);
+}
+
+.score-grid.score-grid-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+@media (max-width: 640px) {
+  .shell-main .score-grid.score-grid-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-xs);
+  }
+
+  .shell-main .score-grid-3 .score-tile {
+    padding: var(--space-sm);
+  }
+
+  .shell-main .score-grid-3 .score-label {
+    font-size: var(--text-xs);
+    line-height: 1.25;
+  }
+
+  .shell-main .score-grid-3 .score-value {
+    font-size: var(--text-lg);
+  }
+
+  .shell-main .score-grid-3 .score-note {
+    display: none;
+  }
+}

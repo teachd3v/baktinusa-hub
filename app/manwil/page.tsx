@@ -1,9 +1,8 @@
 import { env } from "cloudflare:workers";
 import type { Metadata } from "next";
-import Link from "next/link";
+import { CollapseCard } from "@/components/CollapseCard";
 import { ProgressTable } from "@/components/ProgressTable";
 import { requireUser } from "@/lib/auth";
-import { listTasks } from "@/lib/data/evaluations";
 import { listAwardees, progressForScope } from "@/lib/data/awardees";
 import { isRunningOrDone, listPeriods } from "@/lib/data/periods";
 import { scopeFor } from "@/lib/data/scope";
@@ -14,8 +13,6 @@ export const metadata: Metadata = { title: "Wilayah saya" };
 export default async function ManwilHome() {
   const user = await requireUser("manwil");
   const scope = scopeFor(user);
-  const tasks = await listTasks(env.DB, user);
-  const pending = tasks.filter((t) => !t.submitted).length;
   const awardees = await listAwardees(env.DB, scope);
   const periods = (await listPeriods(env.DB)).filter(isRunningOrDone);
   const progress = await Promise.all(periods.map(async (period) => ({ period, rows: await progressForScope(env.DB, scope, period.id) })));
@@ -28,26 +25,6 @@ export default async function ManwilHome() {
         <p>{awardees.length} awardee binaan</p>
       </div>
 
-      <section className="card">
-        <h2 className="section-title">Hasil wilayah</h2>
-        <p className="section-hint">Rata-rata IPK, sebaran predikat, dan rincian tiap awardee binaan.</p>
-        <Link href="/manwil/hasil" className="btn btn-small btn-inline">Lihat hasil wilayah</Link>
-      </section>
-
-      <section className="card">
-        <h2 className="section-title">Penilaian untuk Anda</h2>
-        {tasks.length === 0 ? (
-          <p className="section-hint" style={{ margin: 0 }}>Belum ada penilaian yang dibuka untuk Anda saat ini.</p>
-        ) : (
-          <>
-            <p className="section-hint">
-              {pending === 0 ? "Semua penilaian sudah Anda kirim. Terima kasih!" : `${pending} dari ${tasks.length} penilaian menunggu Anda isi.`}
-            </p>
-            <Link href="/manwil/nilai" className="btn btn-small btn-inline">Buka penilaian</Link>
-          </>
-        )}
-      </section>
-
       {progress.length === 0 ? (
         <section className="card">
           <h2 className="section-title">Belum ada periode penilaian yang berjalan</h2>
@@ -56,22 +33,26 @@ export default async function ManwilHome() {
           </p>
         </section>
       ) : (
-        progress.map(({ period, rows }) => (
-          <section key={period.id} className="card">
-            <h2 className="section-title">
-              {period.name} <span className={`pill ${period.status === "open" ? "pill-ok" : "pill-muted"}`}>{period.status === "open" ? "dibuka" : "ditutup"}</span>
-            </h2>
-            <p className="section-hint">Jumlah penilaian yang sudah masuk dibanding target minimal tiap tipe penilai.</p>
+        progress.map(({ period, rows }, i) => (
+          <CollapseCard
+            key={period.id}
+            openMobile={i === 0}
+            title={
+              <>
+                {period.name} <span className={`pill ${period.status === "open" ? "pill-ok" : "pill-muted"}`}>{period.status === "open" ? "dibuka" : "ditutup"}</span>
+              </>
+            }
+          >
+            <p className="section-hint hide-mobile">Jumlah penilaian yang sudah masuk dibanding target minimal tiap tipe penilai.</p>
             <ProgressTable rows={rows} />
-          </section>
+          </CollapseCard>
         ))
       )}
 
-      <section className="card">
-        <h2 className="section-title">Tautan penilaian awardee</h2>
-        <p className="section-hint">Tautan publik yang dibagikan setiap awardee ke jejaringnya.</p>
+      <CollapseCard title="Tautan penilaian awardee">
+        <p className="section-hint hide-mobile">Tautan publik yang dibagikan setiap awardee ke jejaringnya.</p>
         <div className="table-wrap">
-          <table className="table">
+          <table className="table" data-collapse="1">
             <thead>
               <tr>
                 <th scope="col">Awardee</th>
@@ -90,7 +71,7 @@ export default async function ManwilHome() {
             </tbody>
           </table>
         </div>
-      </section>
+      </CollapseCard>
     </>
   );
 }

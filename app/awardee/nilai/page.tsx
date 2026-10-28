@@ -13,7 +13,7 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
     <>
       <div className="page-head">
         <h1>Penilaian</h1>
-        <p>Asesmen mandiri dan penilaian untuk rekan se-wilayah.</p>
+        <p className="hide-mobile">Asesmen mandiri dan penilaian untuk rekan se-wilayah.</p>
       </div>
       <SentBanner receipt={terkirim} />
       <section className="card">

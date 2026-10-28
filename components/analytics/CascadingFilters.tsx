@@ -28,6 +28,8 @@ export function CascadingFilters({
   // Halaman rincian sudah menyebut jenisnya di alamat dan menyediakan tab untuk berpindah, jadi di sana
   // dropdown jenis hanya akan jadi kemudi kedua yang tidak kemana-mana.
   showTypes = true,
+  // Manwil hanya memegang satu wilayah, jadi memilih wilayah tidak ada artinya baginya.
+  showRegions = true,
 }: {
   cycles: CycleOption[];
   types: AnalyticsType[];
@@ -36,6 +38,7 @@ export function CascadingFilters({
   values: { code: string | null; regionId: number | null; awardeeId: number | null };
   periode: string;
   showTypes?: boolean;
+  showRegions?: boolean;
 }) {
   const form = useRef<HTMLFormElement>(null);
   const kirim = () => form.current?.requestSubmit();
@@ -70,22 +73,24 @@ export function CascadingFilters({
         </div>
       )}
 
-      <div className="field">
-        <label className="label" htmlFor="saring-wilayah">Wilayah</label>
-        <select
-          id="saring-wilayah"
-          className="select"
-          name="wilayah"
-          defaultValue={values.regionId ?? ""}
-          onChange={kosongkanAwardee}
-          disabled={regions.length < 2}
-        >
-          <option value="">Semua wilayah</option>
-          {regions.map((r) => (
-            <option key={r.id} value={r.id}>{r.name}</option>
-          ))}
-        </select>
-      </div>
+      {showRegions && (
+        <div className="field">
+          <label className="label" htmlFor="saring-wilayah">Wilayah</label>
+          <select
+            id="saring-wilayah"
+            className="select"
+            name="wilayah"
+            defaultValue={values.regionId ?? ""}
+            onChange={kosongkanAwardee}
+            disabled={regions.length < 2}
+          >
+            <option value="">Semua wilayah</option>
+            {regions.map((r) => (
+              <option key={r.id} value={r.id}>{r.name}</option>
+            ))}
+          </select>
+        </div>
+      )}
 
       <div className="field">
         <label className="label" htmlFor="saring-awardee">Awardee</label>

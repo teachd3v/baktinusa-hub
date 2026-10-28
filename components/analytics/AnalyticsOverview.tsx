@@ -55,6 +55,8 @@ export async function AnalyticsOverview({
     filter.code ? measurementAnalytics(env.DB, scope, active.id, filter.code, filter) : Promise.resolve(null),
   ]);
   const q = filterQuery(active.slug, filter);
+  // Manwil hanya memegang satu wilayah: tak ada kartu wilayah dan tak ada pilihan wilayah.
+  const wilayahTunggal = role === "manwil";
   const disaring = filter.code !== null || filter.regionId !== null || filter.awardeeId !== null;
   const bersoal = types.filter((t) => t.questionCount > 0);
   const belumBersoal = semuaJenis.filter((t) => t.questionCount === 0);
@@ -72,9 +74,10 @@ export async function AnalyticsOverview({
       <CycleInfo period={active} types={semuaJenis} facts={facts} filtered={disaring} />
 
       <ScoreCards
+        columns={wilayahTunggal ? 3 : undefined}
         cards={[
           { label: "Total Awardee", value: String(totals.awardees), note: active.batch },
-          { label: "Total Wilayah", value: String(totals.regions), note: totals.regions === 1 ? "wilayah" : "wilayah terwakili" },
+          ...(wilayahTunggal ? [] : [{ label: "Total Wilayah", value: String(totals.regions), note: totals.regions === 1 ? "wilayah" : "wilayah terwakili" }]),
           { label: "Total Responden", value: String(totals.responses), note: rinci ? rinci.name : "semua pengukuran" },
           { label: "Rata-rata IPK", value: fmt(totals.ipk), note: "skala 0 sampai 4" },
         ]}
@@ -97,6 +100,7 @@ export async function AnalyticsOverview({
             awardees={awardees}
             values={filter}
             periode={active.slug}
+            showRegions={!wilayahTunggal}
           />
           <p className="section-hint hide-mobile" style={{ marginTop: "0.8rem", marginBottom: 0 }}>
             Semua angka di bawah dihitung ulang dari data yang lolos saringan, bukan sekadar disembunyikan.
@@ -112,7 +116,7 @@ export async function AnalyticsOverview({
           </p>
         </section>
       ) : rinci ? (
-        <SatuJenis rinci={rinci} basePath={basePath} query={q} />
+        <SatuJenis rinci={rinci} basePath={basePath} query={q} showRegions={!wilayahTunggal} />
       ) : (
         <SemuaJenis types={bersoal} />
       )}
@@ -175,10 +179,12 @@ function SatuJenis({
   rinci,
   basePath,
   query,
+  showRegions,
 }: {
   rinci: NonNullable<Awaited<ReturnType<typeof measurementAnalytics>>>;
   basePath: string;
   query: URLSearchParams;
+  showRegions: boolean;
 }) {
   if (rinci.questionCount === 0) {
     return (
@@ -210,14 +216,16 @@ function SatuJenis({
           <PredicateDonut spread={rinci.spread} center={{ value: fmt(rinci.ipk), label: "IPK" }} />
         </section>
 
-        <section className="card">
-          <h2 className="section-title">IPK per wilayah</h2>
-          {rinci.regions.length <= 1 ? (
-            <p className="section-hint" style={{ margin: 0 }}>Hanya satu wilayah dalam lingkup dan saringan ini.</p>
-          ) : (
-            <RegionBars regions={rinci.regions.map((r) => ({ ...r }))} />
-          )}
-        </section>
+        {showRegions && (
+          <section className="card">
+            <h2 className="section-title">IPK per wilayah</h2>
+            {rinci.regions.length <= 1 ? (
+              <p className="section-hint" style={{ margin: 0 }}>Hanya satu wilayah dalam lingkup dan saringan ini.</p>
+            ) : (
+              <RegionBars regions={rinci.regions.map((r) => ({ ...r }))} />
+            )}
+          </section>
+        )}
       </div>
 
       <section className="card">

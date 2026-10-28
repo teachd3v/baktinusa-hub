@@ -123,9 +123,9 @@ export function ColumnChart({ columns, max = 4, ticks = 4 }: { columns: Column[]
 
 // ---------- kartu angka besar ----------
 
-export function ScoreCards({ cards }: { cards: { label: string; value: string; note?: string }[] }) {
+export function ScoreCards({ cards, columns }: { cards: { label: string; value: string; note?: string }[]; columns?: 3 }) {
   return (
-    <div className="score-grid">
+    <div className={columns === 3 ? "score-grid score-grid-3" : "score-grid"}>
       {cards.map((c) => (
         <div key={c.label} className="score-tile">
           <span className="score-label">{c.label}</span>

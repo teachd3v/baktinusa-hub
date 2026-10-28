@@ -140,6 +140,7 @@ export async function MeasurementAnalyticsPage({
             values={filter}
             periode={active.slug}
             showTypes={false}
+            showRegions={role !== "manwil"}
           />
         </MobileCollapse>
       </section>
@@ -182,22 +183,24 @@ export async function MeasurementAnalyticsPage({
               <PredicateDonut spread={data.spread} />
             </section>
 
-            <section className="card">
-              <h2 className="section-title">Rata-rata IPK per wilayah</h2>
-              {data.regions.length <= 1 ? (
-                <p className="section-hint" style={{ margin: 0 }}>Hanya satu wilayah dalam lingkup ini.</p>
-              ) : (
-                <RegionBars
-                  regions={data.regions.map((r) => ({
-                    regionId: r.regionId,
-                    region: r.region,
-                    awardees: r.awardees,
-                    responses: r.responses,
-                    ipk: r.ipk,
-                  }))}
-                />
-              )}
-            </section>
+            {role !== "manwil" && (
+              <section className="card">
+                <h2 className="section-title">Rata-rata IPK per wilayah</h2>
+                {data.regions.length <= 1 ? (
+                  <p className="section-hint" style={{ margin: 0 }}>Hanya satu wilayah dalam lingkup ini.</p>
+                ) : (
+                  <RegionBars
+                    regions={data.regions.map((r) => ({
+                      regionId: r.regionId,
+                      region: r.region,
+                      awardees: r.awardees,
+                      responses: r.responses,
+                      ipk: r.ipk,
+                    }))}
+                  />
+                )}
+              </section>
+            )}
           </div>
 
           <section className="card">
