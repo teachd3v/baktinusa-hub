@@ -16,30 +16,23 @@ export default async function PeriodsPage() {
     <>
       <div className="page-head">
         <h1>Siklus penilaian</h1>
-        <p>
-          Tiap angkatan punya Siklus Awal, Tengah, dan Akhir. Satu siklus menjalankan beberapa jenis pengukuran sekaligus,
-          masing-masing dengan jadwal dan statusnya sendiri.
-        </p>
       </div>
 
       <section className="card">
-        <div className="card-head">
+        <div className="card-head head-compact">
           <h2 className="section-title">Daftar siklus</h2>
           <AddButton
             label="Buat siklus"
+            className="btn btn-small btn-inline add-button btn-icon-mobile"
             title="Buat siklus baru"
             hint="Siklus adalah jadwal milik satu angkatan. Jenis pengukuran yang dijalankannya ditentukan setelah ini."
           >
             <NewPeriodForm />
           </AddButton>
         </div>
-        <p className="section-hint">
-          {periods.length} siklus terdaftar. Klik <b>Ubah</b> untuk mengedit rincian data atau menghapus siklus yang belum
-          memiliki respons.
-        </p>
 
         <div className="table-wrap">
-          <table className="table">
+          <table className="table" data-collapse="1,3">
             <thead>
               <tr>
                 <th scope="col">Siklus</th>
@@ -64,7 +57,7 @@ export default async function PeriodsPage() {
         <section className="card" key={m.batch}>
           <div className="card-head">
             <h2 className="section-title">Peta {m.batch}</h2>
-            <span className="section-hint" style={{ margin: 0 }}>Klik selnya untuk memasang atau melepas.</span>
+            <span className="section-hint hide-mobile" style={{ margin: 0 }}>Klik selnya untuk memasang atau melepas.</span>
           </div>
           <CycleMatrix matrix={m} />
         </section>

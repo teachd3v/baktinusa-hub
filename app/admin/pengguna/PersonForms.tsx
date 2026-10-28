@@ -1,6 +1,8 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useId, useState } from "react";
+import { ModalButton } from "@/components/Modal";
+import { ConfirmDelete } from "@/components/ConfirmDelete";
 import type { CampusOption } from "@/lib/data/campuses";
 import type { Person } from "@/lib/data/people";
 import {
@@ -205,6 +207,8 @@ export function NewPersonForm({
   );
 }
 
+export const ROLE_LABEL: Record<string, string> = { admin: "Admin", manwil: "Manwil", awardee: "Awardee" };
+
 export function PersonRow({
   person,
   regions,
@@ -220,12 +224,6 @@ export function PersonRow({
   onCheck: () => void;
   lockedReason?: string;
 }) {
-  const [state, action, pending] = useActionState<PersonState, FormData>(updatePersonAction, null);
-  const [hapus, hapusAction, menghapus] = useActionState<PersonState, FormData>(deleteAccountAction, null);
-  const [open, setOpen] = useState(false);
-  const [confirming, setConfirming] = useState(false);
-
-  const ROLE_LABEL: Record<string, string> = { admin: "Admin", manwil: "Manwil", awardee: "Awardee" };
 
   return (
     <>
@@ -267,45 +265,41 @@ export function PersonRow({
           )}
         </td>
         <td>
-          <button type="button" className="btn-link" onClick={() => setOpen(!open)}>{open ? "Tutup" : "Ubah"}</button>
+          <ModalButton label="Edit" className="btn-link" title={`Edit ${person.name}`}>
+          <PersonEditor person={person} regions={regions} campuses={campuses} />
+          </ModalButton>
         </td>
       </tr>
+    </>
+  );
+}
 
-      {open && !person.userId && person.awardeeId && (
-        <tr>
-          <td colSpan={8} style={{ background: "var(--surface-sunken)" }}>
-            <AwardeeDataForm person={person} regions={regions} campuses={campuses} />
-          </td>
-        </tr>
-      )}
+// Isi panel "Ubah" satu orang: dipakai baris tabel (desktop) dan daftar per wilayah (ponsel).
+export function PersonEditor({ person, regions, campuses }: { person: Person; regions: Region[]; campuses: CampusOption[] }) {
+  const [state, action, pending] = useActionState<PersonState, FormData>(updatePersonAction, null);
+  const [hapus, hapusAction, menghapus] = useActionState<PersonState, FormData>(deleteAccountAction, null);
+  const hapusForm = useId();
 
-      {open && person.userId && person.role && (
-        <tr>
-          <td colSpan={8} style={{ background: "var(--surface-sunken)" }}>
-            <form action={action}>
-              <input type="hidden" name="userId" value={person.userId} />
-              <Fields regions={regions} campuses={campuses} person={person} role={person.role} />
-              <button type="submit" className="btn btn-small btn-inline" disabled={pending}>{pending ? "Menyimpan…" : "Simpan"}</button>
-              <Result state={state} />
-            </form>
+  if (!person.userId) return person.awardeeId ? <AwardeeDataForm person={person} regions={regions} campuses={campuses} /> : null;
+  if (!person.role) return null;
 
-            <form action={hapusAction} style={{ marginTop: "0.75rem" }}>
-              <input type="hidden" name="userId" value={person.userId} />
-              {confirming ? (
-                <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-                  <button type="submit" className="btn-link" style={{ color: "var(--bad)" }} disabled={menghapus}>
-                    {menghapus ? "Menghapus…" : "Ya, hapus akunnya"}
-                  </button>
-                  <button type="button" className="btn-link" onClick={() => setConfirming(false)}>Batal</button>
-                </div>
-              ) : (
-                <button type="button" className="btn-link" onClick={() => setConfirming(true)}>Hapus akun</button>
-              )}
-              <Result state={hapus} />
-            </form>
-          </td>
-        </tr>
-      )}
+  return (
+    <>
+      <form action={action}>
+        <input type="hidden" name="userId" value={person.userId} />
+        <Fields regions={regions} campuses={campuses} person={person} role={person.role} />
+        <button type="submit" className="btn btn-small btn-inline" disabled={pending}>{pending ? "Menyimpan…" : "Simpan"}</button>
+        <Result state={state} />
+      </form>
+
+      <form id={hapusForm} action={hapusAction} style={{ marginTop: "0.75rem" }}>
+        <input type="hidden" name="userId" value={person.userId} />
+        <ConfirmDelete label="Hapus akun" title="Hapus akun ini?" confirmLabel="Ya, hapus akun" form={hapusForm} pending={menghapus}>
+          <p>Akun <b>{person.name}</b> akan dihapus dan tidak bisa masuk lagi. Data awardee-nya tetap ada.</p>
+          <p>Tindakan ini tidak bisa dibatalkan.</p>
+        </ConfirmDelete>
+        <Result state={hapus} />
+      </form>
     </>
   );
 }
@@ -314,7 +308,7 @@ export function PersonRow({
 function AwardeeDataForm({ person, regions, campuses }: { person: Person; regions: Region[]; campuses: CampusOption[] }) {
   const [state, action, pending] = useActionState<PersonState, FormData>(updateAwardeeDataAction, null);
   const [hapus, hapusAction, menghapus] = useActionState<PersonState, FormData>(deleteAwardeeDataAction, null);
-  const [confirming, setConfirming] = useState(false);
+  const hapusForm = useId();
   const [regionId, setRegionId] = useState(String(person.regionId ?? ""));
   const [campusId, setCampusId] = useState(String(person.campusId ?? ""));
 
@@ -368,18 +362,12 @@ function AwardeeDataForm({ person, regions, campuses }: { person: Person; region
       </p>
 
       {person.responses === 0 && (
-        <form action={hapusAction} style={{ marginTop: "0.5rem" }}>
+        <form id={hapusForm} action={hapusAction} style={{ marginTop: "0.5rem" }}>
           <input type="hidden" name="awardeeId" value={person.awardeeId ?? ""} />
-          {confirming ? (
-            <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-              <button type="submit" className="btn-link" style={{ color: "var(--bad)" }} disabled={menghapus}>
-                {menghapus ? "Menghapus…" : "Ya, hapus datanya"}
-              </button>
-              <button type="button" className="btn-link" onClick={() => setConfirming(false)}>Batal</button>
-            </div>
-          ) : (
-            <button type="button" className="btn-link" onClick={() => setConfirming(true)}>Hapus data awardee</button>
-          )}
+          <ConfirmDelete label="Hapus data awardee" title="Hapus data awardee ini?" confirmLabel="Ya, hapus data" form={hapusForm} pending={menghapus}>
+            <p>Data awardee <b>{person.name}</b> akan dihapus.</p>
+            <p>Tindakan ini tidak bisa dibatalkan.</p>
+          </ConfirmDelete>
           <Result state={hapus} />
         </form>
       )}

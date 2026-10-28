@@ -1,3 +1,4 @@
+import { MobileCollapse } from "@/components/MobileCollapse";
 import { formatWib, formatWibDate } from "@/lib/format";
 import type { AnalyticsType, CycleFacts } from "@/lib/data/analytics";
 import type { PeriodItem } from "@/lib/data/periods";
@@ -38,11 +39,13 @@ export function CycleInfo({
   const status = STATUS[period.status];
   return (
     <section className="card cycle-info" aria-label="Keterangan siklus">
-      <div className="card-head">
-        <h2 className="section-title">
-          {period.name} <span className={`pill ${status.tone}`}>{status.label}</span>
-        </h2>
-      </div>
+      <MobileCollapse
+        summary={
+          <h2 className="section-title">
+            {period.name} <span className={`pill ${status.tone}`}>{status.label}</span>
+          </h2>
+        }
+      >
 
       <dl className="cycle-facts">
         <div>
@@ -86,6 +89,7 @@ export function CycleInfo({
           Keterangan ini untuk seluruh siklus. Angka di bawahnya sedang mengikuti saringan.
         </p>
       )}
+      </MobileCollapse>
     </section>
   );
 }

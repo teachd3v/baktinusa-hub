@@ -13,18 +13,30 @@ type Item = { href: string; label: string };
 // lebih dari empat, sisanya pindah ke "Lainnya". Di layar lebar semuanya disembunyikan CSS.
 const MAX_TABS = 4;
 
+// Foto profil kalau ada dan terbuka; kalau tidak, inisial.
+function Face({ initials, photoSrc }: { initials: string; photoSrc?: string }) {
+  const [failed, setFailed] = useState(false);
+  return (
+    <span className="mobile-face" aria-hidden="true">
+      {photoSrc && !failed ? <img src={photoSrc} alt="" onError={() => setFailed(true)} /> : initials}
+    </span>
+  );
+}
+
 export function MobileChrome({
   items,
   homeHref,
   name,
   role,
   initials,
+  photoSrc,
 }: {
   items: Item[];
   homeHref: string;
   name: string;
   role: string;
   initials: string;
+  photoSrc?: string;
 }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -78,7 +90,7 @@ export function MobileChrome({
         {/* Nama halaman sudah jadi judul di isinya, jadi bilah ini memegang merek saja. */}
         <p className="mobile-title">BAKTINUSA HUB</p>
         <button type="button" className="mobile-avatar" aria-label={`Akun ${name}`} aria-haspopup="dialog" aria-expanded={open} onClick={(e) => openFrom(e.currentTarget)}>
-          {initials}
+          <Face initials={initials} photoSrc={photoSrc} />
         </button>
       </header>
 
@@ -102,7 +114,7 @@ export function MobileChrome({
         <div ref={sheet} className="mobile-sheet" role="dialog" aria-modal="true" aria-label="Akun dan menu lainnya">
           <span className="mobile-grip" aria-hidden="true" />
           <div className="mobile-account">
-            <span className="mobile-account-avatar" aria-hidden="true">{initials}</span>
+            <Face initials={initials} photoSrc={photoSrc} />
             <div>
               <p className="mobile-account-name">{name}</p>
               <p className="mobile-account-role">{role}</p>

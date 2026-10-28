@@ -1,26 +1,24 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useId, useState } from "react";
+import { ConfirmDelete } from "@/components/ConfirmDelete";
 import type { ResponseRow } from "@/lib/data/admin-responses";
 import { formatWib } from "@/lib/format";
 import { deleteResponseAction, type ActionState } from "./actions";
 
-// Menghapus respons tidak bisa dibatalkan, jadi tombolnya bertahap: "Hapus" dulu, baru konfirmasi.
+// Menghapus respons tidak bisa dibatalkan, jadi tombolnya hanya membuka jendela konfirmasi.
 function DeleteCell({ row }: { row: ResponseRow }) {
   const [state, action, pending] = useActionState<ActionState, FormData>(deleteResponseAction, null);
-  const [confirming, setConfirming] = useState(false);
+  const formId = useId();
 
   if (state && !state.ok) return <span className="form-error">{state.message}</span>;
-  if (!confirming) {
-    return <button type="button" className="btn-link" onClick={() => setConfirming(true)}>Hapus</button>;
-  }
   return (
-    <form action={action} style={{ display: "flex", gap: "0.4rem", alignItems: "center" }}>
+    <form id={formId} action={action}>
       <input type="hidden" name="responseId" value={row.id} />
-      <button type="submit" className="btn-link" style={{ color: "var(--bad)" }} disabled={pending}>
-        {pending ? "Menghapus…" : "Ya, hapus"}
-      </button>
-      <button type="button" className="btn-link" onClick={() => setConfirming(false)}>Batal</button>
+      <ConfirmDelete label="Hapus" title="Hapus respons ini?" confirmLabel="Ya, hapus respons" form={formId} pending={pending}>
+        <p>Respons untuk <b>{row.awardee}</b> ({row.type}) akan dihapus beserta skornya.</p>
+        <p>Tindakan ini tidak bisa dibatalkan.</p>
+      </ConfirmDelete>
     </form>
   );
 }

@@ -1,6 +1,7 @@
 import { env } from "cloudflare:workers";
 import Link from "next/link";
 import { CascadingFilters } from "@/components/analytics/CascadingFilters";
+import { MobileCollapse } from "@/components/MobileCollapse";
 import { PredicateDonut } from "@/components/analytics/Charts";
 import { NoPeriod, QuestionHighlights, RegionBars } from "@/components/results/Panels";
 import { BarRows, PredicateBadge, fmt } from "@/components/results/Pieces";
@@ -123,23 +124,24 @@ export async function MeasurementAnalyticsPage({
       </div>
 
       <section className="card">
-        <div className="card-head">
-          <h2 className="section-title">Saring data</h2>
+        <MobileCollapse summary={<h2 className="section-title">Saring data{filter.regionId !== null || filter.awardeeId !== null ? " (aktif)" : ""}</h2>}>
           {(filter.regionId !== null || filter.awardeeId !== null) && (
-            <Link className="btn btn-muted btn-small btn-inline" href={`${basePath}/${data.code.toLowerCase()}?periode=${active.slug}`}>
-              Hapus saringan
-            </Link>
+            <p style={{ margin: "0 0 var(--gap-sm)" }}>
+              <Link className="btn btn-muted btn-small btn-inline" href={`${basePath}/${data.code.toLowerCase()}?periode=${active.slug}`}>
+                Hapus saringan
+              </Link>
+            </p>
           )}
-        </div>
-        <CascadingFilters
-          cycles={cycles}
-          types={semua}
-          regions={regions}
-          awardees={awardees}
-          values={filter}
-          periode={active.slug}
-          showTypes={false}
-        />
+          <CascadingFilters
+            cycles={cycles}
+            types={semua}
+            regions={regions}
+            awardees={awardees}
+            values={filter}
+            periode={active.slug}
+            showTypes={false}
+          />
+        </MobileCollapse>
       </section>
 
       <section className="card">
@@ -200,13 +202,13 @@ export async function MeasurementAnalyticsPage({
 
           <section className="card">
             <h2 className="section-title">Soal terkuat &amp; terlemah</h2>
-            <p className="section-hint">Rata-rata lintas awardee, bahan untuk memilih fokus pembinaan.</p>
+            <p className="section-hint hide-mobile">Rata-rata lintas awardee, bahan untuk memilih fokus pembinaan.</p>
             <QuestionHighlights questions={data.questions} />
           </section>
 
           <section className="card">
             <h2 className="section-title">Semua soal</h2>
-            <p className="section-hint">{data.questions.length} soal, urut sesuai kuesioner.</p>
+            <p className="section-hint hide-mobile">{data.questions.length} soal, urut sesuai kuesioner.</p>
             <BarRows rows={data.questions.map((q2) => ({ label: q2.code, value: q2.average, note: q2.text }))} />
           </section>
         </>

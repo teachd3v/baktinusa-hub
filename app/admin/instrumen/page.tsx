@@ -1,6 +1,8 @@
 import { env } from "cloudflare:workers";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { AddButton } from "@/components/Modal";
+import { AutoSearch, ParamSelect } from "@/components/ListControls";
 import { requireUser } from "@/lib/auth";
 import { listAllInstruments, listMeasurements } from "@/lib/data/measurements";
 import { NewInstrumentForm } from "./InstrumentForms";
@@ -25,11 +27,10 @@ export default async function InstrumentsPage({
     <>
       <div className="page-head">
         <h1>Instrumen</h1>
-        <p>Semua soal dari seluruh pengukuran, dalam satu tempat.</p>
       </div>
 
       <section className="card">
-        <div className="tabs">
+        <div className="tabs tabs-desktop">
           <Link href="/admin/instrumen" aria-current={!pengukuran ? "page" : undefined}>Semua pengukuran</Link>
           {measurements.map((m) => (
             <Link key={m.id} href={`/admin/instrumen?pengukuran=${m.slug}`} aria-current={pengukuran === m.slug ? "page" : undefined}>
@@ -38,21 +39,32 @@ export default async function InstrumentsPage({
           ))}
         </div>
 
-        <form method="get" className="copy-row" style={{ margin: "0 0 1rem" }}>
-          {pengukuran && <input type="hidden" name="pengukuran" value={pengukuran} />}
-          <input className="input" type="search" name="cari" defaultValue={cari ?? ""} placeholder="Cari kode atau isi soal…" aria-label="Cari soal" />
-          <button type="submit" className="btn btn-muted btn-small">Cari</button>
-        </form>
+        {/* Ponsel: chip diganti dropdown, dan tambah soal jadi ikon di sebelah kotak cari. */}
+        <ParamSelect
+          path="/admin/instrumen"
+          param="pengukuran"
+          value={pengukuran ?? ""}
+          options={[["", "Semua pengukuran"], ...measurements.map((m): [string, string] => [m.slug, `${m.name} (${m.instruments})`])]}
+          keep={{ cari: cari ?? "" }}
+          label="Saring menurut pengukuran"
+        />
+
+        <div className="search-row">
+          <AutoSearch path="/admin/instrumen" value={cari ?? ""} keep={{ pengukuran: pengukuran ?? "" }} placeholder="Cari kode atau isi soal…" label="Cari soal" />
+          <AddButton label="Tambah soal" title="Tambah soal" className="btn btn-small btn-inline add-button btn-icon-mobile mobile-only">
+            <NewInstrumentForm measurements={measurements} />
+          </AddButton>
+        </div>
 
         <InstrumentsManager instruments={instruments} measurements={measurements} activeSlug={pengukuran} />
       </section>
 
-      <section className="card">
+      <section className="card hide-mobile">
         <h2 className="section-title">Impor massal soal</h2>
         <InstrumentImportPanel measurements={measurements} activeSlug={pengukuran} />
       </section>
 
-      <section className="card">
+      <section className="card hide-mobile">
         <h2 className="section-title">Tambah soal manual</h2>
         <p className="section-hint">
           Soal menempel ke satu jenis pengukuran, dan ikut terpakai oleh semua siklus yang menjalankannya.

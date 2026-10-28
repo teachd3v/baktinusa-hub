@@ -16,17 +16,14 @@ export default async function MeasurementsPage() {
     <>
       <div className="page-head">
         <h1>Pengukuran</h1>
-        <p>
-          Jenis pengukuran: SA, PA, MA, dan seterusnya. Tiap jenis punya kodenya sendiri, daftar soalnya sendiri, dan
-          menyatakan siapa pengisinya. Itu yang menentukan siapa bisa membuka formnya.
-        </p>
       </div>
 
       <section className="card">
-        <div className="card-head">
+        <div className="card-head head-compact">
           <h2 className="section-title">Daftar pengukuran</h2>
           <AddButton
             label="Buat pengukuran"
+            className="btn btn-small btn-inline add-button btn-icon-mobile"
             title="Buat pengukuran"
             hint="Untuk jenis penilaian baru. Kuesionernya bisa dimulai dari nol atau menyalin pengukuran yang sudah ada."
           >
@@ -38,7 +35,7 @@ export default async function MeasurementsPage() {
           <p className="section-hint">Belum ada jenis pengukuran. Buat dulu lewat tombol di atas.</p>
         ) : (
           <div className="table-wrap">
-            <table className="table">
+            <table className="table" data-collapse="1">
               <thead>
                 <tr>
                   <th scope="col">Pengukuran</th>
@@ -55,7 +52,7 @@ export default async function MeasurementsPage() {
                   <tr key={m.id}>
                     <td>
                       <b>{m.name}</b>
-                      <div className="section-hint" style={{ margin: 0 }}>
+                      <div className="section-hint hide-mobile" style={{ margin: 0 }}>
                         <code style={{ fontSize: "0.72rem" }}>{m.slug}</code>
                       </div>
                     </td>
@@ -70,9 +67,9 @@ export default async function MeasurementsPage() {
                     </td>
                     <td>
                       <ModalButton
-                        label="Atur"
+                        label="Edit"
                         className="btn-link"
-                        title={`${m.code} · ${m.name}`}
+                        title={`Edit ${m.name}`}
                         hint={`Diisi ${FILLED_BY_LABEL[m.filledBy].toLowerCase()}. Soalnya dikelola di menu Instrumen.`}
                       >
                         <MeasurementSettings measurement={m} />

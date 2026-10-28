@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useId, useState } from "react";
+import { ConfirmDelete } from "@/components/ConfirmDelete";
 import Link from "next/link";
 import { FILLED_BY_LABEL, PRESET_MEASUREMENTS, type FilledBy, type FormText, type MeasurementRow } from "@/lib/data/measurements";
 import {
@@ -145,7 +146,7 @@ export function FormTextForm({ measurementId, text }: { measurementId: number; t
 export function MeasurementSettings({ measurement }: { measurement: MeasurementRow }) {
   const [state, action, pending] = useActionState<MeasurementState, FormData>(renameMeasurementAction, null);
   const [hapus, hapusAction, menghapus] = useActionState<MeasurementState, FormData>(deleteMeasurementAction, null);
-  const [confirming, setConfirming] = useState(false);
+  const hapusForm = useId();
 
   return (
     <>
@@ -175,18 +176,12 @@ export function MeasurementSettings({ measurement }: { measurement: MeasurementR
           Dijalankan {measurement.periods} siklus, jadi belum bisa dihapus. Lepas dari siklusnya dulu.
         </p>
       ) : (
-        <form action={hapusAction} style={{ marginTop: "0.75rem" }}>
+        <form id={hapusForm} action={hapusAction} style={{ marginTop: "0.75rem" }}>
           <input type="hidden" name="measurementId" value={measurement.id} />
-          {confirming ? (
-            <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-              <button type="submit" className="btn-link" style={{ color: "var(--bad)" }} disabled={menghapus}>
-                {menghapus ? "Menghapus…" : `Ya, hapus beserta ${measurement.instruments} soalnya`}
-              </button>
-              <button type="button" className="btn-link" onClick={() => setConfirming(false)}>Batal</button>
-            </div>
-          ) : (
-            <button type="button" className="btn-link" onClick={() => setConfirming(true)}>Hapus pengukuran</button>
-          )}
+          <ConfirmDelete label="Hapus pengukuran" title="Hapus pengukuran ini?" confirmLabel="Ya, hapus pengukuran" form={hapusForm} pending={menghapus}>
+            <p>Pengukuran <b>{measurement.name}</b> akan dihapus beserta {measurement.instruments} soalnya.</p>
+            <p>Tindakan ini tidak bisa dibatalkan.</p>
+          </ConfirmDelete>
           <Result state={hapus} />
         </form>
       )}

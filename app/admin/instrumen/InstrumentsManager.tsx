@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
+import { ConfirmDelete } from "@/components/ConfirmDelete";
 import { Icon } from "@/components/Icon";
 import type { InstrumentListRow, MeasurementRow } from "@/lib/data/measurements";
 import { deleteManyInstrumentsAction, type BulkInstrumentState } from "./actions";
@@ -17,7 +18,7 @@ export function InstrumentsManager({
   activeSlug?: string;
 }) {
   const [picked, setPicked] = useState<number[]>([]);
-  const [confirming, setConfirming] = useState(false);
+  const bulkForm = useId();
   const [state, action, pending] = useActionState<BulkInstrumentState, FormData>(
     deleteManyInstrumentsAction,
     null,
@@ -35,7 +36,6 @@ export function InstrumentsManager({
   useEffect(() => {
     if (state) {
       setPicked([]);
-      setConfirming(false);
     }
   }, [state]);
 
@@ -78,7 +78,7 @@ export function InstrumentsManager({
 
   // Komponen Bilah Aksi Massal (Bulk Bar)
   const bulkBar = (dipilih.length > 0 || state) && (
-    <form action={action} className="bulk-bar" style={{ marginTop: "0.5rem" }}>
+    <form id={bulkForm} action={action} className="bulk-bar" style={{ marginTop: "0.5rem" }}>
       {dipilih.map((id) => (
         <input key={id} type="hidden" name="pilih" value={id} />
       ))}
@@ -93,30 +93,24 @@ export function InstrumentsManager({
       )}
 
       <div className="bulk-actions">
-        {dipilih.length > 0 &&
-          (confirming ? (
-            <>
-              <button type="button" className="btn-link" onClick={() => setConfirming(false)}>
-                Batal
-              </button>
-              <button type="submit" className="btn btn-small btn-danger" disabled={pending}>
-                {pending ? "Menghapus…" : `Ya, hapus ${dipilih.length} butir soal`}
-              </button>
-            </>
-          ) : (
-            <>
-              <button
-                type="button"
-                className="btn btn-small btn-danger"
-                onClick={() => setConfirming(true)}
-              >
-                Hapus terpilih
-              </button>
-              <button type="button" className="btn-link" onClick={() => setPicked([])}>
-                Bersihkan pilihan
-              </button>
-            </>
-          ))}
+        {dipilih.length > 0 && (
+          <>
+            <ConfirmDelete
+              label="Hapus terpilih"
+              className="btn btn-small btn-danger"
+              title={`Hapus ${dipilih.length} butir soal?`}
+              confirmLabel={`Ya, hapus ${dipilih.length} butir soal`}
+              form={bulkForm}
+              pending={pending}
+            >
+              <p>{dipilih.length} butir soal yang dipilih akan dihapus.</p>
+              <p>Tindakan ini tidak bisa dibatalkan.</p>
+            </ConfirmDelete>
+            <button type="button" className="btn-link" onClick={() => setPicked([])}>
+              Bersihkan pilihan
+            </button>
+          </>
+        )}
       </div>
 
       {state && (
@@ -155,7 +149,7 @@ export function InstrumentsManager({
           <table className="table">
             <thead>
               <tr>
-                <th scope="col" style={{ width: "2.5rem", textAlign: "center" }}>
+                <th scope="col" className="check-col" style={{ width: "2.5rem", textAlign: "center" }}>
                   <input
                     type="checkbox"
                     checked={allChecked}
@@ -218,6 +212,7 @@ export function InstrumentsManager({
 
       {/* Kontrol Collapse Cepat */}
       <div
+        className="hide-mobile"
         style={{
           display: "flex",
           justifyContent: "space-between",
@@ -270,6 +265,7 @@ export function InstrumentsManager({
             >
               {/* Header Collapse / Accordion */}
               <div
+                className="grp-head"
                 style={{
                   display: "flex",
                   alignItems: "center",
@@ -288,8 +284,9 @@ export function InstrumentsManager({
                   }))
                 }
               >
-                <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
+                <div className="grp-title" style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
                   <span
+                    className="grp-chevron"
                     style={{
                       fontSize: "0.85rem",
                       color: "var(--ink-muted)",
@@ -301,23 +298,28 @@ export function InstrumentsManager({
                   >
                     <Icon name="chevron" className={isOpen ? "chevron open" : "chevron"} />
                   </span>
-                  <span style={{ fontWeight: 700, fontSize: "0.95rem" }}>
+                  <span className="grp-name" style={{ fontWeight: 700, fontSize: "0.95rem" }}>
                     {m.name}
                   </span>
-                  <code style={{ fontSize: "0.75rem", padding: "0.1rem 0.35rem", background: "var(--line)", borderRadius: "4px" }}>
+                  <code className="grp-code" style={{ fontSize: "0.75rem", padding: "0.1rem 0.35rem", background: "var(--line)", borderRadius: "4px" }}>
                     {m.code}
                   </code>
-                  <span className="section-hint" style={{ margin: 0, fontSize: "0.8rem" }}>
+                  <span className="section-hint hide-mobile" style={{ margin: 0, fontSize: "0.8rem" }}>
                     {items.length} soal{m.responses > 0 ? `, ${m.responses} jawaban` : ""}
                   </span>
                   {m.responses > 0 && (
-                    <span className="pill pill-warn" style={{ fontSize: "0.7rem", padding: "0.1rem 0.4rem" }}>
-                      Terkunci
-                    </span>
+                    <>
+                      <span className="pill pill-warn hide-mobile" style={{ fontSize: "0.7rem", padding: "0.1rem 0.4rem" }}>
+                        Terkunci
+                      </span>
+                      <svg className="grp-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" role="img" aria-label="Terkunci">
+                        <path d="M6 11h12v9H6zM8.5 11V8a3.5 3.5 0 0 1 7 0v3" />
+                      </svg>
+                    </>
                   )}
                 </div>
 
-                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }} onClick={(e) => e.stopPropagation()}>
+                <div className="hide-mobile" style={{ display: "flex", alignItems: "center", gap: "0.5rem" }} onClick={(e) => e.stopPropagation()}>
                   <Link
                     href={`/admin/instrumen?pengukuran=${m.slug}`}
                     className="btn-link"
@@ -334,7 +336,7 @@ export function InstrumentsManager({
                   <table className="table" style={{ margin: 0 }}>
                     <thead>
                       <tr>
-                        <th scope="col" style={{ width: "2.5rem", textAlign: "center" }}>
+                        <th scope="col" className="check-col" style={{ width: "2.5rem", textAlign: "center" }}>
                           <input
                             type="checkbox"
                             checked={allInGroupChecked}

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { CascadingFilters } from "@/components/analytics/CascadingFilters";
 import { ColumnChart, PredicateDonut, ScoreCards } from "@/components/analytics/Charts";
 import { CycleInfo } from "@/components/analytics/CycleInfo";
+import { MobileCollapse } from "@/components/MobileCollapse";
 import { NoPeriod, QuestionHighlights, RegionBars } from "@/components/results/Panels";
 import { fmt } from "@/components/results/Pieces";
 import { requireUser } from "@/lib/auth";
@@ -80,25 +81,27 @@ export async function AnalyticsOverview({
       />
 
       <section className="card" style={{ marginTop: "var(--gap-md)" }}>
-        <div className="card-head">
-          <h2 className="section-title">Saring data</h2>
+        {/* Di ponsel saringan dilipat; judulnya menyebut kalau ada yang aktif. */}
+        <MobileCollapse summary={<h2 className="section-title">Saring data{disaring ? " (aktif)" : ""}</h2>}>
           {disaring && (
-            <Link className="btn btn-muted btn-small btn-inline" href={`${basePath}?periode=${active.slug}`}>
-              Hapus saringan
-            </Link>
+            <p style={{ margin: "0 0 var(--gap-sm)" }}>
+              <Link className="btn btn-muted btn-small btn-inline" href={`${basePath}?periode=${active.slug}`}>
+                Hapus saringan
+              </Link>
+            </p>
           )}
-        </div>
-        <CascadingFilters
-          cycles={periods.map((p) => ({ slug: p.slug, name: p.name }))}
-          types={semuaJenis}
-          regions={regions}
-          awardees={awardees}
-          values={filter}
-          periode={active.slug}
-        />
-        <p className="section-hint" style={{ marginTop: "0.8rem", marginBottom: 0 }}>
-          Semua angka di bawah dihitung ulang dari data yang lolos saringan, bukan sekadar disembunyikan.
-        </p>
+          <CascadingFilters
+            cycles={periods.map((p) => ({ slug: p.slug, name: p.name }))}
+            types={semuaJenis}
+            regions={regions}
+            awardees={awardees}
+            values={filter}
+            periode={active.slug}
+          />
+          <p className="section-hint hide-mobile" style={{ marginTop: "0.8rem", marginBottom: 0 }}>
+            Semua angka di bawah dihitung ulang dari data yang lolos saringan, bukan sekadar disembunyikan.
+          </p>
+        </MobileCollapse>
       </section>
 
       {semuaJenis.length === 0 ? (
@@ -143,7 +146,7 @@ function SemuaJenis({ types }: { types: Awaited<ReturnType<typeof analyticsDashb
     <>
       <section className="card">
         <h2 className="section-title">IPK per jenis pengukuran</h2>
-        <p className="section-hint">
+        <p className="section-hint hide-mobile">
           Tiap awardee berbobot sama, jadi yang respondennya berpuluh tidak menenggelamkan yang baru punya dua.
         </p>
         <ColumnChart
@@ -219,7 +222,7 @@ function SatuJenis({
 
       <section className="card">
         <h2 className="section-title">Soal terkuat &amp; terlemah</h2>
-        <p className="section-hint">
+        <p className="section-hint hide-mobile">
           Rata-rata lintas awardee. Inilah yang tidak bisa dibaca dari halaman Hasil, karena di sana
           rincian per soal selalu milik satu orang.
         </p>
@@ -233,7 +236,7 @@ function SatuJenis({
             Buka {rinci.code}
           </Link>
         </div>
-        <p className="section-hint" style={{ margin: 0 }}>
+        <p className="section-hint hide-mobile" style={{ margin: 0 }}>
           Semua {rinci.questions.length} soal berurutan dan daftar {rinci.awardees} awardee beserta predikatnya.
         </p>
       </section>

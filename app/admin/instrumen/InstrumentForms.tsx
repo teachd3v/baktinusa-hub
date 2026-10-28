@@ -1,6 +1,8 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useState, useId } from "react";
+import { ModalButton } from "@/components/Modal";
+import { ConfirmDelete } from "@/components/ConfirmDelete";
 import type { InstrumentListRow } from "@/lib/data/measurements";
 import { addInstrumentAction, deleteInstrumentAction, updateInstrumentAction, type MeasurementState } from "../pengukuran/actions";
 
@@ -81,13 +83,12 @@ export function InstrumentRowForm({
 }) {
   const [state, action, pending] = useActionState<MeasurementState, FormData>(updateInstrumentAction, null);
   const [hapus, hapusAction, menghapus] = useActionState<MeasurementState, FormData>(deleteInstrumentAction, null);
-  const [open, setOpen] = useState(false);
-  const [confirming, setConfirming] = useState(false);
+  const hapusForm = useId();
 
   return (
     <>
       <tr>
-        <td style={{ width: "2.5rem", textAlign: "center" }}>
+        <td className="check-col" style={{ width: "2.5rem", textAlign: "center" }}>
           <input
             type="checkbox"
             checked={selected ?? false}
@@ -96,6 +97,11 @@ export function InstrumentRowForm({
             aria-label={`Pilih soal ${instrument.code}`}
             onChange={() => onToggle?.(instrument.id)}
           />
+          {instrument.answers > 0 && (
+            <svg className="row-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" role="img" aria-label="Sudah punya jawaban, tidak bisa dihapus">
+              <path d="M6 11h12v9H6zM8.5 11V8a3.5 3.5 0 0 1 7 0v3" />
+            </svg>
+          )}
         </td>
         <td><code style={{ fontSize: "0.78rem" }}>{instrument.code}</code></td>
         <td>
@@ -106,40 +112,30 @@ export function InstrumentRowForm({
         <td className="num">
           {instrument.answers > 0 ? <span className="pill pill-info">{instrument.answers}</span> : <span className="section-hint">0</span>}
         </td>
-        <td><button type="button" className="btn-link" onClick={() => setOpen(!open)}>{open ? "Tutup" : "Ubah"}</button></td>
-      </tr>
+        <td>
+          <ModalButton label="Edit" className="btn-link" title={`Edit soal ${instrument.code}`}>
+          <form action={action}>
+            <input type="hidden" name="measurementId" value={instrument.measurementId} />
+            <input type="hidden" name="instrumentId" value={instrument.id} />
+            <Fields instrument={instrument} locked={instrument.locked} />
+            <button type="submit" className="btn btn-small btn-inline" disabled={pending}>{pending ? "Menyimpan…" : "Simpan"}</button>
+            <Result state={state} />
+          </form>
 
-      {open && (
-        <tr>
-          <td colSpan={showMeasurementColumn ? 7 : 6} style={{ background: "var(--surface-sunken)" }}>
-            <form action={action}>
+          {instrument.answers === 0 && (
+            <form id={hapusForm} action={hapusAction} style={{ marginTop: "0.5rem" }}>
               <input type="hidden" name="measurementId" value={instrument.measurementId} />
               <input type="hidden" name="instrumentId" value={instrument.id} />
-              <Fields instrument={instrument} locked={instrument.locked} />
-              <button type="submit" className="btn btn-small btn-inline" disabled={pending}>{pending ? "Menyimpan…" : "Simpan"}</button>
-              <Result state={state} />
+              <ConfirmDelete label="Hapus soal" title="Hapus soal ini?" confirmLabel="Ya, hapus soal" form={hapusForm} pending={menghapus}>
+                <p>Soal <b>{instrument.code}</b> akan dihapus.</p>
+                <p>Tindakan ini tidak bisa dibatalkan.</p>
+              </ConfirmDelete>
+              <Result state={hapus} />
             </form>
-
-            {instrument.answers === 0 && (
-              <form action={hapusAction} style={{ marginTop: "0.5rem" }}>
-                <input type="hidden" name="measurementId" value={instrument.measurementId} />
-                <input type="hidden" name="instrumentId" value={instrument.id} />
-                {confirming ? (
-                  <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-                    <button type="submit" className="btn-link" style={{ color: "var(--bad)" }} disabled={menghapus}>
-                      {menghapus ? "Menghapus…" : "Ya, hapus soal ini"}
-                    </button>
-                    <button type="button" className="btn-link" onClick={() => setConfirming(false)}>Batal</button>
-                  </div>
-                ) : (
-                  <button type="button" className="btn-link" onClick={() => setConfirming(true)}>Hapus soal</button>
-                )}
-                <Result state={hapus} />
-              </form>
-            )}
-          </td>
-        </tr>
-      )}
+          )}
+          </ModalButton>
+        </td>
+      </tr>
     </>
   );
 }

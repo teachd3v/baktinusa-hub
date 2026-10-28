@@ -384,7 +384,7 @@ a:hover {
 
 @media (max-width: 900px) {
   :root {
-    --tabbar-h: 3.25rem;
+    --tabbar-h: 5rem; /* dok 3.5rem + jarak 0.75rem di bawahnya */
     --appbar-h: 3rem;
   }
 
@@ -403,8 +403,9 @@ a:hover {
     overflow: hidden;
   }
 
+  /* contents: bilah atasnya menempel terhadap seluruh halaman, bukan terhadap pembungkusnya yang setinggi bilah itu sendiri. */
   .mobile-chrome {
-    display: block;
+    display: contents;
   }
 
   .shell {
@@ -427,7 +428,8 @@ a:hover {
     position: sticky;
     top: 0;
     z-index: var(--z-sticky-nav);
-    display: flex;
+    display: grid;
+    grid-template-columns: 2.75rem minmax(0, 1fr) 2.75rem;
     align-items: center;
     gap: var(--gap-sm);
     min-height: calc(var(--appbar-h) + env(safe-area-inset-top));
@@ -452,65 +454,84 @@ a:hover {
     mix-blend-mode: multiply; /* logo berlatar putih: menyatu dengan kertas bilah */
   }
 
+  /* Dua kolom samping sama lebar, jadi judulnya tepat di tengah layar. */
   .mobile-title {
-    flex: 1;
     min-width: 0;
     margin: 0;
     overflow: hidden;
     font-family: var(--font-display);
     font-size: var(--text-md);
     font-weight: 700;
-    letter-spacing: var(--tracking-display);
+    letter-spacing: 0.04em;
     line-height: 1.2;
+    text-align: center;
     text-overflow: ellipsis;
     white-space: nowrap;
+    word-spacing: 0.12em;
   }
 
-  .mobile-avatar,
-  .mobile-account-avatar {
+  /* Wajah akun: foto atau inisial. Tombolnya tetap 44px supaya mudah dijangkau; lingkarannya kecil. */
+  .mobile-face {
     display: grid;
     place-items: center;
     flex: none;
-    border: 0;
+    width: 2rem;
+    height: 2rem;
+    overflow: hidden;
     border-radius: var(--radius-pill);
     background: var(--rail);
     color: var(--rail-ink-strong);
-    font-size: var(--text-sm);
+    font-size: var(--text-xs);
     font-weight: 700;
   }
 
-  .mobile-avatar {
-    width: 2.75rem;
-    height: 2.75rem;
-    padding: 0;
-    cursor: pointer;
-    transition: background var(--dur-micro) var(--ease-out);
+  .mobile-face img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
   }
 
-  .mobile-avatar:active {
+  .mobile-avatar {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 2.75rem;
+    height: 2.75rem;
+    margin-right: calc(var(--space-sm) * -0.5);
+    padding: 0;
+    border: 0;
+    border-radius: var(--radius-pill);
+    background: none;
+    cursor: pointer;
+  }
+
+  .mobile-avatar:active .mobile-face {
     background: var(--rail-raised);
   }
 
-  .mobile-account-avatar {
+  .mobile-account .mobile-face {
     width: 3rem;
     height: 3rem;
     font-size: var(--text-md);
   }
 
-  /* Tab bawah */
+  /* Tab bawah: dok gelap mengambang, sama dengan rail di desktop. Menu aktif ditandai ubin yang lebih terang
+     dan satu garis aksen di tepi kirinya. */
   .mobile-tabs {
     position: fixed;
-    right: 0;
-    bottom: 0;
-    left: 0;
+    right: max(var(--gap-sm), env(safe-area-inset-right));
+    bottom: calc(var(--gap-sm) + env(safe-area-inset-bottom));
+    left: max(var(--gap-sm), env(safe-area-inset-left));
     z-index: var(--z-sticky-nav);
     display: flex;
-    padding: 0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
-    background: var(--card);
-    border-top: 1px solid var(--line);
+    gap: var(--space-2xs);
+    padding: var(--space-xs);
+    background: var(--rail);
+    border-radius: var(--radius-xl);
   }
 
   .mobile-tab {
+    position: relative;
     display: flex;
     flex: 1 1 0;
     flex-direction: column;
@@ -518,59 +539,66 @@ a:hover {
     justify-content: center;
     gap: var(--space-3xs);
     min-width: 0;
-    min-height: var(--tabbar-h);
+    min-height: 3rem;
     padding: var(--space-2xs) var(--space-3xs);
     border: 0;
+    border-radius: var(--radius-md);
     background: none;
-    color: var(--ink-muted);
+    color: var(--rail-ink);
     cursor: pointer;
     font-size: var(--text-xs);
     font-weight: 600;
     line-height: 1.2;
     text-decoration: none;
+    transition: background var(--dur-micro) var(--ease-out), color var(--dur-micro) var(--ease-out);
   }
 
   .mobile-tab:hover {
-    color: var(--ink-muted);
+    color: var(--rail-ink);
+  }
+
+  .mobile-tab:active {
+    background: var(--rail-raised);
   }
 
   .mobile-tab-icon {
     display: grid;
     place-items: center;
-    width: 3.25rem;
-    height: 1.6rem;
-    border-radius: var(--radius-pill);
-    transition: background var(--dur-short) var(--ease-out), color var(--dur-short) var(--ease-out);
+    width: 1.5rem;
+    height: 1.5rem;
   }
 
   .mobile-tab-icon svg {
-    width: 1.4rem;
-    height: 1.4rem;
+    width: 1.3rem;
+    height: 1.3rem;
     stroke-width: 1.7;
   }
 
   .mobile-tab-label {
     max-width: 100%;
-    font-size: 0.6875rem;
     overflow: hidden;
+    font-size: 0.6875rem;
     text-overflow: ellipsis;
     white-space: nowrap;
-  }
-
-  .mobile-tab:active .mobile-tab-icon {
-    background: var(--surface-sunken);
   }
 
   .mobile-tab[aria-current="page"],
   .mobile-tab[aria-current="page"]:hover,
   .mobile-tab[data-current="true"] {
-    color: var(--ink);
+    background: var(--rail-raised);
+    color: var(--rail-ink-strong);
   }
 
-  .mobile-tab[aria-current="page"] .mobile-tab-icon,
-  .mobile-tab[data-current="true"] .mobile-tab-icon {
-    background: var(--primary-soft);
-    color: var(--primary-ink);
+  .mobile-tab[aria-current="page"]::before,
+  .mobile-tab[data-current="true"]::before {
+    content: "";
+    position: absolute;
+    top: var(--space-sm);
+    bottom: var(--space-sm);
+    left: 0;
+    width: 3px;
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    background: var(--primary);
   }
 
   /* Lembar akun dan menu lain */
@@ -898,6 +926,174 @@ a:hover {
 }
 
 /* ============================================================================
+   Halaman Pengguna di ponsel: dropdown peran, tombol ikon, cari otomatis, dan daftar per wilayah
+   ============================================================================ */
+
+@media (max-width: 640px) {
+  .people-head {
+    flex-wrap: nowrap;
+    gap: var(--space-xs);
+  }
+
+  .people-head .section-title,
+  .shell-main .tabs.tabs-desktop,
+  .people-table {
+    display: none;
+  }
+
+  .people-head .role-select {
+    display: block;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .people-head > div:last-child {
+    flex: none;
+    flex-wrap: nowrap !important;
+  }
+
+  .btn.btn-icon-mobile {
+    display: inline-grid;
+    place-items: center;
+    width: 2.5rem;
+    min-height: 2.5rem;
+    height: 2.5rem;
+    padding: 0;
+  }
+
+  .shell-main .btn-icon-mobile svg {
+    display: block;
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+
+  .btn-icon-mobile > span[aria-hidden="true"] {
+    font-size: 1.5rem;
+    font-weight: 400;
+    line-height: 1;
+  }
+
+  .btn-icon-mobile .btn-text {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .shell-main .people-search .input {
+    max-width: none;
+  }
+
+  .shell-main .people-groups {
+    display: grid;
+    gap: var(--space-xs);
+  }
+
+  .people-group {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+  }
+
+  .people-group > summary {
+    display: flex;
+    align-items: center;
+    gap: var(--gap-sm);
+    min-height: 3rem;
+    padding: 0 var(--gap-md);
+    cursor: pointer;
+    font-weight: 700;
+    list-style: none;
+  }
+
+  .people-group > summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .people-group > summary::after {
+    content: "";
+    flex: none;
+    width: 0.45rem;
+    height: 0.45rem;
+    margin-top: -0.2rem;
+    border-right: 2px solid var(--ink-muted);
+    border-bottom: 2px solid var(--ink-muted);
+    transform: rotate(45deg);
+    transition: transform var(--dur-short) var(--ease-out);
+  }
+
+  .people-group[open] > summary::after {
+    margin-top: 0.15rem;
+    transform: rotate(225deg);
+  }
+
+  .people-group-name {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .people-group-count {
+    padding: 0 var(--space-xs);
+    background: var(--surface-sunken);
+    border-radius: var(--radius-pill);
+    color: var(--ink-muted);
+    font-size: var(--text-sm);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .people-list {
+    margin: 0;
+    padding: 0;
+    border-top: 1px solid var(--line);
+    list-style: none;
+  }
+
+  .people-list li + li {
+    border-top: 1px solid var(--line);
+  }
+
+  .people-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--gap-sm);
+    width: 100%;
+    min-height: 3rem;
+    padding: var(--space-sm) var(--gap-md);
+    background: none;
+    border: 0;
+    color: inherit;
+    cursor: pointer;
+    text-align: left;
+  }
+
+  .people-row:active,
+  .people-row[aria-expanded="true"] {
+    background: var(--surface-sunken);
+  }
+
+  .people-name {
+    min-width: 0;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+  }
+
+  .people-role {
+    flex: none;
+    color: var(--ink-muted);
+    font-size: var(--text-sm);
+  }
+
+  .people-edit {
+    padding: var(--gap-md);
+    background: var(--surface-sunken);
+    border-top: 1px solid var(--line);
+  }
+}
+
+/* ============================================================================
    Judul halaman, kartu, dan bidang
    ============================================================================ */
 
@@ -1088,6 +1284,49 @@ a:hover {
 
 .btn-danger:hover:not(:disabled) {
   background: var(--bad-soft);
+}
+
+/* Konfirmasi hapus: tombol hapusnya penuh merah, tombol batalnya netral, dan keduanya sama lebar. */
+.btn-danger-solid {
+  background: var(--bad);
+  border-color: var(--bad);
+  color: var(--ink-invert);
+}
+
+.btn-danger-solid:hover:not(:disabled) {
+  background: color-mix(in oklab, var(--bad) 85%, black);
+}
+
+.overlay-confirm {
+  z-index: calc(var(--z-modal) + 1);
+}
+
+.confirm-icon {
+  color: var(--bad);
+}
+
+.confirm-body {
+  margin: 0 0 var(--gap-md);
+  color: var(--ink-muted);
+  font-size: var(--text-sm);
+  overflow-wrap: anywhere;
+}
+
+.confirm-body p {
+  margin: 0 0 var(--space-xs);
+}
+
+.confirm-body p:last-child {
+  margin-bottom: 0;
+}
+
+.confirm-actions {
+  display: flex;
+  gap: var(--gap-sm);
+}
+
+.confirm-actions .btn {
+  flex: 1;
 }
 
 .btn-inline {
@@ -1824,6 +2063,26 @@ a:hover {
   font-weight: 700;
 }
 
+.add-button .btn-text {
+  font: inherit;
+}
+
+/* Halaman Pengguna: bagian yang hanya hidup di ponsel disembunyikan di layar lebar. */
+.btn-icon-mobile svg,
+.role-select,
+.people-groups {
+  display: none;
+}
+
+.people-search {
+  margin: 0 0 var(--gap-md);
+}
+
+.people-search .input {
+  width: 100%;
+  max-width: 28rem;
+}
+
 .receipt {
   display: inline-block;
   padding: var(--space-xs) var(--space-md);
@@ -2214,4 +2473,328 @@ ul.badges {
 .chart-cards .chart-donut {
   flex-direction: column;
   align-items: flex-start;
+}
+
+/* ============================================================================
+   Halaman Admin di ponsel: utilitas, daftar yang bisa dilipat, peta siklus, bagian lipat
+
+   Ditaruh di akhir berkas supaya menang atas aturan layar lebar yang bernilai sama.
+   ============================================================================ */
+
+.btn.mobile-only,
+.mobile-select {
+  display: none;
+}
+
+.m-collapse > summary {
+  list-style: none;
+  pointer-events: none;
+}
+
+.m-collapse > summary::-webkit-details-marker {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .hide-mobile {
+    display: none !important;
+  }
+
+  .btn.btn-icon-mobile.mobile-only {
+    display: inline-grid;
+  }
+
+  .shell-main .mobile-select {
+    display: block;
+    width: 100%;
+    margin-bottom: var(--gap-sm);
+  }
+
+  /* Kepala kartu yang judulnya disembunyikan: tombolnya di kanan. */
+  .card-head.head-compact {
+    justify-content: flex-end;
+  }
+
+  .head-compact .section-title {
+    display: none;
+  }
+
+  .search-row {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-xs);
+  }
+
+  .search-row .people-search {
+    margin: 0 0 var(--gap-sm);
+  }
+
+  /* ---- baris tabel yang dilipat: nama dan tanda panah dulu, sisanya saat diketuk ---- */
+
+  .table[data-collapse]:not(.matrix) tbody tr[data-collapsible] {
+    align-items: center;
+    cursor: pointer;
+  }
+
+  .table[data-collapse]:not(.matrix) tbody tr[data-collapsible] > td[data-keep] {
+    order: 0;
+  }
+
+  .table[data-collapse]:not(.matrix) tbody tr[data-collapsible] > td:not([data-keep]) {
+    order: 2;
+  }
+
+  .table[data-collapse]:not(.matrix) tbody tr[data-collapsible]:not([data-open]) > td:not([data-keep]) {
+    display: none;
+  }
+
+  .table[data-collapse]:not(.matrix) tbody tr[data-collapsible] > td[data-keep]::before {
+    display: none;
+  }
+
+  .table[data-collapse]:not(.matrix) tbody tr[data-collapsible] > td[data-keep]:first-child:not(.check-col),
+  .table[data-collapse]:not(.matrix) tbody tr[data-collapsible] > td.check-col + td[data-keep] {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  /* Sel tersembunyi pertama (urutan DOM) selalu mulai di baris baru di bawah nama. */
+  .table[data-collapse]:not(.matrix) tbody tr[data-collapsible] > td[data-first-hidden] {
+    flex-basis: 100%;
+    margin-top: var(--space-2xs);
+    padding-top: var(--space-xs);
+    border-top: 1px solid var(--line);
+  }
+
+  .table[data-collapse]:not(.matrix) tbody tr[data-collapsible]::after {
+    content: "";
+    order: 1;
+    flex: none;
+    width: 0.45rem;
+    height: 0.45rem;
+    margin: -0.2rem var(--space-2xs) 0 0;
+    border-right: 2px solid var(--ink-muted);
+    border-bottom: 2px solid var(--ink-muted);
+    transform: rotate(45deg);
+    transition: transform var(--dur-short) var(--ease-out);
+  }
+
+  .table[data-collapse]:not(.matrix) tbody tr[data-collapsible][data-open]::after {
+    margin-top: 0.15rem;
+    transform: rotate(225deg);
+  }
+
+  /* ---- peta jenis x siklus: muat tanpa geser ---- */
+
+  .table-wrap:has(> .table.matrix) {
+    margin: 0;
+    padding: 0;
+  }
+
+  .table.matrix th,
+  .table.matrix td {
+    padding: var(--space-xs) var(--space-2xs);
+  }
+
+  .table.matrix th:first-child,
+  .table.matrix td:first-child {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .table.matrix td:first-child .section-hint,
+  .table.matrix th .section-hint {
+    display: none;
+  }
+
+  .table.matrix .matrix-cell {
+    width: 1.75rem;
+    height: 1.75rem;
+  }
+
+  /* ---- bagian yang dilipat di ponsel ---- */
+
+  .m-collapse > summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--gap-sm);
+    min-height: 2.75rem;
+    cursor: pointer;
+    pointer-events: auto;
+  }
+
+  .m-collapse > summary::after {
+    content: "";
+    flex: none;
+    width: 0.45rem;
+    height: 0.45rem;
+    margin-top: -0.2rem;
+    border-right: 2px solid var(--ink-muted);
+    border-bottom: 2px solid var(--ink-muted);
+    transform: rotate(45deg);
+    transition: transform var(--dur-short) var(--ease-out);
+  }
+
+  .m-collapse[open] > summary::after {
+    margin-top: 0.15rem;
+    transform: rotate(225deg);
+  }
+
+  .m-collapse > summary .section-title {
+    margin: 0;
+  }
+
+  .m-collapse-body {
+    padding-top: var(--gap-sm);
+  }
+
+  /* Judul grup soal di halaman Instrumen: kode, nama, gembok, panah. */
+  .grp-head {
+    gap: var(--gap-sm) !important;
+  }
+
+  .grp-title {
+    flex: 1;
+    min-width: 0;
+    flex-wrap: nowrap !important;
+    gap: var(--space-xs) !important;
+  }
+
+  .grp-title > .grp-chevron {
+    order: 9;
+    margin-left: auto;
+  }
+
+  .grp-title > .grp-code {
+    order: 1;
+  }
+
+  .grp-title > .grp-name {
+    order: 2;
+    min-width: 0;
+  }
+
+  .grp-title > .grp-lock {
+    order: 3;
+  }
+}
+
+/* Gembok kecil penanda jenis yang sudah punya jawaban; hanya tampil di ponsel, di layar lebar ada pil "Terkunci". */
+.grp-lock {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .grp-lock {
+    display: inline-block;
+    flex: none;
+    width: 1rem;
+    height: 1rem;
+    color: var(--warn);
+  }
+}
+
+/* Analitik di ponsel: ubin angka dua kolom, dan kartu donat per jenis jadi deretan yang digeser. */
+@media (max-width: 640px) {
+  .shell-main .score-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .shell-main .score-tile {
+    padding: var(--gap-sm);
+  }
+
+  .shell-main .score-value {
+    font-size: var(--text-xl);
+  }
+
+  .shell-main .chart-cards {
+    display: flex;
+    gap: var(--gap-sm);
+    margin-right: calc(var(--gap-md) * -1);
+    margin-left: calc(var(--gap-md) * -1);
+    padding: 0 var(--gap-md) var(--space-xs);
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-padding-inline: var(--gap-md);
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+  }
+
+  .shell-main .chart-cards::-webkit-scrollbar {
+    display: none;
+  }
+
+  .shell-main .chart-cards > .card {
+    flex: 0 0 82%;
+    scroll-snap-align: start;
+  }
+}
+
+@media (max-width: 640px) {
+  /* Panah grup soal: ke bawah saat tertutup, ke atas saat terbuka (sama dengan daftar lain). */
+  .grp-title > .grp-chevron .chevron {
+    transform: rotate(90deg);
+  }
+
+  .grp-title > .grp-chevron .chevron.open {
+    transform: rotate(270deg);
+  }
+}
+
+/* Kotak centang di ponsel: cukup besar untuk jari, dan yang terkunci diganti gembok (kotak mati tidak bisa
+   diketuk dan hanya membingungkan). */
+.row-lock {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .table input[type="checkbox"],
+  .people-check,
+  .people-group-check {
+    width: 1.35rem;
+    height: 1.35rem;
+    margin: 0;
+    accent-color: var(--primary);
+    cursor: pointer;
+  }
+
+  .table tbody input[type="checkbox"]:disabled {
+    display: none;
+  }
+
+  .table tbody .row-lock {
+    display: block;
+    width: 1.15rem;
+    height: 1.15rem;
+    color: var(--warn);
+  }
+
+  .table tbody td.check-col {
+    display: grid;
+    place-items: center;
+    width: 1.35rem !important; /* menimpa lebar inline di tabel soal */
+    text-align: center;
+  }
+
+  .people-group > summary .people-group-check {
+    flex: none;
+  }
+
+  .people-list li {
+    display: flex;
+    align-items: center;
+    padding-left: var(--gap-md);
+  }
+
+  .people-list li .people-check {
+    flex: none;
+  }
+
+  .people-list li .people-row {
+    flex: 1;
+    min-width: 0;
+    padding-left: var(--gap-sm);
+  }
 }

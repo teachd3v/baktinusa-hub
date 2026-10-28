@@ -15,15 +15,17 @@ const initials = (name: string) =>
 export function AppShell({
   user,
   nav,
+  photoSrc,
   children,
 }: {
   user: SessionUser;
+  photoSrc?: string;
   nav: { href: string; label: string }[];
   children: React.ReactNode;
 }) {
   return (
     <>
-    <MobileChrome items={nav} homeHref={homeFor(user.role)} name={user.name} role={ROLE_LABEL[user.role]} initials={initials(user.name)} />
+    <MobileChrome items={nav} homeHref={homeFor(user.role)} name={user.name} role={ROLE_LABEL[user.role]} initials={initials(user.name)} photoSrc={photoSrc} />
     <div className="shell">
       <header className="shell-bar">
         <div className="shell-bar-inner">

@@ -1,14 +1,15 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 
 // Tombol "+" yang membuka jendela. Dipakai untuk form tambah di halaman-halaman Admin, supaya daftar
 // datanya tidak terdorong jauh ke bawah oleh form yang jarang dipakai.
 //
 // Isinya tetap form biasa: pesan hasil muncul di dalam jendela dan jendelanya tidak menutup sendiri,
 // jadi kalau ada isian yang ditolak, yang sudah diketik tidak hilang.
-export function AddButton(props: { label: string; title: string; hint?: string; children: ReactNode }) {
-  return <ModalButton {...props} trigger={<><span aria-hidden="true">+</span> {props.label}</>} />;
+export function AddButton(props: { label: string; title: string; hint?: string; className?: string; children: ReactNode }) {
+  return <ModalButton {...props} trigger={<><span aria-hidden="true">+</span> <span className="btn-text">{props.label}</span></>} />;
 }
 
 // Pemicu bebas: dipakai tombol "Atur" di tiap baris daftar, supaya mengelola satu baris tidak perlu
@@ -60,7 +61,9 @@ export function ModalButton({
         {triggerLabel ?? label}
       </button>
 
-      {open && (
+      {/* Jendela dipasang di <body>: kalau tombolnya ada di dalam baris tabel, ketukan di jendela tidak ikut
+          dibaca sebagai ketukan di baris itu. */}
+      {open && createPortal(
         <div className="overlay" role="presentation" onMouseDown={(e) => e.target === e.currentTarget && close()}>
           <div
             ref={panel}
@@ -82,7 +85,8 @@ export function ModalButton({
 
             <div className="modal-body">{children}</div>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </>
   );

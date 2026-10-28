@@ -11,33 +11,26 @@ export const metadata: Metadata = { title: "Wilayah" };
 export default async function RegionsPage() {
   const admin = await requireUser("admin");
   const [regions, campuses] = await Promise.all([listRegionsForAdmin(env.DB, admin), listCampusesForAdmin(env.DB, admin)]);
-  const terpakai = regions.filter((r) => r.awardees + r.manwils > 0).length;
 
   return (
     <>
       <div className="page-head">
         <h1>Wilayah</h1>
-        <p>Daftar ini yang muncul sebagai pilihan wilayah di seluruh portal. Tiap wilayah juga menyimpan daftar kampusnya, yang jadi pilihan Kampus saat menambah awardee.</p>
       </div>
 
       <section className="card">
-        <div className="card-head">
-          <h2 className="section-title">Daftar wilayah</h2>
+        <div className="card-head head-compact">
           <AddButton
             label="Tambah wilayah"
+            className="btn btn-small btn-inline add-button btn-icon-mobile"
             title="Tambah wilayah"
             hint="Nama wilayah tidak boleh kembar, termasuk yang hanya beda huruf besar-kecil."
           >
             <NewRegionForm />
           </AddButton>
         </div>
-        <p className="section-hint">
-          {regions.length} wilayah, {campuses.length} kampus, {terpakai} wilayah sedang dipakai. Wilayah yang masih
-          dipakai tidak bisa dihapus, tapi namanya tetap bisa dirapikan kapan saja. Buka <b>Ubah</b> untuk mengelola
-          kampusnya.
-        </p>
         <div className="table-wrap">
-          <table className="table">
+          <table className="table" data-collapse="1">
             <thead>
               <tr>
                 <th scope="col">Wilayah</th>

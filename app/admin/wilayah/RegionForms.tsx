@@ -1,6 +1,8 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useId, useState } from "react";
+import { ModalButton } from "@/components/Modal";
+import { ConfirmDelete } from "@/components/ConfirmDelete";
 import type { CampusRow } from "@/lib/data/campuses";
 import type { RegionRow } from "@/lib/data/regions";
 import {
@@ -38,8 +40,7 @@ export function NewRegionForm() {
 export function RegionRowForm({ region, campuses }: { region: RegionRow; campuses: CampusRow[] }) {
   const [state, action, pending] = useActionState<RegionState, FormData>(renameRegionAction, null);
   const [hapus, hapusAction, menghapus] = useActionState<RegionState, FormData>(deleteRegionAction, null);
-  const [open, setOpen] = useState(false);
-  const [confirming, setConfirming] = useState(false);
+  const hapusForm = useId();
   const dipakai = region.awardees + region.manwils > 0;
 
   return (
@@ -49,50 +50,42 @@ export function RegionRowForm({ region, campuses }: { region: RegionRow; campuse
         <td className="num">{region.campuses}</td>
         <td className="num">{region.awardees}</td>
         <td className="num">{region.manwils}</td>
-        <td className="num">{region.responses}</td>
+        <td className="num hide-mobile">{region.responses}</td>
         <td>
-          <button type="button" className="btn-link" onClick={() => setOpen(!open)}>{open ? "Tutup" : "Ubah"}</button>
+          <ModalButton label="Edit" className="btn-link" title={`Edit wilayah ${region.name}`}>
+          <form action={action} className="copy-row">
+            <input type="hidden" name="regionId" value={region.id} />
+            <input className="input" name="name" maxLength={60} defaultValue={region.name} aria-label={`Nama wilayah ${region.name}`} />
+            <button type="submit" className="btn btn-small" disabled={pending}>{pending ? "Menyimpan…" : "Simpan nama"}</button>
+          </form>
+          <Result state={state} />
+
+          <CampusList regionId={region.id} regionName={region.name} campuses={campuses} />
+
+          {dipakai ? (
+            <p className="section-hint hide-mobile" style={{ margin: "0.75rem 0 0" }}>
+              Masih dipakai {region.awardees} awardee dan {region.manwils} akun Manwil, jadi belum bisa dihapus.
+              Pindahkan mereka lewat menu Pengguna dulu.
+            </p>
+          ) : (
+            <form id={hapusForm} action={hapusAction} style={{ marginTop: "0.75rem" }}>
+              <input type="hidden" name="regionId" value={region.id} />
+              <ConfirmDelete
+                label={`Hapus wilayah${region.campuses > 0 ? ` (beserta ${region.campuses} kampusnya)` : ""}`}
+                title="Hapus wilayah ini?"
+                confirmLabel="Ya, hapus wilayah"
+                form={hapusForm}
+                pending={menghapus}
+              >
+                <p>Wilayah <b>{region.name}</b>{region.campuses > 0 ? ` beserta ${region.campuses} kampusnya` : ""} akan dihapus.</p>
+                <p>Tindakan ini tidak bisa dibatalkan.</p>
+              </ConfirmDelete>
+              <Result state={hapus} />
+            </form>
+          )}
+          </ModalButton>
         </td>
       </tr>
-
-      {open && (
-        <tr>
-          <td colSpan={6} style={{ background: "var(--surface-sunken)" }}>
-            <form action={action} className="copy-row">
-              <input type="hidden" name="regionId" value={region.id} />
-              <input className="input" name="name" maxLength={60} defaultValue={region.name} aria-label={`Nama wilayah ${region.name}`} />
-              <button type="submit" className="btn btn-small" disabled={pending}>{pending ? "Menyimpan…" : "Simpan nama"}</button>
-            </form>
-            <Result state={state} />
-
-            <CampusList regionId={region.id} regionName={region.name} campuses={campuses} />
-
-            {dipakai ? (
-              <p className="section-hint" style={{ margin: "0.75rem 0 0" }}>
-                Masih dipakai {region.awardees} awardee dan {region.manwils} akun Manwil, jadi belum bisa dihapus.
-                Pindahkan mereka lewat menu Pengguna dulu.
-              </p>
-            ) : (
-              <form action={hapusAction} style={{ marginTop: "0.75rem" }}>
-                <input type="hidden" name="regionId" value={region.id} />
-                {confirming ? (
-                  <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-                    <button type="submit" className="btn-link" style={{ color: "var(--bad)" }} disabled={menghapus}>
-                      {menghapus ? "Menghapus…" : "Ya, hapus wilayahnya"}
-                    </button>
-                    <button type="button" className="btn-link" onClick={() => setConfirming(false)}>Batal</button>
-                  </div>
-                ) : (
-                  <button type="button" className="btn-link" onClick={() => setConfirming(true)}>
-                    Hapus wilayah{region.campuses > 0 ? ` (beserta ${region.campuses} kampusnya)` : ""}
-                  </button>
-                )}
-                <Result state={hapus} />
-              </form>
-            )}
-          </td>
-        </tr>
-      )}
     </>
   );
 }
@@ -114,7 +107,7 @@ function CampusList({
   return (
     <div style={{ marginTop: "1rem" }}>
       <h3 className="section-title" style={{ fontSize: "0.9rem" }}>Kampus di {regionName}</h3>
-      <p className="section-hint">
+      <p className="section-hint hide-mobile">
         Daftar ini yang muncul sebagai pilihan Kampus saat menambah awardee di wilayah ini.
       </p>
 
@@ -147,8 +140,7 @@ function CampusList({
 function CampusItem({ campus }: { campus: CampusRow }) {
   const [state, action, pending] = useActionState<RegionState, FormData>(renameCampusAction, null);
   const [hapus, hapusAction, menghapus] = useActionState<RegionState, FormData>(deleteCampusAction, null);
-  const [open, setOpen] = useState(false);
-  const [confirming, setConfirming] = useState(false);
+  const hapusForm = useId();
 
   return (
     <li className="campus-item">
@@ -157,11 +149,8 @@ function CampusItem({ campus }: { campus: CampusRow }) {
           {campus.name}
           {campus.awardees > 0 && <span className="pill pill-info" style={{ marginLeft: "0.5rem" }}>{campus.awardees} awardee</span>}
         </span>
-        <button type="button" className="btn-link" onClick={() => setOpen(!open)}>{open ? "Tutup" : "Ubah"}</button>
-      </div>
-
-      {open && (
-        <div style={{ marginTop: "0.5rem" }}>
+        <ModalButton label="Edit" className="btn-link" title={`Edit kampus ${campus.name}`}>
+        <div>
           <form action={action} className="copy-row">
             <input type="hidden" name="campusId" value={campus.id} />
             <input className="input" name="name" maxLength={120} defaultValue={campus.name} aria-label={`Nama kampus ${campus.name}`} />
@@ -170,23 +159,18 @@ function CampusItem({ campus }: { campus: CampusRow }) {
           <Result state={state} />
 
           {campus.awardees === 0 && (
-            <form action={hapusAction} style={{ marginTop: "0.5rem" }}>
+            <form id={hapusForm} action={hapusAction} style={{ marginTop: "0.5rem" }}>
               <input type="hidden" name="campusId" value={campus.id} />
-              {confirming ? (
-                <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-                  <button type="button" className="btn-link" onClick={() => setConfirming(false)}>Batal</button>
-                  <button type="submit" className="btn-link" style={{ color: "var(--bad)" }} disabled={menghapus}>
-                    {menghapus ? "Menghapus…" : "Ya, hapus kampusnya"}
-                  </button>
-                </div>
-              ) : (
-                <button type="button" className="btn-link" onClick={() => setConfirming(true)}>Hapus kampus</button>
-              )}
+              <ConfirmDelete label="Hapus kampus" title="Hapus kampus ini?" confirmLabel="Ya, hapus kampus" form={hapusForm} pending={menghapus}>
+                <p>Kampus <b>{campus.name}</b> akan dihapus.</p>
+                <p>Tindakan ini tidak bisa dibatalkan.</p>
+              </ConfirmDelete>
               <Result state={hapus} />
             </form>
           )}
         </div>
-      )}
+        </ModalButton>
+      </div>
     </li>
   );
 }
