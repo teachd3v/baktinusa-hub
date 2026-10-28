@@ -11,7 +11,9 @@ export const metadata: Metadata = {
   description: "Portal pengukuran awardee BAKTI NUSA untuk Admin, Awardee, dan Manajer Wilayah.",
 };
 
+// viewportFit "cover" membiarkan halaman sampai ke tepi layar berponi; tab bawah memakai env(safe-area-inset-*).
 export const viewport: Viewport = {
+  viewportFit: "cover",
   themeColor: "#1e1616",
 };
 

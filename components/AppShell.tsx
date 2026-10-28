@@ -1,6 +1,9 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { homeFor, type SessionUser } from "@/lib/data/scope";
+import { MobileChrome } from "./MobileChrome";
 import { NavLinks } from "./NavLinks";
+import { ResponsiveTables } from "./ResponsiveTables";
 
 const ROLE_LABEL = { admin: "Admin", manwil: "Manajer Wilayah", awardee: "Awardee" } as const;
 
@@ -19,6 +22,8 @@ export function AppShell({
   children: React.ReactNode;
 }) {
   return (
+    <>
+    <MobileChrome items={nav} homeHref={homeFor(user.role)} name={user.name} role={ROLE_LABEL[user.role]} initials={initials(user.name)} />
     <div className="shell">
       <header className="shell-bar">
         <div className="shell-bar-inner">
@@ -51,5 +56,9 @@ export function AppShell({
       </header>
       <main className="shell-main">{children}</main>
     </div>
+    <Suspense fallback={null}>
+      <ResponsiveTables />
+    </Suspense>
+    </>
   );
 }

@@ -8,12 +8,16 @@ import { NavIcon } from "./NavIcon";
 // di globals.css). Dulu di sini ada puluhan baris geometri untuk lekukan rail yang harus selalu sama dengan angka
 // di CSS. Lekukan itu hanya hiasan, dan satu-satunya yang membuat dua berkas ini tidak bisa diubah sendiri-sendiri.
 
-export function NavLinks({ items }: { items: { href: string; label: string }[] }) {
-  const pathname = usePathname();
-  // Tautan paling spesifik yang cocok dianggap aktif, supaya "/admin" tidak ikut menyala di "/admin/pengguna".
-  const active = items
+// Tautan paling spesifik yang cocok dianggap aktif, supaya "/admin" tidak ikut menyala di "/admin/pengguna".
+export function activeHref(items: { href: string }[], pathname: string) {
+  return items
     .filter((item) => pathname === item.href || pathname.startsWith(`${item.href}/`))
     .sort((a, b) => b.href.length - a.href.length)[0]?.href;
+}
+
+export function NavLinks({ items }: { items: { href: string; label: string }[] }) {
+  const pathname = usePathname();
+  const active = activeHref(items, pathname);
 
   return (
     <nav className="shell-nav" aria-label="Navigasi utama">

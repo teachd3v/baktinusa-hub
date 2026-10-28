@@ -17,6 +17,9 @@ const PATHS: Record<string, string> = {
   pengukuran: "M4 14h4l2-6 3 12 2.5-8 1.5 2h3",
   gaya: "M12 3a9 9 0 1 0 0 18h2a2 2 0 0 0 0-4h-1a2 2 0 0 1 0-4h2a4 4 0 0 0 0-8ZM7.5 10.5h.01M10.5 7.5h.01M14 7.5h.01",
   wilayah: "M12 21s7-5.5 7-11a7 7 0 1 0-14 0c0 5.5 7 11 7 11ZM12 12a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z",
+  // Dua ikon tab bawah di layar ponsel: "Lainnya" (empat kotak) dan "Akun" (orang dalam lingkaran).
+  lainnya: "M5 5h5v5H5zM14 5h5v5h-5zM5 14h5v5H5zM14 14h5v5h-5z",
+  akun: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18ZM12 12a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM6.5 18.5a6 6 0 0 1 11 0",
 };
 
 // Label navigasi menentukan ikonnya, supaya menambah menu tidak perlu menyentuh berkas ini dua kali.
@@ -35,6 +38,8 @@ const KEY_OF: [RegExp, string][] = [
   [/instrumen/i, "instrumen"],
   [/pengukuran/i, "pengukuran"],
   [/gaya/i, "gaya"],
+  [/lainnya/i, "lainnya"],
+  [/akun/i, "akun"],
 ];
 
 export function NavIcon({ label }: { label: string }) {
