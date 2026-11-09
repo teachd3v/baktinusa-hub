@@ -2866,3 +2866,19 @@ ul.badges {
     display: none;
   }
 }
+
+/* Tombol Pasang aplikasi setelah aplikasinya terpasang: centang hijau, tidak bisa diketuk. */
+.install-done,
+.install-done:disabled {
+  color: var(--ok);
+  background: var(--ok-soft);
+  border-color: transparent;
+  opacity: 1;
+  cursor: default;
+  pointer-events: none;
+}
+
+.install-done svg {
+  width: 1.25rem;
+  height: 1.25rem;
+}
