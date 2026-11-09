@@ -53,8 +53,18 @@
     // Sitekey widget Turnstile "baktinusa-hub" (publik). Secret-nya: TURNSTILE_SECRET.
     "TURNSTILE_SITE_KEY": "0x4AAAAAAE7cxR6fTeyN9CuT",
     // Hostname frontend yang sah menurut siteverify. Jangan pernah memasukkan localhost di sini.
-    "TURNSTILE_HOSTNAMES": "baktinusa-hub.te4ch.workers.dev"
+    "TURNSTILE_HOSTNAMES": "baktinusa-hub.te4ch.workers.dev,baktinusa.hrteach.site"
   },
+  // Domain sendiri. Cloudflare membuat DNS dan sertifikatnya otomatis, zone hrteach.site harus ada di akun ini.
+  // Menambah routes mematikan workers.dev secara bawaan; dinyalakan lagi supaya URL lama tetap hidup.
+  "workers_dev": true,
+  "preview_urls": false,
+  "routes": [
+    {
+      "pattern": "baktinusa.hrteach.site",
+      "custom_domain": true
+    }
+  ],
   // Tugas terjadwal (lihat worker/index.ts): tiap 15 menit memindahkan status periode yang jadwalnya tiba,
   // dan sekali sehari pukul 00.10 WIB mencadangkan D1 ke R2.
   "triggers": {

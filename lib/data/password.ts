@@ -5,7 +5,9 @@
 // native yang tidak ada di runtime ini. Jumlah iterasi ikut disimpan di dalam string, jadi kelak bisa
 // dinaikkan tanpa membuat kata sandi lama tidak bisa dipakai.
 
-const ITERATIONS = 210_000;
+// Workers menolak PBKDF2 di atas 100.000 putaran (NotSupportedError), jadi inilah batas atasnya.
+const MAX_ITERATIONS = 100_000;
+const ITERATIONS = MAX_ITERATIONS;
 const KEY_BITS = 256;
 const SALT_BYTES = 16;
 
@@ -53,7 +55,7 @@ export async function verifyPassword(password: string, stored: string | null): P
   if (scheme !== "pbkdf2" || !iterations || !salt || !hash) return false;
 
   const rounds = Number(iterations);
-  if (!Number.isInteger(rounds) || rounds < 1000 || rounds > 2_000_000) return false;
+  if (!Number.isInteger(rounds) || rounds < 1000 || rounds > MAX_ITERATIONS) return false;
 
   const expected = fromB64(hash);
   const actual = await derive(password, fromB64(salt), rounds);

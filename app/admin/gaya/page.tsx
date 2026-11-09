@@ -62,7 +62,6 @@ export default async function StyleGuidePage() {
     <>
       <div className="page-head">
         <h1>Panduan gaya</h1>
-        <p>Token dan komponen yang dipakai seluruh portal. Semuanya hidup di satu berkas: app/globals.css.</p>
       </div>
 
       <section className="card">

@@ -14,7 +14,6 @@ export default async function AuditPage() {
     <>
       <div className="page-head">
         <h1>Jejak perubahan</h1>
-        <p>Siapa mengubah apa lewat konsol Admin. Jejak tidak bisa dihapus dari dalam aplikasi.</p>
       </div>
 
       <section className="card">

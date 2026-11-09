@@ -21,7 +21,6 @@ export default async function ResponsesPage({ searchParams }: { searchParams: Pr
     <>
       <div className="page-head">
         <h1>Respons</h1>
-        <p>Data mentah yang masuk, lengkap dengan penanda kiriman kembar.</p>
       </div>
 
       <PeriodTabs periods={all} active={chosen?.slug ?? ""} basePath="/admin/respons" />

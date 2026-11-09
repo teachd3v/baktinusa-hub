@@ -14,7 +14,7 @@ if (process.argv.includes("--remote")) {
   process.exit(1);
 }
 
-const PASSWORD = "BA2026";
+const PASSWORD = "BA@2026!";
 const q = (s) => (s === null || s === undefined ? "NULL" : `'${String(s).replaceAll("'", "''")}'`);
 
 const d1 = (sql) => {

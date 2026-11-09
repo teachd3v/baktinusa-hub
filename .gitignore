@@ -13,3 +13,6 @@ next-env.d.ts
 
 # konfigurasi alat lokal
 .claude/
+
+# Artefak review desain
+.hallmark/

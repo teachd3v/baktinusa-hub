@@ -19,7 +19,7 @@ export default async function AwardeeLanding({ params }: { params: Promise<{ kod
     <main className="page">
       <BrandHeader title="Survei Awardee" subtitle="BAKTI NUSA" />
       <div className="app-screen">
-        <AwardeeCard name={awardee.name} region={awardee.region} campus={awardee.campus} referralCode={awardee.referralCode} />
+        <AwardeeCard name={awardee.name} region={awardee.region} campus={awardee.campus} />
         {forms.length === 0 ? (
           <div className="notice fade-in">
             <Icon name="calendar" className="notice-icon" />

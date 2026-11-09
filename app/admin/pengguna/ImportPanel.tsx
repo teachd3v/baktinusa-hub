@@ -17,6 +17,7 @@ type Stage =
   | { kind: "done"; results: RowResult[] };
 
 const CHUNK = 20;
+const PREVIEW_ROWS = 10;
 const SEP = ";";
 
 const csvCell = (v: string) => (/["\n\r;]/.test(v) ? `"${v.replaceAll('"', '""')}"` : v);
@@ -28,12 +29,6 @@ function downloadBlob(blob: Blob, filename: string) {
   a.download = filename;
   a.click();
   URL.revokeObjectURL(url);
-}
-
-// Pemisah titik koma + BOM supaya Excel berbahasa Indonesia membacanya langsung benar.
-function templateCsv(): string {
-  const lines = [TEMPLATE_HEADERS.join(SEP), ...TEMPLATE_EXAMPLE.map((row) => TEMPLATE_HEADERS.map((h) => csvCell(row[h] ?? "")).join(SEP))];
-  return `﻿${lines.join("\r\n")}\r\n`;
 }
 
 // Pembaca CSV kecil: menghormati tanda kutip, dan menebak pemisahnya antara ; dan ,
@@ -81,11 +76,7 @@ export function ImportPanel() {
   const [error, setError] = useState("");
   const fileInput = useRef<HTMLInputElement>(null);
 
-  async function unduhTemplate(format: "csv" | "xlsx") {
-    if (format === "csv") {
-      downloadBlob(new Blob([templateCsv()], { type: "text/csv;charset=utf-8" }), "template-pengguna.csv");
-      return;
-    }
+  async function unduhTemplate() {
     const XLSX = await import("xlsx");
     const sheet = XLSX.utils.json_to_sheet(TEMPLATE_EXAMPLE, { header: [...TEMPLATE_HEADERS] });
     const book = XLSX.utils.book_new();
@@ -136,14 +127,8 @@ export function ImportPanel() {
 
   return (
     <>
-      <p className="section-hint">
-        Unduh template, isi di Excel, lalu unggah kembali. Berkasnya diperiksa dulu dan ditampilkan di sini.
-        Tidak ada yang tersimpan sampai Anda menekan tombol terapkan.
-      </p>
-
       <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", alignItems: "center" }}>
-        <button type="button" className="btn btn-small btn-inline btn-muted" onClick={() => unduhTemplate("csv")}>Template CSV</button>
-        <button type="button" className="btn btn-small btn-inline btn-muted" onClick={() => unduhTemplate("xlsx")}>Template Excel</button>
+        <button type="button" className="btn btn-small btn-inline btn-muted" onClick={() => void unduhTemplate()}>Unduh template Excel</button>
         <input
           ref={fileInput}
           type="file"
@@ -168,6 +153,7 @@ export function ImportPanel() {
           <p className="section-hint">
             {hitung(stage.plans, "buat")} akan dibuat, {hitung(stage.plans, "perbarui")} akan diperbarui,{" "}
             {hitung(stage.plans, "tolak")} ditolak
+            {stage.plans.length > PREVIEW_ROWS && `. Menampilkan ${PREVIEW_ROWS} dari ${stage.plans.length} baris, semuanya ikut diterapkan`}
           </p>
 
           <div className="table-wrap" style={{ maxHeight: "22rem", overflowY: "auto" }}>
@@ -182,7 +168,7 @@ export function ImportPanel() {
                 </tr>
               </thead>
               <tbody>
-                {stage.plans.map((p) => (
+                {stage.plans.slice(0, PREVIEW_ROWS).map((p) => (
                   <tr key={p.line}>
                     <td className="num">{p.line}</td>
                     <td>{p.name || "—"}</td>
