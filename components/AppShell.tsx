@@ -44,11 +44,11 @@ export function AppShell({
               <span className="sr-only">
                 Masuk sebagai {user.name}, {ROLE_LABEL[user.role]}
               </span>
-              <Link href="/akun" className="shell-logout" data-label="Kata sandi">
+              <Link href="/akun" className="shell-logout" data-label="Akun">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                   <path d="M6 11h12v9H6zM8.5 11V8a3.5 3.5 0 0 1 7 0v3" />
                 </svg>
-                <span className="sr-only">Ganti kata sandi</span>
+                <span className="sr-only">Akun, kata sandi, dan pasang aplikasi</span>
               </Link>
               <form method="post" action="/api/auth/logout">
                 <button type="submit" className="shell-logout" data-label="Keluar">
