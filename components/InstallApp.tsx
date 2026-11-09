@@ -17,15 +17,15 @@ export function InstallApp() {
     setStandalone(isStandalone);
     setIos(/iphone|ipad|ipod/i.test(navigator.userAgent));
 
-    const onPrompt = (e: Event) => {
-      e.preventDefault();
-      setEvent(e as InstallEvent);
-    };
+    // Peristiwanya ditangkap skrip di layout (lebih awal dari React) dan disimpan di window.__bip.
+    const w = window as Window & { __bip?: InstallEvent };
+    if (w.__bip) setEvent(w.__bip);
+    const onReady = () => setEvent(w.__bip ?? null);
     const onInstalled = () => setStandalone(true);
-    window.addEventListener("beforeinstallprompt", onPrompt);
+    window.addEventListener("bip-ready", onReady);
     window.addEventListener("appinstalled", onInstalled);
     return () => {
-      window.removeEventListener("beforeinstallprompt", onPrompt);
+      window.removeEventListener("bip-ready", onReady);
       window.removeEventListener("appinstalled", onInstalled);
     };
   }, []);
@@ -40,6 +40,7 @@ export function InstallApp() {
         onClick={async () => {
           await event.prompt();
           await event.userChoice;
+          (window as Window & { __bip?: InstallEvent }).__bip = undefined;
           setEvent(null);
         }}
       >

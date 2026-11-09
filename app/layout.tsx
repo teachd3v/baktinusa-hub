@@ -25,7 +25,17 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="id" className={jakarta.variable}>
-      <body>{children}</body>
+      <body>
+        {/* Chrome menembakkan beforeinstallprompt sekali, sering sebelum React selesai memuat. Ditangkap di sini supaya
+            tombol "Pasang aplikasi" di halaman Akun tidak kehilangan peristiwanya. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();window.__bip=e;window.dispatchEvent(new Event('bip-ready'))});",
+          }}
+        />
+        {children}
+      </body>
     </html>
   );
 }
