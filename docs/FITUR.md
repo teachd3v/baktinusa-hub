@@ -46,15 +46,46 @@ Semuanya masih perlu dibahas lebih rinci. Urutan di bawah mengikuti ketergantung
 
 | # | Fitur | Untuk | Status |
 |---|---|---|---|
-| 1 | Profile Saya | Awardee | Ide |
+| 1 | Profile Saya | Awardee, Admin | Dirancang |
 | 2 | Portofolio | Awardee | Ide |
 | 3 | Export CV (PDF) | Awardee | Ide |
 | 4 | Uji Akhir dan transkrip nilai | Admin, Awardee | Ide |
 
-### 1. Profile Saya (Awardee)
-Database personal awardee sekaligus data yang terikat program.
-- Data personal (identitas, kontak, latar belakang) dan data program (angkatan, wilayah, kampus, dst.) dalam satu halaman.
-- Yang sudah ada di sistem: nama, angkatan, wilayah, kampus, foto, kode referal.
+### 1. Profile Saya (Awardee) — status: Dirancang
+Database personal awardee sekaligus data yang terikat program, dan bahan branding aktivis untuk CV.
+Awardee mengisi sendiri, Admin bisa melihat dan mengedit semua kolom.
+
+**Yang sudah ada di sistem:** nama, angkatan, wilayah, kampus, foto (`public/images`), kode referal, LeadPro (nama, bidang, deskripsi), email akun.
+
+**Kolom (awardee yang mengisi)** — W = wajib, O = opsional:
+
+| Kelompok | Kolom |
+|---|---|
+| A. Identitas dan kontak (internal) | nama panggilan W, jenis kelamin W, tempat dan tanggal lahir W, no. WhatsApp W, email pribadi W, kota domisili W, kontak darurat (nama, nomor) O |
+| B. Akademik | fakultas W, program studi W, jenjang W, tahun masuk W, perkiraan lulus W, NIM O |
+| D. Branding aktivis | tagline maks. 100 karakter W, bio maks. 500 karakter W, bidang minat/fokus advokasi (daftar plus bebas) O, keahlian maks. 10 tag O, organisasi utama dan jabatan O, bahasa dan tingkat O |
+| E. Kehadiran daring | Instagram, LinkedIn, satu tautan bebas (semua O) |
+| F. Cerita | motivasi bergabung O, dampak yang ingin dicapai O (maks. 500 karakter) |
+
+**Diisi Admin, awardee hanya melihat (dikunci):** status awardee (aktif, lulus, dicabut), tanggal bergabung.
+
+**IPK per semester:** tabel terpisah, diisi awardee tiap semester (semester, tahun ajaran, IPK). Dipakai Uji Akhir (fitur 4).
+
+**Sengaja tidak dikumpulkan:** data ekonomi keluarga, KTP/KK, alamat lengkap (cukup kota), riwayat prestasi dan organisasi lengkap (itu Portofolio).
+
+**Rancangan tabel (migrasi baru):**
+- `awardee_profiles`: satu baris per awardee (`awardee_id` PRIMARY KEY, FK `awardees`), seluruh kolom A, B, D, E, F; kolom daftar (minat, keahlian, bahasa) disimpan sebagai JSON teks; `consent_at`, `updated_at`, `updated_by`.
+- `awardee_semesters`: `awardee_id`, `semester`, `academic_year`, `gpa`, UNIQUE (`awardee_id`, `semester`).
+- `awardees`: tambah `status` (`active`/`graduated`/`revoked`) dan `joined_at`.
+- Kelengkapan (persen dan daftar kolom wajib yang kosong) **dihitung di kode**, tidak disimpan, supaya tidak bisa basi.
+
+**Halaman:**
+- Awardee: `/awardee/profil`, form per kelompok dengan simpan per bagian. Persetujuan penggunaan data (satu centang, `consent_at` tersimpan) muncul saat pengisian pertama.
+- Beranda awardee: banner dan persen kelengkapan sampai kolom wajib terisi. **Tidak** memblokir akses ke penilaian.
+- Admin: halaman profil per awardee (edit semua kolom, tiap suntingan masuk Jejak perubahan), plus daftar awardee yang profilnya belum lengkap; pengingat lewat fitur Pengingat yang ada.
+- Manwil: lihat saja untuk wilayahnya, **tanpa** tanggal lahir dan kontak darurat.
+
+**Keputusan sementara (dari pembahasan):** Manwil boleh melihat profil wilayahnya dengan pembatasan di atas; IPK dikumpulkan per semester; persetujuan data wajib; kolom wajib hanya yang bertanda W; foto tetap dikelola Admin dulu (unggah sendiri ditunda).
 
 ### 2. Portofolio (Awardee)
 Jejak dokumentasi karya, prestasi, organisasi, dan lainnya.
