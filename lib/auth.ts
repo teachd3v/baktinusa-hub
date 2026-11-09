@@ -2,7 +2,7 @@ import { env } from "cloudflare:workers";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { cache } from "react";
-import { SESSION_TTL_MS, getSessionUser } from "./data/auth.ts";
+import { getSessionUser, sessionTtlMs } from "./data/auth.ts";
 import { homeFor, type Role, type SessionUser } from "./data/scope.ts";
 
 export const SESSION_COOKIE = "bh_session";
@@ -21,8 +21,8 @@ export async function requireUser(...roles: Role[]): Promise<SessionUser> {
   return user;
 }
 
-export const sessionCookie = (token: string) =>
-  `${SESSION_COOKIE}=${token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${Math.floor(SESSION_TTL_MS / 1000)}`;
+export const sessionCookie = (token: string, role: Role) =>
+  `${SESSION_COOKIE}=${token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${Math.floor(sessionTtlMs(role) / 1000)}`;
 
 export const clearedSessionCookie = () => `${SESSION_COOKIE}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0`;
 

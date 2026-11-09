@@ -9,6 +9,11 @@ const jakarta = Plus_Jakarta_Sans({ subsets: ["latin"], weight: ["400", "600", "
 export const metadata: Metadata = {
   title: { default: "BAKTINUSA HUB", template: "%s · BAKTINUSA HUB" },
   description: "Portal pengukuran awardee BAKTI NUSA untuk Admin, Awardee, dan Manajer Wilayah.",
+  // PWA: bisa dipasang ke layar utama dan berjalan layar penuh. Sengaja tanpa service worker: aplikasi ini
+  // selalu online, dan data akun tidak boleh tersimpan di cache perangkat.
+  manifest: "/manifest.webmanifest",
+  icons: { icon: [{ url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" }], apple: "/icons/apple-touch-icon.png" },
+  appleWebApp: { capable: true, title: "BAKTINUSA", statusBarStyle: "default" },
 };
 
 // viewportFit "cover" membiarkan halaman sampai ke tepi layar berponi; tab bawah memakai env(safe-area-inset-*).

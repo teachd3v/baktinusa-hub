@@ -47,6 +47,6 @@ export async function POST(request: Request) {
   const token = await createSession(env.DB, found.user.id);
   return Response.json(
     { ok: true, redirect: homeFor(found.user.role) },
-    { headers: { "set-cookie": sessionCookie(token), "cache-control": "no-store" } },
+    { headers: { "set-cookie": sessionCookie(token, found.user.role), "cache-control": "no-store" } },
   );
 }

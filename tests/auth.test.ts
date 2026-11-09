@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import { beforeEach, describe, test } from "node:test";
 import {
+  ADMIN_SESSION_TTL_MS,
   EMAIL_LINK_TTL_MS,
+  SESSION_TTL_MS,
   consumeLoginToken,
   createLoginToken,
   createSession,
@@ -78,5 +80,32 @@ describe("sesi", () => {
     const token = await createSession(db, 3);
     await setUserStatus(db, admin, 3, "disabled");
     assert.equal(await getSessionUser(db, token), null);
+  });
+});
+
+describe("sesi Admin", () => {
+  test("sesi Admin berlaku 24 jam dan tidak diperpanjang saat dipakai", async () => {
+    const token = await createSession(db, 1);
+    const row = await db.prepare("SELECT created_at, expires_at FROM sessions").first<{ created_at: string; expires_at: string }>();
+    assert.equal(Date.parse(row!.expires_at) - Date.parse(row!.created_at), ADMIN_SESSION_TTL_MS);
+
+    const longAgo = new Date(Date.now() - 2 * 3_600_000).toISOString();
+    await db.prepare("UPDATE sessions SET last_seen_at = ?").bind(longAgo).run();
+    await getSessionUser(db, token);
+    const after = await db.prepare("SELECT expires_at FROM sessions").first<{ expires_at: string }>();
+    assert.equal(after!.expires_at, row!.expires_at);
+  });
+
+  test("sesi Admin lama yang berusia lebih dari 24 jam ditolak walau expires_at masih jauh", async () => {
+    const token = await createSession(db, 1);
+    const old = new Date(Date.now() - ADMIN_SESSION_TTL_MS - 1000).toISOString();
+    await db.prepare("UPDATE sessions SET created_at = ?, expires_at = ?").bind(old, new Date(Date.now() + 10 * 86_400_000).toISOString()).run();
+    assert.equal(await getSessionUser(db, token), null);
+  });
+
+  test("sesi Awardee tetap 14 hari", async () => {
+    await createSession(db, 3);
+    const row = await db.prepare("SELECT created_at, expires_at FROM sessions").first<{ created_at: string; expires_at: string }>();
+    assert.equal(Date.parse(row!.expires_at) - Date.parse(row!.created_at), SESSION_TTL_MS);
   });
 });

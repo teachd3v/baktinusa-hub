@@ -1,5 +1,6 @@
 import { AppShell } from "@/components/AppShell";
 import { requireUser } from "@/lib/auth";
+import { NAV } from "@/lib/nav";
 
 export const dynamic = "force-dynamic";
 
@@ -8,12 +9,7 @@ export default async function ManwilLayout({ children }: { children: React.React
   return (
     <AppShell
       user={user}
-      nav={[
-        { href: "/manwil", label: "Beranda" },
-        { href: "/manwil/nilai", label: "Penilaian" },
-        { href: "/manwil/hasil", label: "Hasil" },
-        { href: "/manwil/analitik", label: "Analitik" },
-      ]}
+      nav={NAV.manwil}
     >
       {children}
     </AppShell>

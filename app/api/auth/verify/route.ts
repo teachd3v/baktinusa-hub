@@ -21,5 +21,5 @@ export async function POST(request: Request) {
   if (!user) return seeOther(request, "/masuk/verifikasi?gagal=1");
 
   const session = await createSession(env.DB, user.id);
-  return seeOther(request, homeFor(user.role), sessionCookie(session));
+  return seeOther(request, homeFor(user.role), sessionCookie(session, user.role));
 }

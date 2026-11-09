@@ -5,6 +5,9 @@ import type { Role, SessionUser } from "./scope.ts";
 // sesi dan tautan masuk tetap tidak bisa dipakai.
 
 export const SESSION_TTL_MS = 14 * 24 * 3_600_000; // 14 hari, diperpanjang saat dipakai
+// Admin memegang akses terluas, jadi sesinya pendek dan mutlak: 24 jam sejak masuk, tidak diperpanjang saat dipakai.
+export const ADMIN_SESSION_TTL_MS = 24 * 3_600_000;
+export const sessionTtlMs = (role: Role) => (role === "admin" ? ADMIN_SESSION_TTL_MS : SESSION_TTL_MS);
 export const EMAIL_LINK_TTL_MS = 15 * 60_000; // tautan dari email: 15 menit
 export const MANUAL_LINK_TTL_MS = 3 * 24 * 3_600_000; // tautan yang dibagikan Admin lewat WhatsApp dsb.: 3 hari
 const TOUCH_INTERVAL_MS = 60 * 60_000; // perpanjangan sesi ditulis paling sering sejam sekali
@@ -85,10 +88,12 @@ export async function createSession(db: D1Database, userId: number): Promise<str
   const token = newToken();
   const now = Date.now();
   const nowIso = new Date(now).toISOString();
+  const owner = await db.prepare("SELECT role FROM users WHERE id = ?").bind(userId).first<{ role: Role }>();
+  const ttl = sessionTtlMs(owner?.role ?? "awardee");
   await db.batch([
     db
       .prepare("INSERT INTO sessions (token_hash, user_id, created_at, expires_at, last_seen_at) VALUES (?, ?, ?, ?, ?)")
-      .bind(await hashToken(token), userId, nowIso, isoIn(SESSION_TTL_MS, now), nowIso),
+      .bind(await hashToken(token), userId, nowIso, isoIn(ttl, now), nowIso),
     db.prepare("UPDATE users SET last_login_at = ? WHERE id = ?").bind(nowIso, userId),
     // Bersihkan token & sesi kedaluwarsa milik pengguna ini sekalian.
     db.prepare("DELETE FROM login_tokens WHERE user_id = ? AND expires_at <= ?").bind(userId, nowIso),
@@ -102,23 +107,26 @@ export async function getSessionUser(db: D1Database, token: string | undefined):
   const tokenHash = await hashToken(token);
   const row = await db
     .prepare(
-      `SELECT u.id, u.name, u.email, u.role, u.region_id, u.awardee_id, s.expires_at, s.last_seen_at
+      `SELECT u.id, u.name, u.email, u.role, u.region_id, u.awardee_id, s.expires_at, s.last_seen_at, s.created_at
        FROM sessions s JOIN users u ON u.id = s.user_id
        WHERE s.token_hash = ? AND u.status = 'active'`,
     )
     .bind(tokenHash)
-    .first<UserRow & { expires_at: string; last_seen_at: string }>();
+    .first<UserRow & { expires_at: string; last_seen_at: string; created_at: string }>();
   if (!row) return null;
 
   const now = Date.now();
-  if (Date.parse(row.expires_at) <= now) {
+  // Batas 24 jam Admin juga berlaku untuk sesi yang dibuat sebelum aturan ini ada.
+  const deadline = row.role === "admin" ? Math.min(Date.parse(row.expires_at), Date.parse(row.created_at) + ADMIN_SESSION_TTL_MS) : Date.parse(row.expires_at);
+  if (deadline <= now) {
     await db.prepare("DELETE FROM sessions WHERE token_hash = ?").bind(tokenHash).run();
     return null;
   }
-  if (now - Date.parse(row.last_seen_at) > TOUCH_INTERVAL_MS) {
+  // Sesi Admin tidak diperpanjang: batas 24 jamnya dihitung dari saat masuk.
+  if (row.role !== "admin" && now - Date.parse(row.last_seen_at) > TOUCH_INTERVAL_MS) {
     await db
       .prepare("UPDATE sessions SET last_seen_at = ?, expires_at = ? WHERE token_hash = ?")
-      .bind(new Date(now).toISOString(), isoIn(SESSION_TTL_MS, now), tokenHash)
+      .bind(new Date(now).toISOString(), isoIn(sessionTtlMs(row.role), now), tokenHash)
       .run();
   }
   return toSessionUser(row);

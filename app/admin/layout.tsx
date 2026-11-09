@@ -1,5 +1,6 @@
 import { AppShell } from "@/components/AppShell";
 import { requireUser } from "@/lib/auth";
+import { NAV } from "@/lib/nav";
 
 export const dynamic = "force-dynamic";
 
@@ -8,14 +9,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   return (
     <AppShell
       user={user}
-      nav={[
-        { href: "/admin/pengguna", label: "Pengguna" },
-        { href: "/admin/wilayah", label: "Wilayah" },
-        { href: "/admin/pengukuran", label: "Pengukuran" },
-        { href: "/admin/instrumen", label: "Instrumen" },
-        { href: "/admin/periode", label: "Siklus" },
-        { href: "/admin/analitik", label: "Analitik" },
-      ]}
+      nav={NAV.admin}
     >
       {children}
     </AppShell>

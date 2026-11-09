@@ -3,6 +3,7 @@ import { AppShell } from "@/components/AppShell";
 import { requireUser } from "@/lib/auth";
 import { listAwardees } from "@/lib/data/awardees";
 import { scopeFor } from "@/lib/data/scope";
+import { NAV } from "@/lib/nav";
 import { awardeePhotoUrl } from "@/lib/photo";
 
 export const dynamic = "force-dynamic";
@@ -16,7 +17,7 @@ export default async function AwardeeLayout({ children }: { children: React.Reac
     <AppShell
       user={user}
       photoSrc={photoSrc}
-      nav={[{ href: "/awardee", label: "Beranda" }, { href: "/awardee/nilai", label: "Penilaian" }, { href: "/awardee/hasil", label: "Hasil" }]}
+      nav={NAV.awardee}
     >
       {children}
     </AppShell>

@@ -134,6 +134,12 @@ export function MobileChrome({
             </ul>
           )}
 
+          <Link href="/akun" className="mobile-logout mobile-account-link" aria-current={pathname === "/akun" ? "page" : undefined}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M6 11h12v9H6zM8.5 11V8a3.5 3.5 0 0 1 7 0v3" />
+            </svg>
+            Ganti kata sandi
+          </Link>
           <form method="post" action="/api/auth/logout">
             <button type="submit" className="mobile-logout">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
