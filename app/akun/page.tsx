@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { InstallApp } from "@/components/InstallApp";
 import { requireUser } from "@/lib/auth";
 import { PasswordForm } from "./PasswordForm";
 
@@ -18,6 +19,12 @@ export default async function AccountPage() {
       <section className="card">
         <h2 className="section-title">{user.name}</h2>
         <p className="section-hint">{ROLE_LABEL[user.role]}</p>
+      </section>
+
+      <section className="card" style={{ maxWidth: "32rem" }}>
+        <h2 className="section-title">Pasang di layar utama</h2>
+        <p className="section-hint">Buka seperti aplikasi biasa, layar penuh, tanpa bilah alamat. Tetap perlu internet.</p>
+        <InstallApp />
       </section>
 
       <section className="card" style={{ maxWidth: "32rem" }}>
