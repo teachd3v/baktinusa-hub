@@ -44,7 +44,7 @@ export default async function SurveyPage({ params }: { params: Promise<{ kode: s
     <SurveyForm
       variant="public"
       kode={form.awardee.referralCode}
-      periode={form.period.slug}
+      periode={form.measurement.slug}
       title={form.config.title}
       subtitle={form.config.subtitle}
       hint={`Seberapa setuju Anda dengan pernyataan berikut tentang ${form.awardee.name}?`}
