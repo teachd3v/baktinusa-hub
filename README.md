@@ -3,6 +3,8 @@
 Portal pengukuran awardee BAKTI NUSA dengan tiga peran — Admin, Awardee, dan Manajer Wilayah.
 Menggantikan tiga aplikasi terpisah di folder induk: `eval-public`, `leadpro-survey`, dan `visualisasi-data`.
 
+Catatan fitur (yang sudah ada, rencana pengembangan, dan riwayat perubahan): [docs/FITUR.md](docs/FITUR.md).
+
 Dibangun dengan [vinext](https://github.com/cloudflare/vinext) (Next.js App Router di atas Vite) dan dijalankan di Cloudflare Workers.
 
 ## Perintah
@@ -35,7 +37,7 @@ yang mengarahkan Wrangler ke `dist/server/wrangler.json`. `npm run deploy` dari 
 |---|---|---|
 | `DB` | D1 `baktinusa-hub-db` (APAC) | Data relasional: awardee, periode, instrumen, respons |
 | `SESSIONS` | KV `baktinusa-hub-sessions` | Belum dipakai — sesi pindah ke D1 sejak migrasi 0003 (lihat **Masuk & peran**). Yang tersisa hanya pemeriksaan `/api/health` |
-| `FILES` | R2 `baktinusa-hub-files` | Foto awardee dan berkas export |
+| `FILES` | R2 `baktinusa-hub-files` | Berkas export dan cadangan D1. Foto awardee tidak lagi di sini: disajikan dari `public/images/<wilayah>/<nama>.webp` |
 
 Akses dari server component, route handler, atau server action:
 
