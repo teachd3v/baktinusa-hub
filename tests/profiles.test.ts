@@ -192,12 +192,12 @@ describe("lingkup baca", () => {
     assert.equal(await getProfileView(db, ayu, 3), null);
   });
 
-  test("Manwil melihat wilayahnya tanpa tanggal lahir dan kontak darurat, persentase tetap sama", async () => {
+  test("Manwil melihat wilayahnya dan kontak darurat, tapi tanpa tanggal lahir", async () => {
     const v = (await getProfileView(db, manwilBandung, 1))!;
     assert.equal(v.profile.whatsapp, "+6281234567890");
     assert.equal(v.profile.birthDate, "");
-    assert.equal(v.profile.emergencyName, "");
-    assert.equal(v.profile.emergencyPhone, "");
+    assert.equal(v.profile.emergencyName, "Ibu");
+    assert.equal(v.profile.emergencyPhone, "+6281300000000");
     assert.equal(v.completeness.percent, 100);
   });
 

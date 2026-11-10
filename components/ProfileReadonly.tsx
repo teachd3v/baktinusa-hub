@@ -26,6 +26,7 @@ export function ProfileReadonly({ view }: { view: ProfileView }) {
           <Row label="No. WhatsApp">{show(p.whatsapp)}</Row>
           <Row label="Email pribadi">{show(p.personalEmail)}</Row>
           <Row label="Alamat domisili">{show(p.address)}</Row>
+          <Row label="Kontak darurat">{p.emergencyName ? `${p.emergencyName} · ${p.emergencyPhone}` : "—"}</Row>
         </dl>
       </section>
 

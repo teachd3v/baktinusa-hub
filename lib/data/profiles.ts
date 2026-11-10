@@ -1,5 +1,5 @@
 // Profil awardee: data personal, akademik, dan branding aktivis. Awardee mengisi sendiri, Admin bisa mengedit semuanya,
-// Manwil hanya membaca profil wilayahnya (tanpa tanggal lahir dan kontak darurat).
+// Manwil hanya membaca profil wilayahnya (tanpa tanggal lahir).
 //
 // Semua pembacaan lewat Scope, seperti data awardee lainnya. Kolom skalar di sisi aplikasi selalu string ("" = kosong),
 // supaya form tidak perlu membedakan null dan kosong; di basis data yang kosong disimpan sebagai NULL.
@@ -72,8 +72,8 @@ type ListKey = (typeof LISTS)[number]["key"];
 export type Profile = { [K in ScalarKey]: string } & { [K in ListKey]: string[] };
 export type ProfileMeta = { exists: boolean; consentAt: string | null; updatedAt: string | null };
 
-// Dua kolom ini hanya terlihat oleh pemiliknya dan Admin.
-const PRIVATE_FOR_MANWIL: ScalarKey[] = ["birthDate", "emergencyName", "emergencyPhone"];
+// Hanya terlihat oleh pemiliknya dan Admin. Kontak darurat sengaja tidak di sini: Manwil perlu menghubunginya saat darurat.
+const PRIVATE_FOR_MANWIL: ScalarKey[] = ["birthDate"];
 
 export function emptyProfile(): Profile {
   const base = {} as Record<string, string | string[]>;

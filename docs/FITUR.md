@@ -33,7 +33,7 @@ setiap kali ada fitur yang selesai, berubah, atau baru direncanakan.
 ### Profil awardee
 - **Profil Saya** (`/awardee/profil`): identitas, akademik, branding aktivis, sosial media, cerita, dan persetujuan data. Bar kelengkapan menempel di atas dan dihitung langsung saat mengetik; banner kelengkapan di Beranda.
 - **Admin** (`/admin/profil`): daftar kelengkapan, edit semua kolom, status program dan tanggal bergabung; suntingan tercatat di Jejak perubahan.
-- **Manwil** (`/manwil/profil`): baca saja untuk wilayahnya, tanpa tanggal lahir dan kontak darurat.
+- **Manwil** (`/manwil/profil`): baca saja untuk wilayahnya, tanpa tanggal lahir (kontak darurat terlihat).
 
 ### Akun dan platform
 - Masuk dengan ID dan kata sandi. Sesi Admin 24 jam (tidak diperpanjang), Awardee dan Manwil 14 hari.
@@ -85,9 +85,9 @@ Awardee mengisi sendiri, Admin bisa melihat dan mengedit semua kolom.
 - Awardee: `/awardee/profil`, form per kelompok dengan simpan per bagian. Persetujuan penggunaan data (satu centang, `consent_at` tersimpan) muncul saat pengisian pertama.
 - Beranda awardee: banner dan persen kelengkapan sampai kolom wajib terisi. **Tidak** memblokir akses ke penilaian.
 - Admin: halaman profil per awardee (edit semua kolom, tiap suntingan masuk Jejak perubahan), plus daftar awardee yang profilnya belum lengkap; pengingat lewat fitur Pengingat yang ada.
-- Manwil: lihat saja untuk wilayahnya, **tanpa** tanggal lahir dan kontak darurat.
+- Manwil: lihat saja untuk wilayahnya, **tanpa** tanggal lahir. Kontak darurat terlihat, supaya Manwil bisa menghubungi saat darurat.
 
-**Keputusan sementara (dari pembahasan):** Manwil boleh melihat profil wilayahnya dengan pembatasan di atas; persetujuan data wajib; kontak darurat wajib (hanya terlihat awardee dan Admin); kolom wajib hanya yang bertanda W; foto tetap dikelola Admin dulu (unggah sendiri ditunda).
+**Keputusan sementara (dari pembahasan):** Manwil boleh melihat profil wilayahnya dengan pembatasan di atas; persetujuan data wajib; kontak darurat wajib (terlihat awardee, Admin, dan Manwil wilayahnya); kolom wajib hanya yang bertanda W; foto tetap dikelola Admin dulu (unggah sendiri ditunda).
 
 **Yang dikerjakan:** migrasi `0010_profil_awardee.sql`, lapisan data `lib/data/profiles.ts` (29 tes), halaman `/awardee/profil` dengan banner kelengkapan di Beranda, `/admin/profil` (daftar dan edit, status program, tercatat di Jejak perubahan), `/manwil/profil` (baca saja). Isian form tidak dikosongkan saat validasi gagal. Batas laju 5 per menit per akun.
 
@@ -145,6 +145,7 @@ Terbaru di atas. Satu baris per perubahan yang terlihat pengguna.
 
 | Tanggal | Perubahan |
 |---|---|
+| 2026-11-10 | Kontak darurat awardee kini terlihat oleh Manwil wilayahnya |
 | 2026-11-10 | Profil: IPK per semester dan jenjang dibuang, alamat domisili, kontak darurat wajib, Sosial Media, bar kelengkapan menempel (migrasi 0011) |
 | 2026-11-10 | Profile Saya: profil awardee, tampilan Admin dan Manwil (migrasi 0010) |
 | 2026-11-09 | Foto awardee di-crop fokus wajah dan setengah badan, 400 px |

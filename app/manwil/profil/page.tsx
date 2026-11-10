@@ -13,7 +13,7 @@ export default async function ManwilProfileListPage() {
     <>
       <div className="page-head">
         <h1>Profil Awardee</h1>
-        <p>Kelengkapan profil awardee di wilayah Anda. Tanggal lahir dan kontak darurat tidak ditampilkan.</p>
+        <p>Kelengkapan profil awardee di wilayah Anda. Tanggal lahir tidak ditampilkan.</p>
       </div>
       <ProfileListTable rows={rows} basePath="/manwil/profil" />
     </>

@@ -119,7 +119,7 @@ export function ProfileForm({ profile, action, mode, consented, awardeeId, versi
 
       <section className="card">
         <h2 className="section-title">Identitas dan kontak</h2>
-        <p className="section-hint">Tanda * wajib diisi. Tanggal lahir dan kontak darurat hanya terlihat oleh Anda dan Admin.</p>
+        <p className="section-hint">Tanda * wajib diisi. Tanggal lahir hanya terlihat oleh Anda dan Admin. Kontak darurat juga terlihat oleh Manajer Wilayah Anda.</p>
         <div className="form-row">
           <Field name="nickname" label="Nama panggilan" profile={profile} max={40} required autoComplete="nickname" />
           <div className="field">
