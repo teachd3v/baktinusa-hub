@@ -48,6 +48,7 @@ Satu komponen (`SurveyForm`) dipakai penilaian publik, mandiri, Peer, dan Manwil
 
 ### Leadership Project (LeadPro)
 - Data ada di tiga kolom tabel `awardees` (`leadpro_name`, `leadpro_field`, `leadpro_description`), satu proyek per awardee; asalnya dari CSV seed. Tanpa migrasi baru.
+- Deskripsi diringkas satu kalimat (maks 100 karakter) lewat migrasi `0012`; kartu menampilkannya dalam lipatan yang tertutup secara bawaan. Bidang dipilih dari daftar (atau "Lainnya…" untuk bidang baru).
 - **Awardee:** kartu baca saja di Profil Saya (Admin yang mengubah). **Manwil:** menu LeadPro untuk wilayahnya. **Admin:** menu LeadPro semua wilayah, edit di `/admin/profil/<id>`.
 - Lapisan data `lib/data/leadpro.ts` (18 tes): daftar berlingkup (Manwil tidak bisa melihat wilayah lain walau memasukkan parameter wilayah), saringan murni di atas hasil berlingkup, pemisah baris Windows (`
 `) dirapikan, edit khusus Admin.
@@ -168,6 +169,7 @@ Terbaru di atas. Satu baris per perubahan yang terlihat pengguna.
 
 | Tanggal | Perubahan |
 |---|---|
+| 2026-11-10 | LeadPro: bidang jadi pilihan, deskripsi diringkas 100 karakter, kartu dilipat |
 | 2026-11-10 | LeadPro: kartu di Profil Saya, menu LeadPro untuk Manwil (wilayahnya) dan Admin (semua, bisa disaring), edit oleh Admin |
 | 2026-11-10 | Perbaikan: tombol Buka di daftar Profil Awardee tak terlihat (teks hampir putih di latar putih) |
 | 2026-11-10 | Form penilaian: emoji skala abu-abu selama belum dipilih, yang dipilih berwarna dengan latar kuning |

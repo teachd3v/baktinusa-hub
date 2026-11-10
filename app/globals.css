@@ -2995,9 +2995,18 @@ ul.badges {
 }
 
 .leadpro-full {
-  margin: 0;
+  margin: 0.35rem 0 0;
+  color: var(--ink-muted);
+  font-size: var(--text-sm);
   white-space: pre-line;
-  line-height: 1.55;
+  line-height: 1.5;
+}
+
+.leadpro-more > summary {
+  width: fit-content;
+  color: var(--ink-muted);
+  font-size: var(--text-sm);
+  cursor: pointer;
 }
 
 @media (max-width: 640px) {

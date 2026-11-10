@@ -1,12 +1,20 @@
 "use client";
 
-import { startTransition, useActionState } from "react";
+import { startTransition, useActionState, useState } from "react";
 import type { Leadpro } from "@/lib/data/leadpro";
 import { saveLeadproAction } from "../actions";
+
+const OTHER = "__other__";
 
 // Dikirim lewat onSubmit supaya isian tidak dikosongkan React saat validasi gagal.
 export function LeadproForm({ awardeeId, leadpro, fields }: { awardeeId: number; leadpro: Leadpro | null; fields: string[] }) {
   const [state, action, pending] = useActionState(saveLeadproAction, null);
+  // Bidang dipilih dari daftar yang sudah ada; "Lainnya" membuka isian untuk bidang baru.
+  const current = leadpro?.field ?? "";
+  const known = current && !fields.includes(current) ? [...fields, current] : fields;
+  const [choice, setChoice] = useState(current);
+  const [custom, setCustom] = useState("");
+  const other = choice === OTHER;
   return (
     <form
       onSubmit={(event) => {
@@ -23,12 +31,17 @@ export function LeadproForm({ awardeeId, leadpro, fields }: { awardeeId: number;
         </div>
         <div className="field">
           <label className="label" htmlFor="lp-field">Bidang</label>
-          <input id="lp-field" className="input" name="field" maxLength={40} list="lp-fields" defaultValue={leadpro?.field ?? ""} />
-          <datalist id="lp-fields">
-            {fields.map((f) => (
-              <option key={f} value={f} />
+          <select id="lp-field" className="select" value={choice} onChange={(e) => setChoice(e.target.value)}>
+            <option value="">Belum dipilih</option>
+            {known.map((f) => (
+              <option key={f} value={f}>{f}</option>
             ))}
-          </datalist>
+            <option value={OTHER}>Lainnya…</option>
+          </select>
+          {other && (
+            <input className="input" aria-label="Bidang baru" maxLength={40} placeholder="Tulis bidang baru" value={custom} onChange={(e) => setCustom(e.target.value)} style={{ marginTop: "0.4rem" }} />
+          )}
+          <input type="hidden" name="field" value={other ? custom : choice} />
         </div>
       </div>
       <div className="field">

@@ -11,7 +11,12 @@ export function LeadproCard({ leadpro, own = false }: { leadpro: Leadpro | null;
             <strong style={{ fontSize: "var(--text-lg, 1.1rem)" }}>{leadpro.name}</strong>
             {leadpro.field && <span className="pill pill-muted">{leadpro.field}</span>}
           </p>
-          {leadpro.description && <p className="leadpro-full">{leadpro.description}</p>}
+          {leadpro.description && (
+            <details className="leadpro-more">
+              <summary>Lihat deskripsi</summary>
+              <p className="leadpro-full">{leadpro.description}</p>
+            </details>
+          )}
           {own && <p className="section-hint" style={{ margin: "0.75rem 0 0" }}>Ada yang kurang pas? Hubungi Admin program untuk mengubahnya.</p>}
         </>
       ) : (
