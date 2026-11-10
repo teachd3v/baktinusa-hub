@@ -94,6 +94,23 @@ export function SurveyForm(props: Props) {
   const relation = profile && answers.relationIndex !== null ? profile.relation.options[answers.relationIndex] : undefined;
   const canSubmit = !isPublic || token !== "";
 
+  // Kemajuan = jawaban wajib yang sudah terisi dibagi seluruh yang wajib: profil responden (form publik), semua soal,
+  // dan kolom saran yang wajib. Dihitung dari jawaban, bukan dari langkah, supaya naik tiap satu soal dijawab.
+  const progress = useMemo(() => {
+    const required = feedback.filter((f) => f.required);
+    let total = instruments.length + required.length;
+    let done = instruments.filter((i) => answers.scores[i.code] !== undefined).length + required.filter((f) => answers.feedback[f.field]?.trim()).length;
+    if (profile) {
+      const items = [answers.name.trim(), answers.city.trim(), relation ? "ya" : ""];
+      if (relation?.detail) items.push(answers.relationDetail.trim());
+      if (profile.knownDuration) items.push(answers.knownDuration);
+      total += items.length;
+      done += items.filter(Boolean).length;
+    }
+    return { done, total, percent: total === 0 ? 100 : Math.round((done / total) * 100) };
+  }, [answers, feedback, instruments, profile, relation]);
+  const stepTitle = profile && step === 0 ? "Profil Responden" : step === lastStep ? "Saran & Masukan" : categories[step - offset];
+
   function firstMissing(target: number): string | null {
     if (profile && target === 0) {
       if (!answers.name.trim()) return "f-name";
@@ -190,10 +207,15 @@ export function SurveyForm(props: Props) {
       <DeadlineBanner closesAt={closesAt} />
       <AwardeeCard {...awardee} />
 
-      <div className="progress" aria-hidden="true">
-        {Array.from({ length: lastStep + 1 }, (_, i) => (
-          <span key={i} className={i <= step ? "done" : undefined} />
-        ))}
+      {/* Menempel di atas saat soal digulir, supaya tahu sudah sampai berapa persen. */}
+      <div className="sticky-progress">
+        <p className="sticky-progress-label">
+          <span>Langkah {step + 1} dari {lastStep + 1} · {stepTitle}</span>
+          <strong>{progress.percent}%</strong>
+        </p>
+        <span className="bar" role="progressbar" aria-valuenow={progress.percent} aria-valuemin={0} aria-valuemax={100} aria-label="Kemajuan pengisian">
+          <span className="bar-fill bar-accent" style={{ width: `${progress.percent}%` }} />
+        </span>
       </div>
       <p className="sr-only" aria-live="polite">Langkah {step + 1} dari {lastStep + 1}</p>
 

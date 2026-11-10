@@ -1863,24 +1863,6 @@ a:hover {
 
 /* ---------- langkah & pernyataan ---------- */
 
-.progress {
-  display: flex;
-  gap: var(--gap-xs);
-  margin-bottom: var(--gap-md);
-}
-
-.progress span {
-  flex: 1;
-  height: 0.3rem;
-  background: var(--color-paper-3);
-  border-radius: var(--radius-sm);
-  transition: background var(--dur-short) var(--ease-out);
-}
-
-.progress span.done {
-  background: var(--primary);
-}
-
 .statement {
   margin: 0 0 var(--gap-sm);
   font-size: var(--text-base);
@@ -2915,8 +2897,8 @@ ul.badges {
   }
 }
 
-/* Bar kelengkapan profil yang menempel di atas saat form digulir. Di ponsel ia menempel tepat di bawah bilah judul. */
-.profile-sticky {
+/* Bar kemajuan yang menempel di atas saat form digulir (profil, penilaian). Di ponsel ia menempel tepat di bawah bilah judul. */
+.sticky-progress {
   position: sticky;
   top: var(--gap-sm);
   z-index: calc(var(--z-sticky-nav) - 1);
@@ -2928,7 +2910,7 @@ ul.badges {
   box-shadow: 0 2px 8px rgb(0 0 0 / 0.06);
 }
 
-.profile-sticky-label {
+.sticky-progress-label {
   display: flex;
   justify-content: space-between;
   gap: var(--gap-sm);
@@ -2937,13 +2919,18 @@ ul.badges {
   font-weight: 700;
 }
 
-.profile-sticky-label span {
+.sticky-progress-label span {
   color: var(--ink-muted);
   font-weight: 600;
 }
 
 @media (max-width: 899px) {
-  .profile-sticky {
+  .sticky-progress {
     top: calc(var(--appbar-h) + env(safe-area-inset-top) + var(--gap-sm));
   }
+}
+
+/* Halaman publik tidak punya bilah judul aplikasi, jadi bar cukup menempel dekat tepi atas. */
+.page .sticky-progress {
+  top: var(--gap-sm);
 }

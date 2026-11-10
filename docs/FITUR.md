@@ -145,6 +145,8 @@ Terbaru di atas. Satu baris per perubahan yang terlihat pengguna.
 
 | Tanggal | Perubahan |
 |---|---|
+| 2026-11-10 | Form penilaian (semua jenis pengukuran): bar kemajuan persen yang menempel di atas, dihitung dari jawaban wajib yang terisi |
+| 2026-11-10 | Beranda awardee menyapa dengan nama panggilan dari profil |
 | 2026-11-10 | Kontak darurat awardee kini terlihat oleh Manwil wilayahnya |
 | 2026-11-10 | Profil: IPK per semester dan jenjang dibuang, alamat domisili, kontak darurat wajib, Sosial Media, bar kelengkapan menempel (migrasi 0011) |
 | 2026-11-10 | Profile Saya: profil awardee, tampilan Admin dan Manwil (migrasi 0010) |

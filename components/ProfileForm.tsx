@@ -109,8 +109,8 @@ export function ProfileForm({ profile, action, mode, consented, awardeeId, versi
       {awardeeId !== undefined && <input type="hidden" name="awardeeId" value={awardeeId} />}
 
       {/* Menempel di atas saat form digulir, supaya persennya terlihat tanpa kembali ke atas. */}
-      <div className="profile-sticky">
-        <p className="profile-sticky-label">
+      <div className="sticky-progress">
+        <p className="sticky-progress-label">
           Kelengkapan profil
           <span>{live.percent === 100 ? "Lengkap" : `${live.missing.length} belum diisi`}</span>
         </p>
