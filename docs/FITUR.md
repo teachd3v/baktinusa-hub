@@ -145,6 +145,7 @@ Terbaru di atas. Satu baris per perubahan yang terlihat pengguna.
 
 | Tanggal | Perubahan |
 |---|---|
+| 2026-11-10 | Form penilaian: emoji skala abu-abu selama belum dipilih, yang dipilih berwarna dengan latar kuning |
 | 2026-11-10 | Form penilaian (semua jenis pengukuran): bar kemajuan persen yang menempel di atas, dihitung dari jawaban wajib yang terisi |
 | 2026-11-10 | Beranda awardee menyapa dengan nama panggilan dari profil |
 | 2026-11-10 | Kontak darurat awardee kini terlihat oleh Manwil wilayahnya |

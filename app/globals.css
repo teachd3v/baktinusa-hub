@@ -1907,9 +1907,26 @@ a:hover {
   background: var(--card);
 }
 
+/* Emoji abu-abu selama belum dipilih; yang dipilih berwarna penuh di atas latar kuning. */
+.likert-option label > span[aria-hidden] {
+  filter: grayscale(1);
+  opacity: 0.5;
+  transition: filter var(--dur-micro) var(--ease-out), opacity var(--dur-micro) var(--ease-out);
+}
+
+.likert-option label:hover > span[aria-hidden] {
+  opacity: 0.8;
+}
+
 .likert-option input:checked + label {
-  background: var(--primary-soft);
+  background: oklch(92% 0.13 92);
+  box-shadow: inset 0 0 0 2px oklch(80% 0.15 88);
   transform: scale(1.06);
+}
+
+.likert-option input:checked + label > span[aria-hidden] {
+  filter: none;
+  opacity: 1;
 }
 
 .likert-option input:focus-visible + label {
