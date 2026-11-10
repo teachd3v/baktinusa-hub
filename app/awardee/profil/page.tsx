@@ -1,5 +1,6 @@
 import { env } from "cloudflare:workers";
 import type { Metadata } from "next";
+import { LeadproCard } from "@/components/LeadproCard";
 import { ProfileForm } from "@/components/ProfileForm";
 import { requireUser } from "@/lib/auth";
 import { getProfileView } from "@/lib/data/profiles";
@@ -26,6 +27,8 @@ export default async function MyProfilePage() {
         <h1>Profil Saya</h1>
         <p>{view.awardee.batch} · {view.awardee.region}{view.awardee.campus ? ` · ${view.awardee.campus}` : ""}</p>
       </div>
+
+      <LeadproCard leadpro={view.leadpro} own />
 
       <ProfileForm
         version={view.meta.updatedAt ?? "baru"}

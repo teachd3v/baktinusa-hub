@@ -2,6 +2,7 @@ import { env } from "cloudflare:workers";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { LeadproCard } from "@/components/LeadproCard";
 import { ProfileProgress } from "@/components/ProfileProgress";
 import { ProfileReadonly } from "@/components/ProfileReadonly";
 import { requireUser } from "@/lib/auth";
@@ -28,6 +29,7 @@ export default async function ManwilProfileDetailPage({ params }: { params: Prom
         <h2 className="section-title">Kelengkapan profil</h2>
         <ProfileProgress value={view.completeness} />
       </section>
+      <LeadproCard leadpro={view.leadpro} />
       <ProfileReadonly view={view} />
     </>
   );

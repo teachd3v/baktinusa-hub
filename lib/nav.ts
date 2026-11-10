@@ -5,6 +5,7 @@ export const NAV: Record<Role, { href: string; label: string }[]> = {
   admin: [
     { href: "/admin/pengguna", label: "Pengguna" },
     { href: "/admin/profil", label: "Profil Awardee" },
+    { href: "/admin/leadpro", label: "LeadPro" },
     { href: "/admin/wilayah", label: "Wilayah" },
     { href: "/admin/pengukuran", label: "Pengukuran" },
     { href: "/admin/instrumen", label: "Instrumen" },
@@ -17,6 +18,7 @@ export const NAV: Record<Role, { href: string; label: string }[]> = {
     { href: "/manwil/hasil", label: "Hasil" },
     { href: "/manwil/analitik", label: "Analitik" },
     { href: "/manwil/profil", label: "Profil Awardee" },
+    { href: "/manwil/leadpro", label: "LeadPro" },
   ],
   awardee: [
     { href: "/awardee", label: "Beranda" },

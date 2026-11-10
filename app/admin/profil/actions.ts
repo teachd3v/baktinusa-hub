@@ -3,6 +3,7 @@
 import { env } from "cloudflare:workers";
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth";
+import { updateLeadpro } from "@/lib/data/leadpro";
 import { saveProfile, setAwardeeStatus } from "@/lib/data/profiles";
 import { profileFromForm } from "@/lib/profile-form";
 
@@ -31,4 +32,18 @@ export async function saveStatusAction(_previous: AdminProfileState, form: FormD
   if (!result.ok) return result;
   refresh(id);
   return { ok: true, message: "Status tersimpan." };
+}
+
+export async function saveLeadproAction(_previous: AdminProfileState, form: FormData): Promise<AdminProfileState> {
+  const admin = await requireUser("admin");
+  const id = awardeeIdOf(form);
+  const result = await updateLeadpro(env.DB, admin, id, {
+    name: String(form.get("name") ?? ""),
+    field: String(form.get("field") ?? ""),
+    description: String(form.get("description") ?? ""),
+  });
+  if (!result.ok) return result;
+  refresh(id);
+  revalidatePath("/admin/leadpro");
+  return { ok: true, message: "LeadPro tersimpan." };
 }

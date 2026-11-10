@@ -6,6 +6,7 @@
 
 import { writeAudit } from "./audit.ts";
 import type { Fail } from "./admin-periods.ts";
+import { toLeadpro, type Leadpro } from "./leadpro.ts";
 import { awardeeFilter, ScopeError, scopeFor, type SessionUser } from "./scope.ts";
 
 export const GENDERS = [
@@ -238,6 +239,8 @@ export type ProfileView = {
   profile: Profile;
   meta: ProfileMeta;
   completeness: Completeness;
+  // Leadership Project awardee; null kalau belum diisi Admin.
+  leadpro: Leadpro | null;
 };
 
 // Profil satu awardee, disaring menurut peran: awardee hanya dirinya, Manwil hanya wilayahnya (dan tanpa kolom
@@ -247,13 +250,15 @@ export async function getProfileView(db: D1Database, user: SessionUser, awardeeI
   const f = awardeeFilter(scope);
   const a = await db
     .prepare(
-      `SELECT a.id, a.name, a.batch, a.status, a.joined_at, a.referral_code, r.name AS region, c.name AS campus
+      `SELECT a.id, a.name, a.batch, a.status, a.joined_at, a.referral_code, r.name AS region, c.name AS campus,
+              a.leadpro_name, a.leadpro_field, a.leadpro_description
        FROM awardees a JOIN regions r ON r.id = a.region_id LEFT JOIN campuses c ON c.id = a.campus_id
        WHERE ${f.sql} AND a.id = ?`,
     )
     .bind(...f.params, awardeeId)
-    .first<{ id: number; name: string; batch: string; status: AwardeeStatus; joined_at: string | null; referral_code: string; region: string; campus: string | null }>();
+    .first<{ id: number; name: string; batch: string; status: AwardeeStatus; joined_at: string | null; referral_code: string; region: string; campus: string | null; leadpro_name: string | null; leadpro_field: string | null; leadpro_description: string | null }>();
   if (!a) return null;
+  const leadpro = toLeadpro(a.leadpro_name, a.leadpro_field, a.leadpro_description);
 
   const row = await db.prepare("SELECT * FROM awardee_profiles WHERE awardee_id = ?").bind(awardeeId).first<Record<string, unknown>>();
   const profile = rowToProfile(row);
@@ -276,6 +281,7 @@ export async function getProfileView(db: D1Database, user: SessionUser, awardeeI
     profile,
     meta: { exists: Boolean(row), consentAt, updatedAt: row ? (row.updated_at as string) : null },
     completeness: done,
+    leadpro: leadpro.name ? leadpro : null,
   };
 }
 

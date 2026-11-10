@@ -18,17 +18,19 @@ setiap kali ada fitur yang selesai, berubah, atau baru direncanakan.
 - Beranda: sapaan dengan nama panggilan (dari profil; nama lengkap kalau belum diisi), banner kelengkapan profil, tautan penilaian pribadi (`/s/<kode>`), perkembangan penilaian per siklus.
 - Penilaian: mengisi penilaian peer dan evaluasi yang ditugaskan (lihat "Form penilaian" di bawah).
 - Hasil: hasil pengukuran diri sendiri per siklus.
-- Profil Saya: lihat bagian Profil awardee.
+- Profil Saya: lihat bagian Profil awardee. Berisi kartu Leadership Project (baca saja).
 
 ### Manajer Wilayah (Manwil)
 - Beranda, Penilaian, Hasil, dan Analitik untuk wilayahnya (satu Manwil memegang satu wilayah).
 - Profil Awardee: daftar kelengkapan dan profil baca-saja awardee di wilayahnya.
+- LeadPro: daftar Leadership Project awardee di wilayahnya, dengan saringan bidang dan kampus, pencarian, dan hitungan per bidang.
 
 ### Admin
 - Pengguna (akun awardee, Manwil, Admin; impor dari Excel; hapus massal), Wilayah dan kampus.
 - Pengukuran (jenis), Instrumen (soal; impor), Siklus (jadwal buka dan tutup per jenis).
 - Analitik, Hasil, Respons (data mentah dengan penanda kiriman kembar), Pengingat, Jejak perubahan, Panduan gaya.
 - Profil Awardee: daftar kelengkapan, edit profil, status program.
+- LeadPro: daftar Leadership Project semua awardee, saring menurut bidang, wilayah, kampus, angkatan, dan pencarian; edit nama, bidang, dan deskripsi proyek lewat halaman profil awardee (tercatat di Jejak perubahan).
 
 ### Publik
 - Evaluasi publik tanpa login lewat tautan awardee: `/s/<kode>/<jenis pengukuran>`, dilindungi Turnstile dan batas laju. Memakai form penilaian yang sama (lihat di bawah).
@@ -43,6 +45,12 @@ Satu komponen (`SurveyForm`) dipakai penilaian publik, mandiri, Peer, dan Manwil
 - **Profil Saya** (`/awardee/profil`): identitas, akademik, branding aktivis, sosial media, cerita, dan persetujuan data. Bar kelengkapan menempel di atas dan dihitung langsung saat mengetik; banner kelengkapan di Beranda. Nama panggilan dipakai untuk sapaan di Beranda.
 - **Admin** (`/admin/profil`): daftar kelengkapan, edit semua kolom, status program dan tanggal bergabung; suntingan tercatat di Jejak perubahan.
 - **Manwil** (`/manwil/profil`): baca saja untuk wilayahnya, tanpa tanggal lahir (kontak darurat terlihat).
+
+### Leadership Project (LeadPro)
+- Data ada di tiga kolom tabel `awardees` (`leadpro_name`, `leadpro_field`, `leadpro_description`), satu proyek per awardee; asalnya dari CSV seed. Tanpa migrasi baru.
+- **Awardee:** kartu baca saja di Profil Saya (Admin yang mengubah). **Manwil:** menu LeadPro untuk wilayahnya. **Admin:** menu LeadPro semua wilayah, edit di `/admin/profil/<id>`.
+- Lapisan data `lib/data/leadpro.ts` (18 tes): daftar berlingkup (Manwil tidak bisa melihat wilayah lain walau memasukkan parameter wilayah), saringan murni di atas hasil berlingkup, pemisah baris Windows (`
+`) dirapikan, edit khusus Admin.
 
 ### Akun dan platform
 - Masuk dengan ID dan kata sandi. Sesi Admin 24 jam (tidak diperpanjang), Awardee dan Manwil 14 hari.
@@ -132,6 +140,7 @@ Uji akhir diinput Admin. Hasilnya menjadi dokumen transkrip nilai awardee.
 - Halaman Akun belum punya foto profil atau ubah email. Foto awardee masih dikelola Admin (unggah sendiri ditunda).
 - Nama panggilan baru dipakai di sapaan Beranda awardee; "Masuk sebagai ..." dan halaman Akun masih nama lengkap.
 - Daftar Profil Awardee (Admin dan Manwil) belum bisa difilter atau diurutkan menurut kelengkapan.
+- LeadPro hanya punya nama, bidang, dan deskripsi. Belum ada lokasi, sasaran atau penerima manfaat, tanggal mulai, status, tautan dokumentasi, dan anggota tim (tautan dokumentasi lebih cocok masuk Portofolio). Impor Excel di Pengguna belum mengisi LeadPro.
 - Domain `m.baktinusa.id` ditunda: DNS `baktinusa.id` ada di Hostinger dan dipakai situs WordPress. Memasangnya di Workers
   mengharuskan zone-nya ada di Cloudflare. Detail ada di Keputusan.
 - Binding `FILES` (R2) dan `IMAGES` masih terpasang walau rute `/foto` sudah dihapus. Lepas kalau sudah dipastikan tak dipakai.
@@ -147,6 +156,7 @@ Uji akhir diinput Admin. Hasilnya menjadi dokumen transkrip nilai awardee.
 - **Profil awardee dibuat ringkas:** tanpa jenjang (program hanya S1) dan tanpa IPK per semester (awardee masuk semester 7, pembinaan sampai semester 8). Data ekonomi keluarga dan KTP/KK tidak dikumpulkan.
 - **Kontak darurat wajib dan terlihat Manwil wilayahnya**; tanggal lahir hanya terlihat awardee dan Admin.
 - **Profil tidak memblokir penilaian.** Kelengkapan hanya penanda (bar dan banner).
+- **LeadPro dipisah dari Portofolio.** Data proyeknya tetap di kolom `awardees`; awardee hanya membaca, Admin yang mengubah. Kolom tambahan (lokasi, sasaran, tautan) ditunda.
 - **Persen di form penilaian dihitung dari jawaban wajib yang terisi**, bukan dari langkah yang dilewati.
 - **Domain tetap `baktinusa.hrteach.site`** untuk sekarang. Pindah ke `m.baktinusa.id` menunggu keputusan soal DNS Hostinger.
 
@@ -158,6 +168,8 @@ Terbaru di atas. Satu baris per perubahan yang terlihat pengguna.
 
 | Tanggal | Perubahan |
 |---|---|
+| 2026-11-10 | LeadPro: kartu di Profil Saya, menu LeadPro untuk Manwil (wilayahnya) dan Admin (semua, bisa disaring), edit oleh Admin |
+| 2026-11-10 | Perbaikan: tombol Buka di daftar Profil Awardee tak terlihat (teks hampir putih di latar putih) |
 | 2026-11-10 | Form penilaian: emoji skala abu-abu selama belum dipilih, yang dipilih berwarna dengan latar kuning |
 | 2026-11-10 | Form penilaian (semua jenis pengukuran): bar kemajuan persen yang menempel di atas, dihitung dari jawaban wajib yang terisi |
 | 2026-11-10 | Perbaikan: Beranda awardee menyapa dengan nama panggilan dari profil (sebelumnya masih nama lengkap) |

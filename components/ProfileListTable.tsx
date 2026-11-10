@@ -34,7 +34,7 @@ export function ProfileListTable({ rows, basePath }: { rows: ProfileListRow[]; b
                   <span className={`pill ${r.percent === 100 ? "pill-ok" : r.percent === 0 ? "pill-bad" : "pill-warn"}`}>{r.percent}%</span>
                 </td>
                 <td>{r.updatedAt ? formatWibDate(r.updatedAt) : "Belum diisi"}</td>
-                <td><Link href={`${basePath}/${r.awardeeId}`} className="btn btn-small btn-ghost">Buka</Link></td>
+                <td><Link href={`${basePath}/${r.awardeeId}`} className="btn btn-small btn-muted">Buka</Link></td>
               </tr>
             ))}
           </tbody>
