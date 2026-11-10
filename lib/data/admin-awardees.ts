@@ -18,7 +18,6 @@ export type AwardeeAdminRow = {
   regionId: number;
   region: string;
   photoKey: string | null;
-  leadproName: string | null;
   hasAccount: boolean;
   responses: number;
 };
@@ -30,9 +29,6 @@ export type AwardeeInput = {
   campusId: number | null;
   referralCode: string;
   photoKey: string | null;
-  leadproName: string | null;
-  leadproField: string | null;
-  leadproDescription: string | null;
 };
 
 // Kode referal jadi bagian URL yang dibagikan ke publik: huruf besar, angka, tanpa spasi.
@@ -42,7 +38,7 @@ export async function listAwardeesForAdmin(db: D1Database, actor: SessionUser, b
   assertAdmin(actor);
   const { results } = await db
     .prepare(
-      `SELECT a.id, a.name, a.batch, a.campus_id, c.name AS campus, a.referral_code, a.region_id, a.photo_key, a.leadpro_name, g.name AS region,
+      `SELECT a.id, a.name, a.batch, a.campus_id, c.name AS campus, a.referral_code, a.region_id, a.photo_key, g.name AS region,
           (SELECT COUNT(*) FROM users u WHERE u.awardee_id = a.id) AS accounts,
           (SELECT COUNT(*) FROM responses r WHERE r.awardee_id = a.id) AS responses
        FROM awardees a JOIN regions g ON g.id = a.region_id
@@ -51,7 +47,7 @@ export async function listAwardeesForAdmin(db: D1Database, actor: SessionUser, b
        ORDER BY a.batch DESC, g.name, a.name`,
     )
     .bind(...(batch ? [batch] : []))
-    .all<{ id: number; name: string; batch: string; campus_id: number | null; campus: string | null; referral_code: string; region_id: number; photo_key: string | null; leadpro_name: string | null; region: string; accounts: number; responses: number }>();
+    .all<{ id: number; name: string; batch: string; campus_id: number | null; campus: string | null; referral_code: string; region_id: number; photo_key: string | null; region: string; accounts: number; responses: number }>();
 
   return results.map((r) => ({
     id: r.id,
@@ -63,7 +59,6 @@ export async function listAwardeesForAdmin(db: D1Database, actor: SessionUser, b
     regionId: r.region_id,
     region: r.region,
     photoKey: r.photo_key,
-    leadproName: r.leadpro_name,
     hasAccount: r.accounts > 0,
     responses: r.responses,
   }));
@@ -100,8 +95,8 @@ export async function createAwardee(db: D1Database, actor: SessionUser, input: A
 
   const row = await db
     .prepare(
-      `INSERT INTO awardees (region_id, batch, name, campus_id, referral_code, photo_key, leadpro_name, leadpro_field, leadpro_description)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`,
+      `INSERT INTO awardees (region_id, batch, name, campus_id, referral_code, photo_key)
+       VALUES (?, ?, ?, ?, ?, ?) RETURNING id`,
     )
     .bind(
       input.regionId,
@@ -110,9 +105,6 @@ export async function createAwardee(db: D1Database, actor: SessionUser, input: A
       input.campusId,
       code,
       clean(input.photoKey),
-      clean(input.leadproName),
-      clean(input.leadproField),
-      clean(input.leadproDescription),
     )
     .first<{ id: number }>();
 
@@ -148,8 +140,7 @@ export async function updateAwardee(db: D1Database, actor: SessionUser, id: numb
 
   await db
     .prepare(
-      `UPDATE awardees SET region_id = ?, batch = ?, name = ?, campus_id = ?, referral_code = ?, photo_key = ?,
-          leadpro_name = ?, leadpro_field = ?, leadpro_description = ? WHERE id = ?`,
+      `UPDATE awardees SET region_id = ?, batch = ?, name = ?, campus_id = ?, referral_code = ?, photo_key = ? WHERE id = ?`,
     )
     .bind(
       input.regionId,
@@ -158,9 +149,6 @@ export async function updateAwardee(db: D1Database, actor: SessionUser, id: numb
       input.campusId,
       code,
       clean(input.photoKey),
-      clean(input.leadproName),
-      clean(input.leadproField),
-      clean(input.leadproDescription),
       id,
     )
     .run();

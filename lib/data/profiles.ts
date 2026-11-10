@@ -62,12 +62,14 @@ const FIELDS = [
   { key: "impact", column: "impact", label: "Dampak yang ingin dicapai", kind: "text", max: 500 },
 ] as const satisfies readonly FieldDef[];
 
+export const PROFILE_FIELDS = FIELDS;
 type ScalarKey = (typeof FIELDS)[number]["key"];
 const LISTS = [
   { key: "interests", column: "interests", label: "Bidang minat", max: 8 },
   { key: "skills", column: "skills", label: "Keahlian", max: 10 },
   { key: "languages", column: "languages", label: "Bahasa", max: 6 },
 ] as const;
+export const PROFILE_LISTS = LISTS;
 type ListKey = (typeof LISTS)[number]["key"];
 
 export type Profile = { [K in ScalarKey]: string } & { [K in ListKey]: string[] };
@@ -92,7 +94,7 @@ const parseList = (raw: unknown): string[] => {
   }
 };
 
-function rowToProfile(row: Record<string, unknown> | null): Profile {
+export function rowToProfile(row: Record<string, unknown> | null): Profile {
   const profile = emptyProfile();
   if (!row) return profile;
   for (const f of FIELDS) {
@@ -251,8 +253,9 @@ export async function getProfileView(db: D1Database, user: SessionUser, awardeeI
   const a = await db
     .prepare(
       `SELECT a.id, a.name, a.batch, a.status, a.joined_at, a.referral_code, r.name AS region, c.name AS campus,
-              a.leadpro_name, a.leadpro_field, a.leadpro_description
+              l.name AS leadpro_name, lf.name AS leadpro_field, l.description AS leadpro_description
        FROM awardees a JOIN regions r ON r.id = a.region_id LEFT JOIN campuses c ON c.id = a.campus_id
+       LEFT JOIN leadpros l ON l.awardee_id = a.id LEFT JOIN leadpro_fields lf ON lf.id = l.field_id
        WHERE ${f.sql} AND a.id = ?`,
     )
     .bind(...f.params, awardeeId)

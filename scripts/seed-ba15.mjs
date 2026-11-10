@@ -139,10 +139,12 @@ const awardees = ordered.map((r, i) => [
   clean(r.Kampus) ? campusId.get(campusKey(clean(r.Wilayah), clean(r.Kampus))) : null,
   clean(r.Referal),
   `awardees/${BATCH.toLowerCase()}/${clean(r.Referal)}.webp`,
-  clean(r.Leadpro) || null,
-  clean(r.Bidang) || null,
-  clean(r["Deskripsi Leadpro"]) || null,
 ]);
+// LeadPro: tabel sendiri, bidangnya menunjuk ke tabel acuan (migrasi 0013).
+const leadpros = ordered
+  .map((r, i) => ({ id: awardees[i][0], name: clean(r.Leadpro), field: clean(r.Bidang), description: clean(r["Deskripsi Leadpro"]) }))
+  .filter((l) => l.name);
+const leadproFields = [...new Map(leadpros.filter((l) => l.field).map((l) => [l.field.toLowerCase(), l.field])).values()].sort((a, b) => a.localeCompare(b, "id"));
 
 // ---------- kuesioner ----------
 
@@ -196,8 +198,14 @@ const statements = [
   "-- Dihasilkan oleh scripts/seed-ba15.mjs. Berisi nama awardee: jangan di-commit.",
   ...upsertStatements("regions", ["id", "name"], regionNames.map((name) => [regionId.get(name), name]), { on: ["id"], update: ["name"] }),
   ...upsertStatements("campuses", ["id", "region_id", "name"], campuses, { on: ["id"], update: ["region_id", "name"] }),
-  ...upsertStatements("awardees", ["id", "region_id", "batch", "name", "campus_id", "referral_code", "photo_key", "leadpro_name", "leadpro_field", "leadpro_description"], awardees,
-    { on: ["id"], update: ["region_id", "batch", "name", "campus_id", "referral_code", "photo_key", "leadpro_name", "leadpro_field", "leadpro_description"] }),
+  ...upsertStatements("awardees", ["id", "region_id", "batch", "name", "campus_id", "referral_code", "photo_key"], awardees,
+    { on: ["id"], update: ["region_id", "batch", "name", "campus_id", "referral_code", "photo_key"] }),
+  // Bidang hanya ditambah dan proyek hanya diisi bila belum ada, supaya suntingan Admin tidak tertimpa.
+  ...leadproFields.map((name) => `INSERT OR IGNORE INTO leadpro_fields (name) VALUES (${sql(name)});`),
+  ...leadpros.map(
+    (l) =>
+      `INSERT OR IGNORE INTO leadpros (awardee_id, name, field_id, description) VALUES (${l.id}, ${sql(l.name)}, ${l.field ? `(SELECT id FROM leadpro_fields WHERE name = ${sql(l.field)})` : "NULL"}, ${sql(l.description || null)});`,
+  ),
   // Jenis pengukuran memegang kuesioner dan menyatakan siapa pengisinya.
   ...upsertStatements("measurements", ["id", "code", "slug", "name", "filled_by", "form_config"],
     MEASUREMENTS.map((m) => [m.id, m.code, m.slug, m.name, m.filledBy, formConfigFor(m)]),

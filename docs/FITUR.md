@@ -26,10 +26,10 @@ setiap kali ada fitur yang selesai, berubah, atau baru direncanakan.
 - LeadPro: daftar Leadership Project awardee di wilayahnya, dengan saringan bidang dan kampus, pencarian, dan hitungan per bidang.
 
 ### Admin
-- Pengguna (akun awardee, Manwil, Admin; impor dari Excel; hapus massal), Wilayah dan kampus.
+- Pengguna (akun awardee, Manwil, Admin; impor lengkap dari Excel; hapus massal), Wilayah dan kampus.
 - Pengukuran (jenis), Instrumen (soal; impor), Siklus (jadwal buka dan tutup per jenis).
 - Analitik, Hasil, Respons (data mentah dengan penanda kiriman kembar), Pengingat, Jejak perubahan, Panduan gaya.
-- Profil Awardee: daftar kelengkapan, edit profil, status program.
+- Profil Awardee: daftar kelengkapan, edit profil, status program, dan tombol Impor dari Excel (panel yang sama dengan Pengguna).
 - LeadPro: daftar Leadership Project semua awardee, saring menurut bidang, wilayah, kampus, angkatan, dan pencarian; edit nama, bidang, dan deskripsi proyek lewat halaman profil awardee (tercatat di Jejak perubahan).
 
 ### Publik
@@ -46,8 +46,18 @@ Satu komponen (`SurveyForm`) dipakai penilaian publik, mandiri, Peer, dan Manwil
 - **Admin** (`/admin/profil`): daftar kelengkapan, edit semua kolom, status program dan tanggal bergabung; suntingan tercatat di Jejak perubahan.
 - **Manwil** (`/manwil/profil`): baca saja untuk wilayahnya, tanpa tanggal lahir (kontak darurat terlihat).
 
+### Impor lengkap dari Excel
+- Satu berkas untuk akun, data awardee, profil, LeadPro, status awardee, dan tanggal bergabung (41 kolom dalam empat kelompok: Akun, Program, Profil, LeadPro). Kuncinya kolom ID: ID yang ada diperbarui, ID baru dibuat.
+- Template kosong atau **Unduh data saat ini** (berisi data awardee sekarang, tanpa kata sandi; dicatat di Jejak perubahan karena memuat data pribadi). Lembar "Petunjuk" ikut di berkas.
+- **Sel kosong = biarkan; `[kosongkan]` = hapus.** Baris yang isinya sama dengan data sekarang ditandai `tetap` dan tidak ditulis (tanpa catatan audit palsu).
+- **Duplikat:** ditolak keras untuk ID ganda (dalam berkas), email akun, dan kode referal. **Peringatan** (boleh lanjut, atau centang "Lewati baris berperingatan") untuk nama, email pribadi, NIM, nomor WhatsApp, dan nama LeadPro yang sama, baik dengan awardee lain maupun dengan baris lain di berkas.
+- Wilayah, kampus, dan bidang LeadPro harus sudah ada (tidak dibuat otomatis dari berkas). Persetujuan data tidak bisa diimpor. Kolom profil/LeadPro/program ditolak untuk Admin dan Manwil.
+- Tanggal diterima `2004-05-17`, `17/05/2004`, dan angka seri Excel; nomor telepon yang kehilangan nol di depan dipulihkan.
+- Semua baris divalidasi dulu di tahap rencana; penulisan tetap lewat `createPerson/updatePerson`, `saveProfile`, `updateLeadpro`, `setAwardeeStatus`. Tiap baris ditulis berurutan (bukan satu transaksi): kalau satu langkah gagal, pesannya menyebut "akun tersimpan, tetapi …".
+- Kode di `lib/data/import-people.ts` (tes: `import-people` dan `import-awardees`).
+
 ### Leadership Project (LeadPro)
-- Data ada di tiga kolom tabel `awardees` (`leadpro_name`, `leadpro_field`, `leadpro_description`), satu proyek per awardee; asalnya dari CSV seed. Tanpa migrasi baru.
+- Data relasional (migrasi `0013`): tabel `leadpros` (satu per awardee, `awardee_id` sebagai kunci) dan tabel acuan `leadpro_fields` (bidang, tidak peka huruf besar-kecil). Kolom lama di `awardees` dihapus di `0014`, diterapkan setelah kode baru aktif supaya deploy tidak memutus kode lama.
 - Deskripsi diringkas satu kalimat (maks 100 karakter) lewat migrasi `0012`; kartu menampilkannya dalam lipatan yang tertutup secara bawaan. Bidang dipilih dari daftar (atau "Lainnya…" untuk bidang baru).
 - **Awardee:** kartu baca saja di Profil Saya (Admin yang mengubah). **Manwil:** menu LeadPro untuk wilayahnya. **Admin:** menu LeadPro semua wilayah, edit di `/admin/profil/<id>`.
 - Lapisan data `lib/data/leadpro.ts` (18 tes): daftar berlingkup (Manwil tidak bisa melihat wilayah lain walau memasukkan parameter wilayah), saringan murni di atas hasil berlingkup, pemisah baris Windows (`
@@ -141,7 +151,7 @@ Uji akhir diinput Admin. Hasilnya menjadi dokumen transkrip nilai awardee.
 - Halaman Akun belum punya foto profil atau ubah email. Foto awardee masih dikelola Admin (unggah sendiri ditunda).
 - Nama panggilan baru dipakai di sapaan Beranda awardee; "Masuk sebagai ..." dan halaman Akun masih nama lengkap.
 - Daftar Profil Awardee (Admin dan Manwil) belum bisa difilter atau diurutkan menurut kelengkapan.
-- LeadPro hanya punya nama, bidang, dan deskripsi. Belum ada lokasi, sasaran atau penerima manfaat, tanggal mulai, status, tautan dokumentasi, dan anggota tim (tautan dokumentasi lebih cocok masuk Portofolio). Impor Excel di Pengguna belum mengisi LeadPro.
+- LeadPro hanya punya nama, bidang, dan deskripsi. Belum ada lokasi, sasaran atau penerima manfaat, tanggal mulai, status, tautan dokumentasi, dan anggota tim (tautan dokumentasi lebih cocok masuk Portofolio). Impor Excel sekarang mengisi LeadPro.
 - Domain `m.baktinusa.id` ditunda: DNS `baktinusa.id` ada di Hostinger dan dipakai situs WordPress. Memasangnya di Workers
   mengharuskan zone-nya ada di Cloudflare. Detail ada di Keputusan.
 - Binding `FILES` (R2) dan `IMAGES` masih terpasang walau rute `/foto` sudah dihapus. Lepas kalau sudah dipastikan tak dipakai.
@@ -169,6 +179,7 @@ Terbaru di atas. Satu baris per perubahan yang terlihat pengguna.
 
 | Tanggal | Perubahan |
 |---|---|
+| 2026-11-10 | Impor lengkap dari Excel (akun, profil, LeadPro, status) di Pengguna dan Profil Awardee; LeadPro jadi tabel relasional |
 | 2026-11-10 | LeadPro: bidang jadi pilihan, deskripsi diringkas 100 karakter, kartu dilipat |
 | 2026-11-10 | LeadPro: kartu di Profil Saya, menu LeadPro untuk Manwil (wilayahnya) dan Admin (semua, bisa disaring), edit oleh Admin |
 | 2026-11-10 | Perbaikan: tombol Buka di daftar Profil Awardee tak terlihat (teks hampir putih di latar putih) |

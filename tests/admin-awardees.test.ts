@@ -23,9 +23,6 @@ const input = (over: Partial<AwardeeInput> = {}): AwardeeInput => ({
   campusId: 2,
   referralCode: "EKA12345",
   photoKey: null,
-  leadproName: null,
-  leadproField: null,
-  leadproDescription: null,
   ...over,
 });
 

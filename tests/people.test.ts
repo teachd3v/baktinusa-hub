@@ -222,12 +222,15 @@ describe("menghapus akun", () => {
 });
 
 describe("data awardee tanpa akun", () => {
-  test("kolom lain — foto R2 dan data Leadpro — tidak ikut terhapus saat nama diubah", async () => {
-    await db.prepare("UPDATE awardees SET photo_key = 'awardees/ba15/AAAA0002.webp', leadpro_name = 'Kelas Inspirasi' WHERE id = 2").run();
+  test("kolom lain — foto R2 dan LeadPro — tidak ikut terhapus saat nama diubah", async () => {
+    await db.prepare("UPDATE awardees SET photo_key = 'awardees/ba15/AAAA0002.webp' WHERE id = 2").run();
+    await db.prepare("INSERT INTO leadpros (awardee_id, name) VALUES (2, 'Kelas Inspirasi')").run();
     assert.ok(
       (await updateAwardeeData(db, admin, 2, { name: "Budi Santoso", regionId: 1, batch: "BA15", campusId: 1, referralCode: "AAAA0002" })).ok,
     );
-    const row = await db.prepare("SELECT name, photo_key, leadpro_name FROM awardees WHERE id = 2").first<{ name: string; photo_key: string; leadpro_name: string }>();
+    const row = await db
+      .prepare("SELECT a.name, a.photo_key, l.name AS leadpro_name FROM awardees a JOIN leadpros l ON l.awardee_id = a.id WHERE a.id = 2")
+      .first<{ name: string; photo_key: string; leadpro_name: string }>();
     assert.deepEqual(row, { name: "Budi Santoso", photo_key: "awardees/ba15/AAAA0002.webp", leadpro_name: "Kelas Inspirasi" });
   });
 

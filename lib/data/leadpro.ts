@@ -1,5 +1,5 @@
-// Leadership Project (LeadPro) awardee: nama proyek, bidang, dan deskripsi. Tiga kolom itu ada di tabel awardees,
-// satu proyek per awardee. Admin mengisi dan mengedit; awardee hanya membaca di Profil Saya; Manwil melihat daftar
+// Leadership Project (LeadPro) awardee: nama proyek, bidang, dan deskripsi. Proyek ada di tabel leadpros (satu per
+// awardee) dan bidangnya menunjuk ke tabel acuan leadpro_fields. Admin mengisi dan mengedit; awardee hanya membaca di Profil Saya; Manwil melihat daftar
 // wilayahnya. Pembacaan selalu lewat Scope, seperti data awardee lainnya.
 
 import { writeAudit } from "./audit.ts";
@@ -41,9 +41,11 @@ export async function listLeadpros(db: D1Database, user: SessionUser): Promise<L
   const { results } = await db
     .prepare(
       `SELECT a.id, a.name AS awardee, a.batch, a.region_id, r.name AS region, a.campus_id, c.name AS campus,
-              a.leadpro_name, a.leadpro_field, a.leadpro_description
+              l.name AS leadpro_name, f.name AS leadpro_field, l.description AS leadpro_description
        FROM awardees a JOIN regions r ON r.id = a.region_id
        LEFT JOIN campuses c ON c.id = a.campus_id
+       LEFT JOIN leadpros l ON l.awardee_id = a.id
+       LEFT JOIN leadpro_fields f ON f.id = l.field_id
        WHERE ${f.sql} ORDER BY r.name, a.name`,
     )
     .bind(...f.params)
@@ -129,24 +131,57 @@ export function validateLeadpro(input: LeadproInput): { ok: true; value: Leadpro
   return { ok: true, value };
 }
 
+// Pernyataan untuk menulis LeadPro satu awardee, supaya pemanggil bisa menggabungkannya dalam satu batch.
+// Bidang yang belum ada di tabel acuan dibuat di sini; nama bidang tidak peka huruf besar-kecil, jadi
+// "pendidikan" dan "Pendidikan" tetap satu baris. Nama proyek kosong berarti LeadPro-nya dihapus.
+export function leadproStatements(db: D1Database, awardeeId: number, value: Leadpro): D1PreparedStatement[] {
+  if (!value.name) return [db.prepare("DELETE FROM leadpros WHERE awardee_id = ?").bind(awardeeId)];
+  const statements: D1PreparedStatement[] = [];
+  if (value.field) statements.push(db.prepare("INSERT OR IGNORE INTO leadpro_fields (name) VALUES (?)").bind(value.field));
+  statements.push(
+    db
+      .prepare(
+        `INSERT INTO leadpros (awardee_id, name, field_id, description, updated_at)
+         VALUES (?, ?, (SELECT id FROM leadpro_fields WHERE name = ?), ?, ?)
+         ON CONFLICT(awardee_id) DO UPDATE SET name = excluded.name, field_id = excluded.field_id,
+           description = excluded.description, updated_at = excluded.updated_at`,
+      )
+      .bind(awardeeId, value.name, value.field || null, value.description || null, new Date().toISOString()),
+  );
+  return statements;
+}
+
+// Bidang yang tersedia, termasuk yang belum dipakai proyek mana pun.
+export async function listLeadproFields(db: D1Database): Promise<string[]> {
+  const { results } = await db.prepare("SELECT name FROM leadpro_fields ORDER BY name COLLATE NOCASE").all<{ name: string }>();
+  return results.map((r) => r.name);
+}
+
+export async function getLeadpro(db: D1Database, awardeeId: number): Promise<Leadpro | null> {
+  const row = await db
+    .prepare(
+      `SELECT l.name, f.name AS field, l.description FROM leadpros l LEFT JOIN leadpro_fields f ON f.id = l.field_id WHERE l.awardee_id = ?`,
+    )
+    .bind(awardeeId)
+    .first<{ name: string; field: string | null; description: string | null }>();
+  return row ? toLeadpro(row.name, row.field, row.description) : null;
+}
+
 export async function updateLeadpro(db: D1Database, admin: SessionUser, awardeeId: number, input: LeadproInput): Promise<{ ok: true } | Fail> {
   if (admin.role !== "admin") throw new ScopeError("Hanya Admin yang boleh mengubah LeadPro");
   const checked = validateLeadpro(input);
   if (!checked.ok) return checked;
 
-  const before = await db
-    .prepare("SELECT name, leadpro_name, leadpro_field, leadpro_description FROM awardees WHERE id = ?")
-    .bind(awardeeId)
-    .first<{ name: string; leadpro_name: string | null; leadpro_field: string | null; leadpro_description: string | null }>();
-  if (!before) return { ok: false, message: "Awardee tidak ditemukan." };
+  const awardee = await db.prepare("SELECT name FROM awardees WHERE id = ?").bind(awardeeId).first<{ name: string }>();
+  if (!awardee) return { ok: false, message: "Awardee tidak ditemukan." };
+  const old = (await getLeadpro(db, awardeeId)) ?? toLeadpro("", "", "");
 
-  const { name, field, description } = checked.value;
-  await db
-    .prepare("UPDATE awardees SET leadpro_name = ?, leadpro_field = ?, leadpro_description = ? WHERE id = ?")
-    .bind(name || null, field || null, description || null, awardeeId)
-    .run();
+  const { name, description } = checked.value;
+  // Bidang yang sudah ada dipakai dengan ejaan tabel acuan, bukan ejaan yang diketik.
+  const known = (await listLeadproFields(db)).find((f) => f.toLowerCase() === checked.value.field.toLowerCase());
+  const field = known ?? checked.value.field;
+  await db.batch(leadproStatements(db, awardeeId, { name, field, description }));
 
-  const old = toLeadpro(before.leadpro_name, before.leadpro_field, before.leadpro_description);
   const changed = [
     old.name !== name && "Nama proyek",
     old.field !== field && "Bidang",
@@ -157,7 +192,7 @@ export async function updateLeadpro(db: D1Database, admin: SessionUser, awardeeI
       action: "leadpro.update",
       entity: "awardee",
       entityId: awardeeId,
-      summary: `Mengubah LeadPro ${before.name}: ${changed.join(", ")}`,
+      summary: `Mengubah LeadPro ${awardee.name}: ${changed.join(", ")}`,
     });
   }
   return { ok: true };

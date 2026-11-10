@@ -25,9 +25,11 @@ beforeEach(async () => {
   await seedFixture(db);
   // Ayu dan Budi (Bandung), Citra (Medan) punya proyek; Dedi (Makassar) belum.
   await db.exec(`
-    UPDATE awardees SET leadpro_name = 'Ruang Baca', leadpro_field = 'Pendidikan', leadpro_description = 'Taman baca anak.' || char(13) || char(10) || 'Setiap pekan.' WHERE id = 1;
-    UPDATE awardees SET leadpro_name = 'Bank Sampah', leadpro_field = 'Lingkungan', leadpro_description = 'Memilah sampah warga.' WHERE id = 2;
-    UPDATE awardees SET leadpro_name = 'Klinik Desa', leadpro_field = 'Kesehatan', leadpro_description = 'Pemeriksaan gratis.' WHERE id = 3;
+    INSERT INTO leadpro_fields (id, name) VALUES (1, 'Pendidikan'), (2, 'Lingkungan'), (3, 'Kesehatan');
+    INSERT INTO leadpros (awardee_id, name, field_id, description) VALUES
+      (1, 'Ruang Baca', 1, 'Taman baca anak.' || char(13) || char(10) || 'Setiap pekan.'),
+      (2, 'Bank Sampah', 2, 'Memilah sampah warga.'),
+      (3, 'Klinik Desa', 3, 'Pemeriksaan gratis.');
   `);
 });
 
@@ -151,5 +153,24 @@ describe("mengubah LeadPro", () => {
 
   test("awardee yang tidak ada ditolak dengan pesan", async () => {
     assert.equal((await updateLeadpro(db, admin, 999, input)).ok, false);
+  });
+});
+
+describe("bidang sebagai tabel acuan", () => {
+  test("bidang baru dibuat sekali, dan ejaan lain dipetakan ke yang sudah ada", async () => {
+    assert.ok((await updateLeadpro(db, admin, 4, { name: "Kopi Desa", field: "Ekonomi", description: "" })).ok);
+    assert.ok((await updateLeadpro(db, admin, 2, { name: "Bank Sampah", field: "ekonomi", description: "" })).ok);
+    const dedi = (await listLeadpros(db, admin)).find((r) => r.awardeeId === 4)!;
+    const budi = (await listLeadpros(db, admin)).find((r) => r.awardeeId === 2)!;
+    assert.equal(dedi.field, "Ekonomi");
+    assert.equal(budi.field, "Ekonomi"); // "ekonomi" memakai baris yang sama, bukan bidang kedua
+    const jumlah = await db.prepare("SELECT COUNT(*) AS n FROM leadpro_fields WHERE name = 'Ekonomi'").first<{ n: number }>();
+    assert.equal(jumlah!.n, 1);
+  });
+
+  test("mengosongkan nama proyek menghapus barisnya, bidang acuannya tetap ada", async () => {
+    assert.ok((await updateLeadpro(db, admin, 1, { name: "", field: "", description: "" })).ok);
+    assert.equal((await db.prepare("SELECT COUNT(*) AS n FROM leadpros WHERE awardee_id = 1").first<{ n: number }>())!.n, 0);
+    assert.equal((await db.prepare("SELECT COUNT(*) AS n FROM leadpro_fields WHERE name = 'Pendidikan'").first<{ n: number }>())!.n, 1);
   });
 });

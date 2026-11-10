@@ -372,7 +372,7 @@ export async function deleteAccount(db: D1Database, actor: SessionUser, userId: 
 // ---------- data awardee yang belum punya akun ----------
 
 // Sengaja tidak memakai updateAwardee() dari admin-awardees: fungsi itu menulis semua kolom, termasuk
-// kunci foto R2 dan data Leadpro, sehingga mengubah nama dari halaman ini akan ikut menghapusnya.
+// kunci foto R2, sehingga mengubah nama dari halaman ini akan ikut menghapusnya.
 export async function updateAwardeeData(
   db: D1Database,
   actor: SessionUser,

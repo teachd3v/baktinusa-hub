@@ -4,7 +4,7 @@ import { env } from "cloudflare:workers";
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth";
 import { deleteAwardee } from "@/lib/data/admin-awardees";
-import { applyPlan, planImport, type RawRow, type RowPlan, type RowResult } from "@/lib/data/import-people";
+import { applyPlan, exportCurrentRows, planImport, type RawRow, type RowPlan, type RowResult } from "@/lib/data/import-people";
 import {
   createPerson,
   deleteAccount,
@@ -151,4 +151,10 @@ export async function applyImportAction(plans: RowPlan[]): Promise<RowResult[]> 
   const results = await applyPlan(env.DB, admin, plans);
   refresh();
   return results;
+}
+
+// Data saat ini sebagai baris template. Memuat data pribadi, jadi hanya Admin dan tercatat di Jejak perubahan.
+export async function exportCurrentAction(): Promise<RawRow[]> {
+  const admin = await requireUser("admin");
+  return exportCurrentRows(env.DB, admin);
 }

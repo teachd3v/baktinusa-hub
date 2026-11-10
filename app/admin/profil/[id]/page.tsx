@@ -4,7 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ProfileForm } from "@/components/ProfileForm";
 import { requireUser } from "@/lib/auth";
-import { leadproOptions, listLeadpros } from "@/lib/data/leadpro";
+import { listLeadproFields } from "@/lib/data/leadpro";
 import { getProfileView } from "@/lib/data/profiles";
 import { saveProfileAsAdminAction } from "../actions";
 import { LeadproForm } from "./LeadproForm";
@@ -18,7 +18,7 @@ export default async function AdminProfileDetailPage({ params }: { params: Promi
   const awardeeId = Number(id);
   const view = Number.isInteger(awardeeId) ? await getProfileView(env.DB, admin, awardeeId) : null;
   if (!view) notFound();
-  const fields = leadproOptions(await listLeadpros(env.DB, admin)).fields;
+  const fields = await listLeadproFields(env.DB);
 
   return (
     <>
