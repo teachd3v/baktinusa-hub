@@ -31,7 +31,7 @@ setiap kali ada fitur yang selesai, berubah, atau baru direncanakan.
 - Evaluasi publik tanpa login lewat tautan awardee: `/s/<kode>/<jenis pengukuran>`, dilindungi Turnstile dan batas laju.
 
 ### Profil awardee
-- **Profil Saya** (`/awardee/profil`): identitas, akademik, branding aktivis, kehadiran daring, cerita, persetujuan data, dan IPK kuliah per semester. Banner kelengkapan di Beranda.
+- **Profil Saya** (`/awardee/profil`): identitas, akademik, branding aktivis, sosial media, cerita, dan persetujuan data. Bar kelengkapan menempel di atas dan dihitung langsung saat mengetik; banner kelengkapan di Beranda.
 - **Admin** (`/admin/profil`): daftar kelengkapan, edit semua kolom, status program dan tanggal bergabung; suntingan tercatat di Jejak perubahan.
 - **Manwil** (`/manwil/profil`): baca saja untuk wilayahnya, tanpa tanggal lahir dan kontak darurat.
 
@@ -66,21 +66,18 @@ Awardee mengisi sendiri, Admin bisa melihat dan mengedit semua kolom.
 
 | Kelompok | Kolom |
 |---|---|
-| A. Identitas dan kontak (internal) | nama panggilan W, jenis kelamin W, tempat dan tanggal lahir W, no. WhatsApp W, email pribadi W, kota domisili W, kontak darurat (nama, nomor) O |
-| B. Akademik | fakultas W, program studi W, jenjang W, tahun masuk W, perkiraan lulus W, NIM O |
+| A. Identitas dan kontak (internal) | nama panggilan W, jenis kelamin W, tempat dan tanggal lahir W, no. WhatsApp W, email pribadi W, alamat domisili W (alamat tinggal, misalnya kos), kontak darurat (nama, nomor) W |
+| B. Akademik | fakultas W, program studi W, tahun masuk W, perkiraan lulus W, NIM O |
 | D. Branding aktivis | tagline maks. 100 karakter W, bio maks. 500 karakter W, bidang minat/fokus advokasi (daftar plus bebas) O, keahlian maks. 10 tag O, organisasi utama dan jabatan O, bahasa dan tingkat O |
-| E. Kehadiran daring | Instagram, LinkedIn, satu tautan bebas (semua O) |
+| E. Sosial Media | Instagram, LinkedIn, satu tautan bebas (semua O) |
 | F. Cerita | motivasi bergabung O, dampak yang ingin dicapai O (maks. 500 karakter) |
 
 **Diisi Admin, awardee hanya melihat (dikunci):** status awardee (aktif, lulus, dicabut), tanggal bergabung.
 
-**IPK per semester:** tabel terpisah, diisi awardee tiap semester (semester, tahun ajaran, IPK). Dipakai Uji Akhir (fitur 4).
-
-**Sengaja tidak dikumpulkan:** data ekonomi keluarga, KTP/KK, alamat lengkap (cukup kota), riwayat prestasi dan organisasi lengkap (itu Portofolio).
+**Sengaja tidak dikumpulkan:** data ekonomi keluarga, KTP/KK, jenjang (program hanya S1), IPK kuliah per semester (awardee masuk di semester 7, pembinaan berakhir di semester 8), riwayat prestasi dan organisasi lengkap (itu Portofolio).
 
 **Rancangan tabel (migrasi baru):**
 - `awardee_profiles`: satu baris per awardee (`awardee_id` PRIMARY KEY, FK `awardees`), seluruh kolom A, B, D, E, F; kolom daftar (minat, keahlian, bahasa) disimpan sebagai JSON teks; `consent_at`, `updated_at`, `updated_by`.
-- `awardee_semesters`: `awardee_id`, `semester`, `academic_year`, `gpa`, UNIQUE (`awardee_id`, `semester`).
 - `awardees`: tambah `status` (`active`/`graduated`/`revoked`) dan `joined_at`.
 - Kelengkapan (persen dan daftar kolom wajib yang kosong) **dihitung di kode**, tidak disimpan, supaya tidak bisa basi.
 
@@ -90,9 +87,11 @@ Awardee mengisi sendiri, Admin bisa melihat dan mengedit semua kolom.
 - Admin: halaman profil per awardee (edit semua kolom, tiap suntingan masuk Jejak perubahan), plus daftar awardee yang profilnya belum lengkap; pengingat lewat fitur Pengingat yang ada.
 - Manwil: lihat saja untuk wilayahnya, **tanpa** tanggal lahir dan kontak darurat.
 
-**Keputusan sementara (dari pembahasan):** Manwil boleh melihat profil wilayahnya dengan pembatasan di atas; IPK dikumpulkan per semester; persetujuan data wajib; kolom wajib hanya yang bertanda W; foto tetap dikelola Admin dulu (unggah sendiri ditunda).
+**Keputusan sementara (dari pembahasan):** Manwil boleh melihat profil wilayahnya dengan pembatasan di atas; persetujuan data wajib; kontak darurat wajib (hanya terlihat awardee dan Admin); kolom wajib hanya yang bertanda W; foto tetap dikelola Admin dulu (unggah sendiri ditunda).
 
-**Yang dikerjakan:** migrasi `0010_profil_awardee.sql`, lapisan data `lib/data/profiles.ts` (29 tes), halaman `/awardee/profil` dengan banner kelengkapan di Beranda, `/admin/profil` (daftar dan edit, status program, IPK, tercatat di Jejak perubahan), `/manwil/profil` (baca saja). Kolom IPK kuliah memakai nama `gpa` dan di layar "IPK kuliah". Isian form tidak dikosongkan saat validasi gagal. Batas laju 5 per menit per akun, kunci terpisah untuk profil dan semester.
+**Yang dikerjakan:** migrasi `0010_profil_awardee.sql`, lapisan data `lib/data/profiles.ts` (29 tes), halaman `/awardee/profil` dengan banner kelengkapan di Beranda, `/admin/profil` (daftar dan edit, status program, tercatat di Jejak perubahan), `/manwil/profil` (baca saja). Isian form tidak dikosongkan saat validasi gagal. Batas laju 5 per menit per akun.
+
+**Penyesuaian setelah ditinjau pengelola (migrasi `0011`):** IPK per semester dan jenjang dibuang (awardee masuk semester 7, pembinaan sampai semester 8, program hanya S1); kota domisili jadi alamat domisili (kolom `city` diganti nama jadi `address`); kontak darurat wajib; bagian "Kehadiran daring" diganti "Sosial Media"; bar kelengkapan menempel dan dihitung langsung.
 
 
 ### 2. Portofolio (Awardee)
@@ -146,7 +145,8 @@ Terbaru di atas. Satu baris per perubahan yang terlihat pengguna.
 
 | Tanggal | Perubahan |
 |---|---|
-| 2026-11-10 | Profile Saya: profil awardee, IPK kuliah per semester, tampilan Admin dan Manwil (migrasi 0010) |
+| 2026-11-10 | Profil: IPK per semester dan jenjang dibuang, alamat domisili, kontak darurat wajib, Sosial Media, bar kelengkapan menempel (migrasi 0011) |
+| 2026-11-10 | Profile Saya: profil awardee, tampilan Admin dan Manwil (migrasi 0010) |
 | 2026-11-09 | Foto awardee di-crop fokus wajah dan setengah badan, 400 px |
 | 2026-11-09 | Tombol Pasang aplikasi di lembar akun ponsel; berubah jadi centang hijau "Aplikasi terinstal" saat terpasang |
 | 2026-11-09 | Perbaikan: kiriman evaluasi publik gagal "Survei atau awardee tidak ditemukan" (slug yang dikirim form salah) |

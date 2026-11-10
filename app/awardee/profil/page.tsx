@@ -1,11 +1,9 @@
 import { env } from "cloudflare:workers";
 import type { Metadata } from "next";
 import { ProfileForm } from "@/components/ProfileForm";
-import { ProfileProgress } from "@/components/ProfileProgress";
-import { SemesterCard } from "@/components/SemesterCard";
 import { requireUser } from "@/lib/auth";
 import { getProfileView } from "@/lib/data/profiles";
-import { deleteMySemesterAction, saveMyProfileAction, saveMySemesterAction } from "./actions";
+import { saveMyProfileAction } from "./actions";
 
 export const metadata: Metadata = { title: "Profil Saya" };
 
@@ -29,20 +27,14 @@ export default async function MyProfilePage() {
         <p>{view.awardee.batch} · {view.awardee.region}{view.awardee.campus ? ` · ${view.awardee.campus}` : ""}</p>
       </div>
 
-      <section className="card">
-        <h2 className="section-title">Kelengkapan profil</h2>
-        <ProfileProgress value={view.completeness} />
-      </section>
-
       <ProfileForm
         version={view.meta.updatedAt ?? "baru"}
         profile={view.profile}
         action={saveMyProfileAction}
         mode="self"
         consented={Boolean(view.meta.consentAt)}
+        initial={view.completeness}
       />
-
-      <SemesterCard semesters={view.semesters} saveAction={saveMySemesterAction} deleteAction={deleteMySemesterAction} />
     </>
   );
 }

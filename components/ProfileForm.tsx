@@ -1,7 +1,9 @@
 "use client";
 
-import { startTransition, useActionState } from "react";
-import { DEGREES, GENDERS, INTEREST_OPTIONS, type Profile } from "@/lib/data/profiles";
+import { startTransition, useActionState, useState } from "react";
+import { completeness, GENDERS, INTEREST_OPTIONS, type Completeness, type Profile } from "@/lib/data/profiles";
+import { profileFromForm } from "@/lib/profile-form";
+import { ProfileProgress } from "./ProfileProgress";
 
 export type ProfileState = { ok: boolean; message: string } | null;
 
@@ -14,6 +16,8 @@ type Props = {
   awardeeId?: number;
   // Berubah setiap kali profil tersimpan: isian disegarkan dari data yang sudah dinormalkan, sementara pesan hasil tetap.
   version: string;
+  // Kelengkapan dari data tersimpan. Saat mengetik, bar dihitung ulang dari isi form.
+  initial: Completeness;
 };
 
 // Kolom daftar (keahlian, bahasa) tampil sebagai teks berkoma.
@@ -66,7 +70,7 @@ function Field({
   );
 }
 
-function Area({ name, label, profile, max, required, hint }: { name: keyof Profile; label: string; profile: Profile; max: number; required?: boolean; hint?: string }) {
+function Area({ name, label, profile, max, required, hint, rows = 4 }: { name: keyof Profile; label: string; profile: Profile; max: number; required?: boolean; hint?: string; rows?: number }) {
   const id = `pf-${name}`;
   return (
     <div className="field">
@@ -74,14 +78,17 @@ function Area({ name, label, profile, max, required, hint }: { name: keyof Profi
         {label}
         {required && <span aria-hidden="true"> *</span>}
       </label>
-      <textarea id={id} className="textarea" name={name} rows={4} maxLength={max} defaultValue={String(profile[name] ?? "")} />
+      <textarea id={id} className="textarea" name={name} rows={rows} maxLength={max} defaultValue={String(profile[name] ?? "")} />
       <p className="section-hint" style={{ margin: "0.35rem 0 0" }}>{hint ?? `Maksimal ${max} karakter.`}</p>
     </div>
   );
 }
 
-export function ProfileForm({ profile, action, mode, consented, awardeeId, version }: Props) {
+export function ProfileForm({ profile, action, mode, consented, awardeeId, version, initial }: Props) {
   const [state, formAction, pending] = useActionState(action, null);
+  // Hitungan langsung dari isi form. Dikaitkan ke version supaya data tersimpan yang baru menggantikannya.
+  const [typed, setTyped] = useState<{ version: string; value: Completeness } | null>(null);
+  const live = typed && typed.version === version ? typed.value : initial;
   const extraInterests = profile.interests.filter((i) => !(INTEREST_OPTIONS as readonly string[]).includes(i));
 
   return (
@@ -89,6 +96,10 @@ export function ProfileForm({ profile, action, mode, consented, awardeeId, versi
     // validasi tidak boleh hilang.
     <form
       key={version}
+      onChange={(event) => {
+        const data = new FormData(event.currentTarget);
+        setTyped({ version, value: completeness(profileFromForm(data), consented || data.get("consent") === "1" ? "ya" : null) });
+      }}
       onSubmit={(event) => {
         event.preventDefault();
         const data = new FormData(event.currentTarget);
@@ -96,6 +107,15 @@ export function ProfileForm({ profile, action, mode, consented, awardeeId, versi
       }}
     >
       {awardeeId !== undefined && <input type="hidden" name="awardeeId" value={awardeeId} />}
+
+      {/* Menempel di atas saat form digulir, supaya persennya terlihat tanpa kembali ke atas. */}
+      <div className="profile-sticky">
+        <p className="profile-sticky-label">
+          Kelengkapan profil
+          <span>{live.percent === 100 ? "Lengkap" : `${live.missing.length} belum diisi`}</span>
+        </p>
+        <ProfileProgress value={live} showMissing={false} />
+      </div>
 
       <section className="card">
         <h2 className="section-title">Identitas dan kontak</h2>
@@ -120,10 +140,10 @@ export function ProfileForm({ profile, action, mode, consented, awardeeId, versi
           <Field name="whatsapp" label="No. WhatsApp aktif" profile={profile} type="tel" max={20} required placeholder="081234567890" autoComplete="tel" />
           <Field name="personalEmail" label="Email pribadi" profile={profile} type="email" max={120} required autoComplete="email" />
         </div>
-        <Field name="city" label="Kota domisili" profile={profile} max={80} required />
+        <Area name="address" label="Alamat domisili" profile={profile} max={250} required rows={3} hint="Alamat tempat tinggal Anda saat ini, misalnya alamat kos. Contoh: Jl. Dr. Mansur No. 5, Padang Bulan, Medan." />
         <div className="form-row">
-          <Field name="emergencyName" label="Kontak darurat: nama" profile={profile} max={120} hint="Opsional. Isi nama dan nomor, atau kosongkan keduanya." />
-          <Field name="emergencyPhone" label="Kontak darurat: nomor" profile={profile} type="tel" max={20} />
+          <Field name="emergencyName" label="Kontak darurat: nama" profile={profile} max={120} required hint="Kerabat atau teman dekat yang bisa dihubungi bila terjadi keadaan darurat." />
+          <Field name="emergencyPhone" label="Kontak darurat: nomor" profile={profile} type="tel" max={20} required hint="Nomor WhatsApp atau telepon yang aktif." />
         </div>
       </section>
 
@@ -134,15 +154,6 @@ export function ProfileForm({ profile, action, mode, consented, awardeeId, versi
           <Field name="studyProgram" label="Program studi" profile={profile} max={120} required />
         </div>
         <div className="form-row">
-          <div className="field">
-            <label className="label" htmlFor="pf-degreeLevel">Jenjang <span aria-hidden="true">*</span></label>
-            <select id="pf-degreeLevel" className="select" name="degreeLevel" defaultValue={profile.degreeLevel}>
-              <option value="">Pilih</option>
-              {DEGREES.map((d) => (
-                <option key={d} value={d}>{d}</option>
-              ))}
-            </select>
-          </div>
           <Field name="entryYear" label="Tahun masuk" profile={profile} type="number" max={4} required placeholder="2024" />
           <Field name="expectedGraduationYear" label="Perkiraan lulus" profile={profile} type="number" max={4} required placeholder="2028" />
         </div>
@@ -177,12 +188,12 @@ export function ProfileForm({ profile, action, mode, consented, awardeeId, versi
       </section>
 
       <section className="card">
-        <h2 className="section-title">Kehadiran daring</h2>
+        <h2 className="section-title">Sosial Media</h2>
         <div className="form-row">
           <Field name="instagram" label="Instagram" profile={profile} max={120} placeholder="nama akun saja" />
           <Field name="linkedin" label="LinkedIn" profile={profile} max={200} placeholder="linkedin.com/in/…" />
         </div>
-        <Field name="website" label="Tautan lain" profile={profile} max={200} hint="Blog atau portofolio daring, opsional." />
+        <Field name="website" label="Tautan lain" profile={profile} max={200} hint="Blog, YouTube, TikTok, atau tautan lain yang ingin Anda tampilkan. Opsional." />
       </section>
 
       <section className="card">

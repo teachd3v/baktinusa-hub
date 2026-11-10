@@ -3,8 +3,8 @@
 import { env } from "cloudflare:workers";
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth";
-import { deleteSemester, saveProfile, saveSemester, setAwardeeStatus } from "@/lib/data/profiles";
-import { profileFromForm, semesterFromForm } from "@/lib/profile-form";
+import { saveProfile, setAwardeeStatus } from "@/lib/data/profiles";
+import { profileFromForm } from "@/lib/profile-form";
 
 export type AdminProfileState = { ok: boolean; message: string } | null;
 
@@ -22,23 +22,6 @@ export async function saveProfileAsAdminAction(_previous: AdminProfileState, for
   if (!result.ok) return result;
   refresh(id);
   return { ok: true, message: "Profil tersimpan." };
-}
-
-export async function saveSemesterAsAdminAction(_previous: AdminProfileState, form: FormData): Promise<AdminProfileState> {
-  const admin = await requireUser("admin");
-  const id = awardeeIdOf(form);
-  const result = await saveSemester(env.DB, admin, id, semesterFromForm(form));
-  if (!result.ok) return result;
-  refresh(id);
-  return { ok: true, message: "Semester tersimpan." };
-}
-
-export async function deleteSemesterAsAdminAction(form: FormData): Promise<void> {
-  const admin = await requireUser("admin");
-  const id = awardeeIdOf(form);
-  const semester = Number(form.get("semester"));
-  if (Number.isInteger(id) && Number.isInteger(semester)) await deleteSemester(env.DB, admin, id, semester);
-  refresh(id);
 }
 
 export async function saveStatusAction(_previous: AdminProfileState, form: FormData): Promise<AdminProfileState> {

@@ -1,18 +1,15 @@
-// Profil awardee: validasi, kelengkapan, lingkup akses per peran, dan IPK kuliah per semester.
+// Profil awardee: validasi, kelengkapan, dan lingkup akses per peran.
 import assert from "node:assert/strict";
 import { beforeEach, describe, test } from "node:test";
 import { listAudit } from "../lib/data/audit.ts";
 import {
   completeness,
-  deleteSemester,
   emptyProfile,
   getProfileView,
   listProfileStatus,
   saveProfile,
-  saveSemester,
   setAwardeeStatus,
   validateProfile,
-  validateSemester,
   type Profile,
 } from "../lib/data/profiles.ts";
 import { ScopeError, type SessionUser } from "../lib/data/scope.ts";
@@ -34,10 +31,11 @@ const full = (over: Partial<Profile> = {}): Profile => ({
   birthDate: "2005-03-14",
   whatsapp: "081234567890",
   personalEmail: "ayu@gmail.com",
-  city: "Bandung",
+  address: "Jl. Ganesha No. 10, Lebak Siliwangi, Bandung",
+  emergencyName: "Ibu Ayu",
+  emergencyPhone: "081300000000",
   faculty: "FTI",
   studyProgram: "Teknik Informatika",
-  degreeLevel: "S1",
   entryYear: "2024",
   expectedGraduationYear: "2028",
   tagline: "Mahasiswa TI, penggerak literasi digital desa",
@@ -69,10 +67,9 @@ describe("validasi profil", () => {
     assert.equal(validateProfile(full({ birthDate: "14/03/2005" }), TODAY).ok, false);
   });
 
-  test("email, jenjang, jenis kelamin, dan tahun diperiksa", () => {
+  test("email, jenis kelamin, dan tahun diperiksa", () => {
     assert.equal(validateProfile(full({ personalEmail: "bukan-email" }), TODAY).ok, false);
-    assert.equal(validateProfile(full({ degreeLevel: "S9" }), TODAY).ok, false);
-    assert.equal(validateProfile(full({ gender: "X" }), TODAY).ok, false);
+        assert.equal(validateProfile(full({ gender: "X" }), TODAY).ok, false);
     assert.equal(validateProfile(full({ entryYear: "2028", expectedGraduationYear: "2024" }), TODAY).ok, false);
   });
 
@@ -89,9 +86,10 @@ describe("validasi profil", () => {
     assert.equal(validateProfile(full({ website: "javascript:alert(1)" }), TODAY).ok, false);
   });
 
-  test("kontak darurat harus lengkap berdua atau kosong berdua", () => {
-    assert.equal(validateProfile(full({ emergencyName: "Ibu" }), TODAY).ok, false);
-    assert.equal(validateProfile(full({ emergencyName: "Ibu", emergencyPhone: "081300000000" }), TODAY).ok, true);
+  test("kontak darurat harus lengkap berdua (kosong berdua sah di simpan, tapi dihitung belum lengkap)", () => {
+    assert.equal(validateProfile(full({ emergencyPhone: "" }), TODAY).ok, false);
+    assert.equal(validateProfile(full({ emergencyName: "" }), TODAY).ok, false);
+    assert.equal(validateProfile(full({ emergencyName: "", emergencyPhone: "" }), TODAY).ok, true);
   });
 
   test("batas panjang dan jumlah daftar", () => {
@@ -117,6 +115,12 @@ describe("kelengkapan", () => {
     assert.deepEqual(c.missing, []);
   });
 
+  test("kontak darurat dan alamat domisili wajib", () => {
+    const c = completeness(full({ emergencyName: "", emergencyPhone: "", address: "" }), "x");
+    assert.deepEqual(c.missing, ["Alamat domisili", "Nama kontak darurat", "Nomor kontak darurat"]);
+    assert.ok(c.percent < 100);
+  });
+
   test("kolom opsional tidak mempengaruhi", () => {
     assert.equal(completeness(full({ studentId: "", motivation: "" }), "x").percent, 100);
   });
@@ -136,9 +140,9 @@ describe("menyimpan profil", () => {
     assert.equal(first.completeness.percent, 100);
     assert.equal(first.profile.whatsapp, "+6281234567890");
 
-    assert.deepEqual(await saveProfile(db, ayu, 1, full({ city: "Cimahi" }), false, TODAY), { ok: true });
+    assert.deepEqual(await saveProfile(db, ayu, 1, full({ address: "Jl. Kosan No. 3, Cimahi" }), false, TODAY), { ok: true });
     const second = (await getProfileView(db, ayu, 1))!;
-    assert.equal(second.profile.city, "Cimahi");
+    assert.equal(second.profile.address, "Jl. Kosan No. 3, Cimahi");
     assert.equal(second.meta.consentAt, first.meta.consentAt);
   });
 
@@ -160,16 +164,16 @@ describe("menyimpan profil", () => {
   test("Admin mengedit tanpa menyetujui atas nama awardee, dan jejaknya tanpa isi data pribadi", async () => {
     await saveProfile(db, ayu, 1, full(), true, TODAY);
     const consent = (await getProfileView(db, admin, 1))!.meta.consentAt;
-    assert.deepEqual(await saveProfile(db, admin, 1, full({ city: "Garut", whatsapp: "081200000001" }), false, TODAY), { ok: true });
+    assert.deepEqual(await saveProfile(db, admin, 1, full({ address: "Jl. Rahasia No. 9, Garut", whatsapp: "081200000001" }), false, TODAY), { ok: true });
     const v = (await getProfileView(db, admin, 1))!;
-    assert.equal(v.profile.city, "Garut");
+    assert.equal(v.profile.address, "Jl. Rahasia No. 9, Garut");
     assert.equal(v.meta.consentAt, consent);
 
     const audit = await listAudit(db, admin);
     const row = audit.find((a) => a.action === "profile.update");
     assert.ok(row);
-    assert.match(row.summary, /Kota domisili/);
-    assert.doesNotMatch(row.summary, /Garut|081200000001/);
+    assert.match(row.summary, /Alamat domisili/);
+    assert.doesNotMatch(row.summary, /Garut|Rahasia|081200000001/);
   });
 
   test("Admin yang menyimpan profil kosong awardee tidak mengisi persetujuan", async () => {
@@ -225,40 +229,6 @@ describe("daftar kelengkapan", () => {
     const own = await listProfileStatus(db, manwilBandung);
     assert.deepEqual(own.map((r) => r.awardeeId).sort(), [1, 2]);
     await assert.rejects(() => listProfileStatus(db, ayu), ScopeError);
-  });
-});
-
-describe("IPK kuliah per semester", () => {
-  const sem = { semester: "3", academicYear: "2025/2026", gpa: "3,75" };
-
-  test("validasi", () => {
-    assert.ok(validateSemester(sem).ok);
-    assert.equal(validateSemester({ ...sem, gpa: "4.5" }).ok, false);
-    assert.equal(validateSemester({ ...sem, semester: "0" }).ok, false);
-    assert.equal(validateSemester({ ...sem, academicYear: "2025/2027" }).ok, false);
-    assert.equal(validateSemester({ ...sem, academicYear: "2025" }).ok, false);
-  });
-
-  test("simpan, timpa semester yang sama, hapus", async () => {
-    assert.deepEqual(await saveSemester(db, ayu, 1, sem), { ok: true });
-    await saveSemester(db, ayu, 1, { ...sem, gpa: "3.80" });
-    await saveSemester(db, ayu, 1, { semester: "1", academicYear: "2024/2025", gpa: "3.5" });
-    let v = (await getProfileView(db, ayu, 1))!;
-    assert.deepEqual(v.semesters.map((s) => [s.semester, s.gpa]), [[1, 3.5], [3, 3.8]]);
-    await deleteSemester(db, ayu, 1, 3);
-    v = (await getProfileView(db, ayu, 1))!;
-    assert.deepEqual(v.semesters.map((s) => s.semester), [1]);
-  });
-
-  test("awardee dan Manwil tidak bisa menyentuh IPK orang lain", async () => {
-    await assert.rejects(() => saveSemester(db, ayu, 3, sem), ScopeError);
-    await assert.rejects(() => saveSemester(db, manwilBandung, 1, sem), ScopeError);
-    await assert.rejects(() => deleteSemester(db, citra, 1, 1), ScopeError);
-  });
-
-  test("Manwil bisa membaca IPK wilayahnya lewat profil", async () => {
-    await saveSemester(db, ayu, 1, sem);
-    assert.equal((await getProfileView(db, manwilBandung, 1))!.semesters.length, 1);
   });
 });
 

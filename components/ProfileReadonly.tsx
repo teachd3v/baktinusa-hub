@@ -1,4 +1,4 @@
-import { DEGREES, GENDERS, type ProfileView } from "@/lib/data/profiles";
+import { GENDERS, type ProfileView } from "@/lib/data/profiles";
 
 const show = (v: string) => (v ? v : "—");
 
@@ -15,7 +15,6 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 export function ProfileReadonly({ view }: { view: ProfileView }) {
   const p = view.profile;
   const gender = GENDERS.find((g) => g.value === p.gender)?.label ?? "";
-  const degree = (DEGREES as readonly string[]).includes(p.degreeLevel) ? p.degreeLevel : "";
   return (
     <>
       <section className="card">
@@ -26,7 +25,7 @@ export function ProfileReadonly({ view }: { view: ProfileView }) {
           <Row label="Tempat lahir">{show(p.birthPlace)}</Row>
           <Row label="No. WhatsApp">{show(p.whatsapp)}</Row>
           <Row label="Email pribadi">{show(p.personalEmail)}</Row>
-          <Row label="Kota domisili">{show(p.city)}</Row>
+          <Row label="Alamat domisili">{show(p.address)}</Row>
         </dl>
       </section>
 
@@ -35,33 +34,10 @@ export function ProfileReadonly({ view }: { view: ProfileView }) {
         <dl className="profile-dl">
           <Row label="Fakultas">{show(p.faculty)}</Row>
           <Row label="Program studi">{show(p.studyProgram)}</Row>
-          <Row label="Jenjang">{show(degree)}</Row>
           <Row label="Tahun masuk">{show(p.entryYear)}</Row>
           <Row label="Perkiraan lulus">{show(p.expectedGraduationYear)}</Row>
           <Row label="NIM">{show(p.studentId)}</Row>
         </dl>
-        {view.semesters.length > 0 && (
-          <div className="table-wrap" style={{ marginTop: "1rem" }}>
-            <table className="table">
-              <thead>
-                <tr>
-                  <th scope="col">Semester</th>
-                  <th scope="col">Tahun ajaran</th>
-                  <th scope="col" className="num">IPK</th>
-                </tr>
-              </thead>
-              <tbody>
-                {view.semesters.map((s) => (
-                  <tr key={s.semester}>
-                    <td>{s.semester}</td>
-                    <td>{s.academicYear}</td>
-                    <td className="num">{s.gpa.toFixed(2)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
       </section>
 
       <section className="card">

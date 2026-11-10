@@ -8,7 +8,6 @@ import { writeAudit } from "./audit.ts";
 import type { Fail } from "./admin-periods.ts";
 import { awardeeFilter, ScopeError, scopeFor, type SessionUser } from "./scope.ts";
 
-export const DEGREES = ["D3", "D4", "S1", "S2", "S3"] as const;
 export const GENDERS = [
   { value: "L", label: "Laki-laki" },
   { value: "P", label: "Perempuan" },
@@ -43,12 +42,11 @@ const FIELDS = [
   { key: "birthDate", column: "birth_date", label: "Tanggal lahir", kind: "date", max: 10, required: true },
   { key: "whatsapp", column: "whatsapp", label: "No. WhatsApp", kind: "text", max: 20, required: true },
   { key: "personalEmail", column: "personal_email", label: "Email pribadi", kind: "text", max: 120, required: true },
-  { key: "city", column: "city", label: "Kota domisili", kind: "text", max: 80, required: true },
-  { key: "emergencyName", column: "emergency_name", label: "Nama kontak darurat", kind: "text", max: 120 },
-  { key: "emergencyPhone", column: "emergency_phone", label: "Nomor kontak darurat", kind: "text", max: 20 },
+  { key: "address", column: "address", label: "Alamat domisili", kind: "text", max: 250, required: true },
+  { key: "emergencyName", column: "emergency_name", label: "Nama kontak darurat", kind: "text", max: 120, required: true },
+  { key: "emergencyPhone", column: "emergency_phone", label: "Nomor kontak darurat", kind: "text", max: 20, required: true },
   { key: "faculty", column: "faculty", label: "Fakultas", kind: "text", max: 120, required: true },
   { key: "studyProgram", column: "study_program", label: "Program studi", kind: "text", max: 120, required: true },
-  { key: "degreeLevel", column: "degree_level", label: "Jenjang", kind: "text", max: 2, required: true },
   { key: "entryYear", column: "entry_year", label: "Tahun masuk", kind: "year", max: 4, required: true },
   { key: "expectedGraduationYear", column: "expected_graduation_year", label: "Perkiraan lulus", kind: "year", max: 4, required: true },
   { key: "studentId", column: "student_id", label: "NIM", kind: "text", max: 30 },
@@ -166,7 +164,6 @@ export function validateProfile(input: ProfileInput, today = new Date()): { ok: 
   }
 
   if (value.gender && !GENDERS.some((g) => g.value === value.gender)) return bad("Jenis kelamin tidak dikenal.");
-  if (value.degreeLevel && !(DEGREES as readonly string[]).includes(value.degreeLevel)) return bad("Jenjang tidak dikenal.");
   if (value.birthDate && !validDate(value.birthDate, today)) return bad("Tanggal lahir tidak valid.");
 
   for (const key of ["whatsapp", "emergencyPhone"] as const) {
@@ -241,18 +238,7 @@ export type ProfileView = {
   profile: Profile;
   meta: ProfileMeta;
   completeness: Completeness;
-  semesters: Semester[];
 };
-
-export type Semester = { semester: number; academicYear: string; gpa: number };
-
-export async function listSemesters(db: D1Database, awardeeId: number): Promise<Semester[]> {
-  const { results } = await db
-    .prepare("SELECT semester, academic_year, gpa FROM awardee_semesters WHERE awardee_id = ? ORDER BY semester")
-    .bind(awardeeId)
-    .all<{ semester: number; academic_year: string; gpa: number }>();
-  return results.map((r) => ({ semester: r.semester, academicYear: r.academic_year, gpa: r.gpa }));
-}
 
 // Profil satu awardee, disaring menurut peran: awardee hanya dirinya, Manwil hanya wilayahnya (dan tanpa kolom
 // pribadi), Admin semuanya. Di luar lingkup hasilnya null, sama seperti awardee yang tidak ada.
@@ -290,7 +276,6 @@ export async function getProfileView(db: D1Database, user: SessionUser, awardeeI
     profile,
     meta: { exists: Boolean(row), consentAt, updatedAt: row ? (row.updated_at as string) : null },
     completeness: done,
-    semesters: await listSemesters(db, awardeeId),
   };
 }
 
@@ -409,54 +394,6 @@ export async function saveProfile(
         summary: `Mengubah profil ${awardee.name}: ${changed.join(", ")}`,
       });
     }
-  }
-  return { ok: true };
-}
-
-// ---------- IPK kuliah per semester ----------
-
-export type SemesterInput = { semester: string; academicYear: string; gpa: string };
-
-export function validateSemester(input: SemesterInput): { ok: true; value: Semester } | Fail {
-  const semester = Number(clean(input.semester));
-  if (!Number.isInteger(semester) || semester < 1 || semester > 20) return { ok: false, message: "Semester harus angka 1 sampai 20." };
-
-  const year = clean(input.academicYear);
-  const m = /^(\d{4})\/(\d{4})$/.exec(year);
-  if (!m || Number(m[2]) !== Number(m[1]) + 1) return { ok: false, message: "Tahun ajaran harus berbentuk 2025/2026." };
-
-  const gpa = Number(clean(input.gpa).replace(",", "."));
-  if (!Number.isFinite(gpa) || gpa < 0 || gpa > 4) return { ok: false, message: "IPK harus antara 0 dan 4." };
-  return { ok: true, value: { semester, academicYear: year, gpa: Math.round(gpa * 100) / 100 } };
-}
-
-export async function saveSemester(db: D1Database, user: SessionUser, awardeeId: number, input: SemesterInput): Promise<{ ok: true } | Fail> {
-  if (!canWrite(user, awardeeId)) throw new ScopeError("Tidak boleh mengubah IPK ini");
-  const checked = validateSemester(input);
-  if (!checked.ok) return checked;
-  const exists = await db.prepare("SELECT 1 AS x FROM awardees WHERE id = ?").bind(awardeeId).first();
-  if (!exists) return { ok: false, message: "Awardee tidak ditemukan." };
-
-  const { semester, academicYear, gpa } = checked.value;
-  await db
-    .prepare(
-      `INSERT INTO awardee_semesters (awardee_id, semester, academic_year, gpa) VALUES (?, ?, ?, ?)
-       ON CONFLICT(awardee_id, semester) DO UPDATE SET academic_year = excluded.academic_year, gpa = excluded.gpa,
-         updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')`,
-    )
-    .bind(awardeeId, semester, academicYear, gpa)
-    .run();
-  if (user.role === "admin") {
-    await writeAudit(db, user, { action: "semester.save", entity: "awardee_semester", entityId: awardeeId, summary: `Mengisi IPK semester ${semester} awardee #${awardeeId}` });
-  }
-  return { ok: true };
-}
-
-export async function deleteSemester(db: D1Database, user: SessionUser, awardeeId: number, semester: number): Promise<{ ok: true }> {
-  if (!canWrite(user, awardeeId)) throw new ScopeError("Tidak boleh mengubah IPK ini");
-  await db.prepare("DELETE FROM awardee_semesters WHERE awardee_id = ? AND semester = ?").bind(awardeeId, semester).run();
-  if (user.role === "admin") {
-    await writeAudit(db, user, { action: "semester.delete", entity: "awardee_semester", entityId: awardeeId, summary: `Menghapus IPK semester ${semester} awardee #${awardeeId}` });
   }
   return { ok: true };
 }

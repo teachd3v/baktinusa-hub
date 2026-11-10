@@ -2914,3 +2914,36 @@ ul.badges {
     gap: 0.1rem;
   }
 }
+
+/* Bar kelengkapan profil yang menempel di atas saat form digulir. Di ponsel ia menempel tepat di bawah bilah judul. */
+.profile-sticky {
+  position: sticky;
+  top: var(--gap-sm);
+  z-index: calc(var(--z-sticky-nav) - 1);
+  margin-bottom: var(--gap-md);
+  padding: var(--gap-sm) var(--gap-md);
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.06);
+}
+
+.profile-sticky-label {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--gap-sm);
+  margin: 0 0 0.35rem;
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+
+.profile-sticky-label span {
+  color: var(--ink-muted);
+  font-weight: 600;
+}
+
+@media (max-width: 899px) {
+  .profile-sticky {
+    top: calc(var(--appbar-h) + env(safe-area-inset-top) + var(--gap-sm));
+  }
+}

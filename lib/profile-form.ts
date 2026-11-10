@@ -1,4 +1,4 @@
-import { emptyProfile, type ProfileInput, type SemesterInput } from "./data/profiles.ts";
+import { emptyProfile, type ProfileInput } from "./data/profiles.ts";
 
 // Mengubah FormData menjadi masukan profil. Dipakai server action awardee dan Admin supaya keduanya membaca form yang sama.
 // Isi tidak divalidasi di sini; validateProfile() di lapisan data yang memutuskan.
@@ -18,8 +18,3 @@ export function profileFromForm(form: FormData): ProfileInput {
   return profile;
 }
 
-export const semesterFromForm = (form: FormData): SemesterInput => ({
-  semester: text(form, "semester"),
-  academicYear: text(form, "academicYear"),
-  gpa: text(form, "gpa"),
-});
