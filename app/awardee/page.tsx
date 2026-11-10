@@ -26,7 +26,7 @@ export default async function AwardeeHome() {
   return (
     <>
       <div className="page-head">
-        <h1>Halo, {user.name}</h1>
+        <h1>Halo, {profile?.profile.nickname || user.name}</h1>
         {me && <p>{me.region}{me.campus ? ` · ${me.campus}` : ""}</p>}
       </div>
 
