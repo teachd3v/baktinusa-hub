@@ -15,23 +15,32 @@ setiap kali ada fitur yang selesai, berubah, atau baru direncanakan.
 ## Fitur yang sudah ada
 
 ### Awardee
-- Beranda: tautan penilaian pribadi (`/s/<kode>`), perkembangan penilaian per siklus.
-- Penilaian: mengisi penilaian peer dan evaluasi yang ditugaskan.
+- Beranda: sapaan dengan nama panggilan (dari profil; nama lengkap kalau belum diisi), banner kelengkapan profil, tautan penilaian pribadi (`/s/<kode>`), perkembangan penilaian per siklus.
+- Penilaian: mengisi penilaian peer dan evaluasi yang ditugaskan (lihat "Form penilaian" di bawah).
 - Hasil: hasil pengukuran diri sendiri per siklus.
+- Profil Saya: lihat bagian Profil awardee.
 
 ### Manajer Wilayah (Manwil)
 - Beranda, Penilaian, Hasil, dan Analitik untuk wilayahnya (satu Manwil memegang satu wilayah).
+- Profil Awardee: daftar kelengkapan dan profil baca-saja awardee di wilayahnya.
 
 ### Admin
 - Pengguna (akun awardee, Manwil, Admin; impor dari Excel; hapus massal), Wilayah dan kampus.
 - Pengukuran (jenis), Instrumen (soal; impor), Siklus (jadwal buka dan tutup per jenis).
 - Analitik, Hasil, Respons (data mentah dengan penanda kiriman kembar), Pengingat, Jejak perubahan, Panduan gaya.
+- Profil Awardee: daftar kelengkapan, edit profil, status program.
 
 ### Publik
-- Evaluasi publik tanpa login lewat tautan awardee: `/s/<kode>/<jenis pengukuran>`, dilindungi Turnstile dan batas laju.
+- Evaluasi publik tanpa login lewat tautan awardee: `/s/<kode>/<jenis pengukuran>`, dilindungi Turnstile dan batas laju. Memakai form penilaian yang sama (lihat di bawah).
+
+### Form penilaian (semua jenis pengukuran)
+Satu komponen (`SurveyForm`) dipakai penilaian publik, mandiri, Peer, dan Manwil.
+- **Bar kemajuan persen** menempel di atas saat digulir: langkah dan nama bagian di kiri, persen di kanan. Persen dihitung dari jawaban wajib yang terisi (semua soal, kolom saran wajib, dan profil responden di form publik), jadi naik tiap satu soal dijawab. Di ponsel menempel tepat di bawah bilah judul.
+- **Emoji skala** abu-abu dan pudar selama belum dipilih; yang dipilih berwarna penuh di atas latar kuning.
+- Draf jawaban tersimpan di perangkat dan ikut terhitung di persen saat halaman dibuka lagi.
 
 ### Profil awardee
-- **Profil Saya** (`/awardee/profil`): identitas, akademik, branding aktivis, sosial media, cerita, dan persetujuan data. Bar kelengkapan menempel di atas dan dihitung langsung saat mengetik; banner kelengkapan di Beranda.
+- **Profil Saya** (`/awardee/profil`): identitas, akademik, branding aktivis, sosial media, cerita, dan persetujuan data. Bar kelengkapan menempel di atas dan dihitung langsung saat mengetik; banner kelengkapan di Beranda. Nama panggilan dipakai untuk sapaan di Beranda.
 - **Admin** (`/admin/profil`): daftar kelengkapan, edit semua kolom, status program dan tanggal bergabung; suntingan tercatat di Jejak perubahan.
 - **Manwil** (`/manwil/profil`): baca saja untuk wilayahnya, tanpa tanggal lahir (kontak darurat terlihat).
 
@@ -76,23 +85,22 @@ Awardee mengisi sendiri, Admin bisa melihat dan mengedit semua kolom.
 
 **Sengaja tidak dikumpulkan:** data ekonomi keluarga, KTP/KK, jenjang (program hanya S1), IPK kuliah per semester (awardee masuk di semester 7, pembinaan berakhir di semester 8), riwayat prestasi dan organisasi lengkap (itu Portofolio).
 
-**Rancangan tabel (migrasi baru):**
-- `awardee_profiles`: satu baris per awardee (`awardee_id` PRIMARY KEY, FK `awardees`), seluruh kolom A, B, D, E, F; kolom daftar (minat, keahlian, bahasa) disimpan sebagai JSON teks; `consent_at`, `updated_at`, `updated_by`.
+**Tabel (migrasi `0010`, disesuaikan `0011`):**
+- `awardee_profiles`: satu baris per awardee (`awardee_id` PRIMARY KEY, FK `awardees`), seluruh kolom A, B, D, E, F (alamat domisili di kolom `address`); kolom daftar (minat, keahlian, bahasa) disimpan sebagai JSON teks; `consent_at`, `updated_at`, `updated_by`.
 - `awardees`: tambah `status` (`active`/`graduated`/`revoked`) dan `joined_at`.
 - Kelengkapan (persen dan daftar kolom wajib yang kosong) **dihitung di kode**, tidak disimpan, supaya tidak bisa basi.
 
 **Halaman:**
-- Awardee: `/awardee/profil`, form per kelompok dengan simpan per bagian. Persetujuan penggunaan data (satu centang, `consent_at` tersimpan) muncul saat pengisian pertama.
+- Awardee: `/awardee/profil`, form per kelompok dengan satu tombol simpan (boleh disimpan belum lengkap). Persetujuan penggunaan data (satu centang, `consent_at` tersimpan) muncul saat pengisian pertama.
 - Beranda awardee: banner dan persen kelengkapan sampai kolom wajib terisi. **Tidak** memblokir akses ke penilaian.
 - Admin: halaman profil per awardee (edit semua kolom, tiap suntingan masuk Jejak perubahan), plus daftar awardee yang profilnya belum lengkap; pengingat lewat fitur Pengingat yang ada.
 - Manwil: lihat saja untuk wilayahnya, **tanpa** tanggal lahir. Kontak darurat terlihat, supaya Manwil bisa menghubungi saat darurat.
 
 **Keputusan sementara (dari pembahasan):** Manwil boleh melihat profil wilayahnya dengan pembatasan di atas; persetujuan data wajib; kontak darurat wajib (terlihat awardee, Admin, dan Manwil wilayahnya); kolom wajib hanya yang bertanda W; foto tetap dikelola Admin dulu (unggah sendiri ditunda).
 
-**Yang dikerjakan:** migrasi `0010_profil_awardee.sql`, lapisan data `lib/data/profiles.ts` (29 tes), halaman `/awardee/profil` dengan banner kelengkapan di Beranda, `/admin/profil` (daftar dan edit, status program, tercatat di Jejak perubahan), `/manwil/profil` (baca saja). Isian form tidak dikosongkan saat validasi gagal. Batas laju 5 per menit per akun.
+**Yang dikerjakan:** migrasi `0010_profil_awardee.sql`, lapisan data `lib/data/profiles.ts` (26 tes), halaman `/awardee/profil` dengan banner kelengkapan di Beranda, `/admin/profil` (daftar dan edit, status program, tercatat di Jejak perubahan), `/manwil/profil` (baca saja). Isian form tidak dikosongkan saat validasi gagal. Batas laju 5 per menit per akun.
 
-**Penyesuaian setelah ditinjau pengelola (migrasi `0011`):** IPK per semester dan jenjang dibuang (awardee masuk semester 7, pembinaan sampai semester 8, program hanya S1); kota domisili jadi alamat domisili (kolom `city` diganti nama jadi `address`); kontak darurat wajib; bagian "Kehadiran daring" diganti "Sosial Media"; bar kelengkapan menempel dan dihitung langsung.
-
+**Penyesuaian setelah ditinjau pengelola (migrasi `0011`):** IPK per semester dan jenjang dibuang (awardee masuk semester 7, pembinaan sampai semester 8, program hanya S1); kota domisili jadi alamat domisili (kolom `city` diganti nama jadi `address`); kontak darurat wajib; bagian "Kehadiran daring" diganti "Sosial Media"; bar kelengkapan menempel dan dihitung langsung. Kontak darurat dibuka untuk Manwil wilayahnya (tanggal lahir tetap tersembunyi). Nama panggilan dipakai sebagai sapaan di Beranda awardee.
 
 ### 2. Portofolio (Awardee)
 Jejak dokumentasi karya, prestasi, organisasi, dan lainnya.
@@ -111,8 +119,7 @@ Uji akhir diinput Admin. Hasilnya menjadi dokumen transkrip nilai awardee.
 - Transkrip kemungkinan ikut masuk ke CV (fitur 3).
 
 ### Pertanyaan terbuka (untuk pembahasan berikutnya)
-- Data apa saja di Profile Saya, mana yang wajib, dan siapa yang boleh melihat (hanya awardee, Manwil wilayahnya, Admin)?
-- Data personal itu sensitif: butuh aturan persetujuan dan retensi data?
+- Retensi data profil: berapa lama disimpan setelah awardee lulus atau dicabut? (Persetujuan penggunaan data sudah ada; aturan retensi belum.)
 - Portofolio: jenis entri apa saja, boleh unggah berkas atau hanya tautan, dan perlu verifikasi Admin?
 - CV: satu templat atau beberapa, bahasa Indonesia saja atau juga Inggris, dibuat di server atau di browser?
 - Uji Akhir: komponen dan bobot nilai, rumus gabungannya, skala nilai, dan siapa yang mengesahkan transkrip?
@@ -122,7 +129,9 @@ Uji akhir diinput Admin. Hasilnya menjadi dokumen transkrip nilai awardee.
 
 ## Backlog kecil
 
-- Halaman Akun belum punya foto profil atau ubah email.
+- Halaman Akun belum punya foto profil atau ubah email. Foto awardee masih dikelola Admin (unggah sendiri ditunda).
+- Nama panggilan baru dipakai di sapaan Beranda awardee; "Masuk sebagai ..." dan halaman Akun masih nama lengkap.
+- Daftar Profil Awardee (Admin dan Manwil) belum bisa difilter atau diurutkan menurut kelengkapan.
 - Domain `m.baktinusa.id` ditunda: DNS `baktinusa.id` ada di Hostinger dan dipakai situs WordPress. Memasangnya di Workers
   mengharuskan zone-nya ada di Cloudflare. Detail ada di Keputusan.
 - Binding `FILES` (R2) dan `IMAGES` masih terpasang walau rute `/foto` sudah dihapus. Lepas kalau sudah dipastikan tak dipakai.
@@ -135,6 +144,10 @@ Uji akhir diinput Admin. Hasilnya menjadi dokumen transkrip nilai awardee.
 - **Sesi Admin 24 jam** sejak masuk dan tidak diperpanjang saat dipakai.
 - **Hash kata sandi PBKDF2 maksimal 100.000 putaran.** Workers menolak lebih dari itu.
 - **Foto awardee disajikan dari `public/images`** (400 px), bukan dari R2.
+- **Profil awardee dibuat ringkas:** tanpa jenjang (program hanya S1) dan tanpa IPK per semester (awardee masuk semester 7, pembinaan sampai semester 8). Data ekonomi keluarga dan KTP/KK tidak dikumpulkan.
+- **Kontak darurat wajib dan terlihat Manwil wilayahnya**; tanggal lahir hanya terlihat awardee dan Admin.
+- **Profil tidak memblokir penilaian.** Kelengkapan hanya penanda (bar dan banner).
+- **Persen di form penilaian dihitung dari jawaban wajib yang terisi**, bukan dari langkah yang dilewati.
 - **Domain tetap `baktinusa.hrteach.site`** untuk sekarang. Pindah ke `m.baktinusa.id` menunggu keputusan soal DNS Hostinger.
 
 ---
@@ -147,7 +160,7 @@ Terbaru di atas. Satu baris per perubahan yang terlihat pengguna.
 |---|---|
 | 2026-11-10 | Form penilaian: emoji skala abu-abu selama belum dipilih, yang dipilih berwarna dengan latar kuning |
 | 2026-11-10 | Form penilaian (semua jenis pengukuran): bar kemajuan persen yang menempel di atas, dihitung dari jawaban wajib yang terisi |
-| 2026-11-10 | Beranda awardee menyapa dengan nama panggilan dari profil |
+| 2026-11-10 | Perbaikan: Beranda awardee menyapa dengan nama panggilan dari profil (sebelumnya masih nama lengkap) |
 | 2026-11-10 | Kontak darurat awardee kini terlihat oleh Manwil wilayahnya |
 | 2026-11-10 | Profil: IPK per semester dan jenjang dibuang, alamat domisili, kontak darurat wajib, Sosial Media, bar kelengkapan menempel (migrasi 0011) |
 | 2026-11-10 | Profile Saya: profil awardee, tampilan Admin dan Manwil (migrasi 0010) |
