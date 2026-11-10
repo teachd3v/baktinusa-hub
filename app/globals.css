@@ -2882,3 +2882,35 @@ ul.badges {
   width: 1.25rem;
   height: 1.25rem;
 }
+
+/* Profil awardee: daftar label-isi baca-saja dan baris daftar kelengkapan. */
+.profile-dl {
+  margin: 0;
+  display: grid;
+  gap: var(--gap-sm);
+}
+
+.profile-row {
+  display: grid;
+  grid-template-columns: minmax(8rem, 12rem) 1fr;
+  gap: var(--gap-sm) var(--gap-md);
+  font-size: var(--text-sm);
+}
+
+.profile-row dt {
+  color: var(--ink-muted);
+  font-weight: 600;
+}
+
+.profile-row dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  white-space: pre-line;
+}
+
+@media (max-width: 560px) {
+  .profile-row {
+    grid-template-columns: 1fr;
+    gap: 0.1rem;
+  }
+}

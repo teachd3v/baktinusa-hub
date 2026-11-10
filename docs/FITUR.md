@@ -46,12 +46,12 @@ Semuanya masih perlu dibahas lebih rinci. Urutan di bawah mengikuti ketergantung
 
 | # | Fitur | Untuk | Status |
 |---|---|---|---|
-| 1 | Profile Saya | Awardee, Admin | Dirancang |
+| 1 | Profile Saya | Awardee, Admin, Manwil | Selesai di lokal, belum di-deploy |
 | 2 | Portofolio | Awardee | Ide |
 | 3 | Export CV (PDF) | Awardee | Ide |
 | 4 | Uji Akhir dan transkrip nilai | Admin, Awardee | Ide |
 
-### 1. Profile Saya (Awardee) — status: Dirancang
+### 1. Profile Saya (Awardee) — status: selesai di lokal, belum di-deploy
 Database personal awardee sekaligus data yang terikat program, dan bahan branding aktivis untuk CV.
 Awardee mengisi sendiri, Admin bisa melihat dan mengedit semua kolom.
 
@@ -86,6 +86,10 @@ Awardee mengisi sendiri, Admin bisa melihat dan mengedit semua kolom.
 - Manwil: lihat saja untuk wilayahnya, **tanpa** tanggal lahir dan kontak darurat.
 
 **Keputusan sementara (dari pembahasan):** Manwil boleh melihat profil wilayahnya dengan pembatasan di atas; IPK dikumpulkan per semester; persetujuan data wajib; kolom wajib hanya yang bertanda W; foto tetap dikelola Admin dulu (unggah sendiri ditunda).
+
+**Yang dikerjakan:** migrasi `0010_profil_awardee.sql`, lapisan data `lib/data/profiles.ts` (29 tes), halaman `/awardee/profil` dengan banner kelengkapan di Beranda, `/admin/profil` (daftar dan edit, status program, IPK, tercatat di Jejak perubahan), `/manwil/profil` (baca saja). Kolom IPK kuliah memakai nama `gpa` dan di layar "IPK kuliah". Isian form tidak dikosongkan saat validasi gagal. Batas laju 5 per menit per akun, kunci terpisah untuk profil dan semester.
+
+**Sebelum deploy:** jalankan `npm run db:migrate:remote` (migrasi 0010) lebih dulu, baru `npm run deploy`. Setelah deploy, pindahkan ke "Fitur yang sudah ada" dan tambah baris di Riwayat perubahan.
 
 ### 2. Portofolio (Awardee)
 Jejak dokumentasi karya, prestasi, organisasi, dan lainnya.

@@ -4,6 +4,7 @@ import type { Role } from "./data/scope.ts";
 export const NAV: Record<Role, { href: string; label: string }[]> = {
   admin: [
     { href: "/admin/pengguna", label: "Pengguna" },
+    { href: "/admin/profil", label: "Profil Awardee" },
     { href: "/admin/wilayah", label: "Wilayah" },
     { href: "/admin/pengukuran", label: "Pengukuran" },
     { href: "/admin/instrumen", label: "Instrumen" },
@@ -15,10 +16,12 @@ export const NAV: Record<Role, { href: string; label: string }[]> = {
     { href: "/manwil/nilai", label: "Penilaian" },
     { href: "/manwil/hasil", label: "Hasil" },
     { href: "/manwil/analitik", label: "Analitik" },
+    { href: "/manwil/profil", label: "Profil Awardee" },
   ],
   awardee: [
     { href: "/awardee", label: "Beranda" },
     { href: "/awardee/nilai", label: "Penilaian" },
     { href: "/awardee/hasil", label: "Hasil" },
+    { href: "/awardee/profil", label: "Profil Saya" },
   ],
 };
